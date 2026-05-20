@@ -45,3 +45,23 @@ def get_configured_model(model_key: str, default_model: str) -> str:
     if isinstance(value, str) and value.strip():
         return value.strip()
     return default_model
+
+
+def get_optional_reasoning_effort(
+    model_name: str,
+    preferred_effort: str = "none",
+) -> Dict[str, str]:
+    """
+    Return reasoning_effort only for model families that reliably support it.
+
+    DeepSeek-compatible safety: omit reasoning_effort for non-OpenAI model names
+    to avoid provider-side validation failures (e.g. reasoning_effort="none").
+    """
+    normalized = (model_name or "").strip().lower()
+    if not normalized:
+        return {}
+
+    supports_reasoning_effort = normalized.startswith(("gpt-", "o1", "o3", "o4"))
+    if supports_reasoning_effort:
+        return {"reasoning_effort": preferred_effort}
+    return {}

@@ -48,6 +48,12 @@ def _import_from_main_cores(module_name: str, relative_path: str):
 _utils_module = _import_from_main_cores("cores_utils", "cores/utils.py")
 parse_llm_json = _utils_module.parse_llm_json
 
+_model_cfg_module = _import_from_main_cores("cores_model_config", "cores/model_config.py")
+get_configured_model = _model_cfg_module.get_configured_model
+get_optional_reasoning_effort = _model_cfg_module.get_optional_reasoning_effort
+
+US_JOURNAL_MODEL = get_configured_model("us_journal", "gpt-5.4-mini")
+
 
 class USJournalManager:
     """Manages trading journal operations for US stocks."""
@@ -133,7 +139,11 @@ class USJournalManager:
 
                 response = await llm.generate_str(
                     message=prompt,
-                    request_params=RequestParams(model="gpt-5.4-mini", reasoning_effort="none", maxTokens=16000)
+                    request_params=RequestParams(
+                        model=US_JOURNAL_MODEL,
+                        maxTokens=16000,
+                        **get_optional_reasoning_effort(US_JOURNAL_MODEL, "none"),
+                    )
                 )
                 logger.info(f"US Journal agent response received: {len(response)} chars")
 

@@ -77,6 +77,21 @@ _social_client_module = _import_from_project_root(
 )
 USSocialSentimentClient = _social_client_module.USSocialSentimentClient
 
+_model_cfg_module = _import_from_project_root(
+    "main_model_config",
+    _project_root / "cores" / "model_config.py"
+)
+get_configured_model = _model_cfg_module.get_configured_model
+US_REPORT_FILENAME_MODEL = get_configured_model("us_report_filename", "gpt-5.4-mini")
+
+
+def _model_slug(model_name: str) -> str:
+    """Create a safe filename suffix from model name."""
+    import re
+
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", (model_name or "").strip())
+    return slug.strip("-") or "model"
+
 
 async def analyze_us_stock(
     ticker: str = "AAPL",
@@ -520,7 +535,7 @@ if __name__ == "__main__":
     ))
 
     # Save result
-    output_path = f"AAPL_Apple Inc_{datetime.now().strftime('%Y%m%d')}_gpt5.4-mini.md"
+    output_path = f"AAPL_Apple Inc_{datetime.now().strftime('%Y%m%d')}_{_model_slug(US_REPORT_FILENAME_MODEL)}.md"
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(result)
 

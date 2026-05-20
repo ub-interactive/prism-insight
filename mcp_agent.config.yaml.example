@@ -98,7 +98,9 @@ openai:
   reasoning_effort: high
   # Optional model overrides by workflow
   models:
+    us_journal: gpt-5.4-mini
     us_macro_analysis: gpt-5.4-mini
+    us_report_filename: gpt-5.4-mini
     us_telegram_summary: gpt-5.4-mini
     us_trading_decision: gpt-5.5
     us_sell_decision: gpt-5.5

@@ -124,9 +124,11 @@ _model_config_module = _import_from_main_cores(
     "cores/model_config.py"
 )
 get_configured_model = _model_config_module.get_configured_model
+get_optional_reasoning_effort = _model_config_module.get_optional_reasoning_effort
 
 US_MACRO_ANALYSIS_MODEL = get_configured_model("us_macro_analysis", "gpt-5.4-mini")
 US_TRANSLATION_MODEL = get_configured_model("us_translation", "gpt-5-nano")
+US_REPORT_FILENAME_MODEL = get_configured_model("us_report_filename", US_MACRO_ANALYSIS_MODEL)
 
 # Directory configuration
 US_REPORTS_DIR = PRISM_US_DIR / "reports"
@@ -149,6 +151,12 @@ TRIGGER_TYPE_KO = {
     "Closing Strength Top": "장 마감 강세 상위주",  # Closing strength top stocks
     "Volume Surge Sideways": "거래량 급증 횡보주",  # Volume surge sideways stocks
 }
+
+
+def _model_slug(model_name: str) -> str:
+    """Create a safe filename suffix from model name."""
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", (model_name or "").strip())
+    return slug.strip("-") or "model"
 
 
 class USStockAnalysisOrchestrator:
@@ -316,10 +324,10 @@ class USStockAnalysisOrchestrator:
                     message=f"Execute US stock market macro analysis for {reference_date} and output JSON.",
                     request_params=RequestParams(
                         model=US_MACRO_ANALYSIS_MODEL,
-                        reasoning_effort="none",
                         maxTokens=16000,
                         parallel_tool_calls=True,
-                        use_history=True
+                        use_history=True,
+                        **get_optional_reasoning_effort(US_MACRO_ANALYSIS_MODEL, "none"),
                     )
                 )
 
@@ -487,7 +495,9 @@ class USStockAnalysisOrchestrator:
             logger.info(f"[{idx}/{len(tickers)}] Starting US stock analysis: {company_name}({ticker})")
 
             reference_date = datetime.now().strftime("%Y%m%d")
-            output_file = str(US_REPORTS_DIR / f"{ticker}_{company_name}_{reference_date}_{mode}_gpt5.4-mini.md")
+            output_file = str(
+                US_REPORTS_DIR / f"{ticker}_{company_name}_{reference_date}_{mode}_{_model_slug(US_REPORT_FILENAME_MODEL)}.md"
+            )
 
             try:
                 from cores.us_analysis import analyze_us_stock

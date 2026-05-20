@@ -53,9 +53,13 @@ if _model_cfg_spec and _model_cfg_spec.loader:
     _model_cfg_mod = _ilu.module_from_spec(_model_cfg_spec)
     _model_cfg_spec.loader.exec_module(_model_cfg_mod)
     get_configured_model = _model_cfg_mod.get_configured_model
+    get_optional_reasoning_effort = _model_cfg_mod.get_optional_reasoning_effort
 else:
     def get_configured_model(_model_key: str, default_model: str) -> str:
         return default_model
+
+    def get_optional_reasoning_effort(_model_name: str, _preferred_effort: str = "none") -> dict:
+        return {}
 
 US_TELEGRAM_SUMMARY_MODEL = get_configured_model("us_telegram_summary", "gpt-5.4-mini")
 
@@ -502,9 +506,9 @@ Report Content:
             message=prompt_message,
             request_params=RequestParams(
                 model=US_TELEGRAM_SUMMARY_MODEL,
-                reasoning_effort="none",
                 maxTokens=6000,
-                max_iterations=2
+                max_iterations=2,
+                **get_optional_reasoning_effort(US_TELEGRAM_SUMMARY_MODEL, "none"),
             )
         )
 

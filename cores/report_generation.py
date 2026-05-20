@@ -5,6 +5,21 @@ from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
 
 from cores.openai_error_logging import log_openai_error
 
+try:
+    from cores.model_config import get_configured_model, get_optional_reasoning_effort
+except Exception:
+    # Fallback for dynamic import contexts (e.g., prism-us direct module loading).
+    import importlib.util
+    from pathlib import Path
+
+    _model_cfg_path = Path(__file__).resolve().parent / "model_config.py"
+    _model_cfg_spec = importlib.util.spec_from_file_location("report_model_config", _model_cfg_path)
+    _model_cfg_mod = importlib.util.module_from_spec(_model_cfg_spec)
+    assert _model_cfg_spec is not None and _model_cfg_spec.loader is not None
+    _model_cfg_spec.loader.exec_module(_model_cfg_mod)
+    get_configured_model = _model_cfg_mod.get_configured_model
+    get_optional_reasoning_effort = _model_cfg_mod.get_optional_reasoning_effort
+
 
 # Language name mapping for report generation
 LANGUAGE_NAMES = {
@@ -16,6 +31,21 @@ LANGUAGE_NAMES = {
     "fr": "French",
     "de": "German"
 }
+
+REPORT_GENERATION_MODEL = get_configured_model("report_generation", "gpt-5.4-mini")
+
+
+def _language_output_directive(language: str) -> str:
+    """Return strict output-language instruction for non-Korean modes."""
+    if language == "zh":
+        return (
+            "Output must be in Simplified Chinese only. "
+            "Do not output Korean or English except stock tickers/symbols."
+        )
+    if language == "en":
+        return "Output must be in English only."
+    language_name = LANGUAGE_NAMES.get(language, language.upper())
+    return f"Output must be in {language_name} only."
 
 
 @retry(
@@ -84,6 +114,7 @@ async def generate_report(agent, section, company_name, company_code, reference_
 4. Focus on practical content that directly helps investment decisions.
 5. Analyze based only on actual collected data, and do not speculate on missing data.
 6. **Always translate company names to {language_name}.** (e.g., "삼성전자" → "Samsung Electronics")
+7. {_language_output_directive(language)}
 
 ## Format Requirements:
 1. Always start the report with two newline characters (\\n\\n) before the title.
@@ -106,11 +137,11 @@ async def generate_report(agent, section, company_name, company_code, reference_
         report = await llm.generate_str(
             message=message,
             request_params=RequestParams(
-                model="gpt-5.4-mini",
-                reasoning_effort="none",
+                model=REPORT_GENERATION_MODEL,
                 maxTokens=32000,
                 parallel_tool_calls=True,
-                use_history=True
+                use_history=True,
+                **get_optional_reasoning_effort(REPORT_GENERATION_MODEL, "none"),
             )
         )
     except Exception as e:
@@ -178,6 +209,7 @@ async def generate_market_report(agent, section, reference_date, logger, languag
 4. Focus on practical content that directly helps investment decisions.
 5. Analyze based only on actual collected data, and do not speculate on missing data.
 6. **Always translate company names to {language_name}.** (e.g., "삼성전자" → "Samsung Electronics")
+7. {_language_output_directive(language)}
 
 ## Format Requirements:
 1. Always start the report with two newline characters (\\n\\n) before the title.
@@ -200,12 +232,12 @@ async def generate_market_report(agent, section, reference_date, logger, languag
         report = await llm.generate_str(
             message=message,
             request_params=RequestParams(
-                model="gpt-5.4-mini",
-                reasoning_effort="none",
+                model=REPORT_GENERATION_MODEL,
                 maxTokens=32000,
                 max_iterations=3,
                 parallel_tool_calls=True,
-                use_history=True
+                use_history=True,
+                **get_optional_reasoning_effort(REPORT_GENERATION_MODEL, "none"),
             )
         )
     except Exception as e:
@@ -279,6 +311,7 @@ Extract and concisely summarize the 3-5 most important key points from each sect
 Provide a summary that investors can quickly read and understand the key points.
 
 **Always translate company names to {language_name}.** (e.g., "삼성전자" → "Samsung Electronics")
+{_language_output_directive(language)}
 
 ##Analysis Date: {reference_date} (YYYYMMDD format)
 """
@@ -300,6 +333,7 @@ Write a concise yet insightful summary of about 500-800 characters.
 - Use conditional/probabilistic expressions rather than definitive expressions
 - All points are based on technical/fundamental analysis data
 - **Always translate company names to {language_name}.**
+- {_language_output_directive(language)}
 
 Comprehensive Analysis Report:
 {all_reports}
@@ -314,12 +348,12 @@ Comprehensive Analysis Report:
         executive_summary = await llm.generate_str(
             message=message,
             request_params=RequestParams(
-                model="gpt-5.4-mini",
-                reasoning_effort="none",
+                model=REPORT_GENERATION_MODEL,
                 maxTokens=16000,
                 max_iterations=2,
                 parallel_tool_calls=True,
-                use_history=True
+                use_history=True,
+                **get_optional_reasoning_effort(REPORT_GENERATION_MODEL, "none"),
             )
         )
         return executive_summary
@@ -328,8 +362,9 @@ Comprehensive Analysis Report:
         logger.error(f"Error generating executive summary: {e}")
         if language == "ko":
             return "## 핵심 요약\n\n분석 요약을 생성하는 데 문제가 발생했습니다."
-        else:
-            return "## Executive Summary\n\nA problem occurred while generating the analysis summary."
+        if language == "zh":
+            return "## 核心摘要\n\n生成分析摘要时发生问题。"
+        return "## Executive Summary\n\nA problem occurred while generating the analysis summary."
 
 
 async def generate_investment_strategy(section_reports, combined_reports, company_name, company_code, reference_date, logger, language="ko"):
@@ -451,6 +486,7 @@ async def generate_investment_strategy(section_reports, combined_reports, compan
             instruction = f"""You are an investment strategy expert. Synthesize the previously analyzed technical analysis, company information, financial analysis, news trends, and market analysis to present investment strategies and opinions.
 
 **Always translate company names to {language_name}.** (e.g., "삼성전자" → "Samsung Electronics")
+{_language_output_directive(language)}
 
 ## Analysis Integration Elements
 1. Stock Price/Volume Analysis Summary - Price trends, major support/resistance levels, volume patterns
@@ -533,6 +569,7 @@ Follow the guidelines set in the investment strategy agent, but pay particular a
 3. Present investment scenarios linking valuation and earnings outlook
 4. Analyze relative investment attractiveness within the overall industry and market flow
 5. **Always translate company names to {language_name}.**
+6. {_language_output_directive(language)}
 
 Please present a consistent and executable investment strategy that investors can use for actual decision-making.
 
@@ -552,12 +589,12 @@ Please present a consistent and executable investment strategy that investors ca
         investment_strategy = await llm.generate_str(
             message=message,
             request_params=RequestParams(
-                model="gpt-5.4-mini",
-                reasoning_effort="none",
+                model=REPORT_GENERATION_MODEL,
                 maxTokens=32000,
                 max_iterations=3,
                 parallel_tool_calls=True,
-                use_history=True
+                use_history=True,
+                **get_optional_reasoning_effort(REPORT_GENERATION_MODEL, "none"),
             )
         )
         logger.info(f"Completed investment_strategy - {len(investment_strategy)} characters")
@@ -567,8 +604,9 @@ Please present a consistent and executable investment strategy that investors ca
         logger.error(f"Error processing investment_strategy: {e}")
         if language == "ko":
             return "투자 전략 분석 실패"
-        else:
-            return "Investment strategy analysis failed"
+        if language == "zh":
+            return "投资策略分析失败"
+        return "Investment strategy analysis failed"
 
 
 def get_disclaimer(language="ko"):
@@ -590,6 +628,15 @@ def get_disclaimer(language="ko"):
 
 투자는 본인의 판단과 책임 하에 신중하게 이루어져야 하며,
 본 보고서를 참고하여 발생하는 투자 결과에 대한 책임은 투자자 본인에게 있습니다."""
+    if language == "zh":
+        return """## 投资免责声明
+
+本报告仅供信息参考，不构成任何投资建议。
+本报告内容由 AI 基于撰写时可获得的资料生成，
+但不保证其准确性与完整性。
+
+投资需由您自行判断并承担风险，
+依据本报告进行投资所产生的结果由投资者本人负责。"""
     else:  # English or other languages
         return """## Investment Disclaimer
 

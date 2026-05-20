@@ -1207,8 +1207,8 @@ async def main():
     parser = argparse.ArgumentParser(description="US stock analysis and telegram transmission orchestrator")
     parser.add_argument("--mode", choices=["morning", "midday", "afternoon", "both"], default="both",
                         help="Execution mode (morning, midday, afternoon, both)")
-    parser.add_argument("--language", choices=["ko", "en"], default="ko",
-                        help="Analysis language (ko: Korean, en: English)")
+    parser.add_argument("--language", choices=["ko", "en", "zh"], default="ko",
+                        help="Analysis language (ko: Korean, en: English, zh: Chinese)")
     parser.add_argument("--broadcast-languages", type=str, default="",
                         help="Additional languages for parallel telegram channel broadcasting (comma-separated, e.g., 'en,ja,zh')")
     parser.add_argument("--no-telegram", action="store_true",

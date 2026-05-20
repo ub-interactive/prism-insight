@@ -68,7 +68,7 @@ async def generate_report(ticker: str, company_name: str, language: str = "ko") 
     Args:
         ticker: Stock ticker symbol (e.g., "AAPL")
         company_name: Company name (e.g., "Apple Inc.")
-        language: Language code ("en" or "ko")
+        language: Language code ("ko", "en", or "zh")
 
     Returns:
         tuple: (markdown_path, pdf_path)
@@ -82,7 +82,8 @@ async def generate_report(ticker: str, company_name: str, language: str = "ko") 
     print(f"  PRISM-INSIGHT AI Stock Analysis")
     print(f"  Ticker: {ticker}")
     print(f"  Company: {company_name}")
-    print(f"  Language: {'English' if language == 'en' else 'Korean'}")
+    language_labels = {"ko": "Korean", "en": "English", "zh": "Chinese"}
+    print(f"  Language: {language_labels.get(language, language.upper())}")
     if not include_news:
         print(f"  Note: News analysis skipped (Perplexity API not configured)")
     print(f"{'='*60}\n")
@@ -133,6 +134,8 @@ Examples:
   python demo.py MSFT                 # Analyze Microsoft
   python demo.py NVDA "NVIDIA Corp"   # Analyze with custom name
   python demo.py AAPL --language ko   # Korean report
+  python demo.py AAPL --language en   # English report
+  python demo.py AAPL --language zh   # Chinese report (native generation)
         """
     )
     parser.add_argument(
@@ -149,7 +152,7 @@ Examples:
     )
     parser.add_argument(
         "--language", "-l",
-        choices=["ko", "en"],
+        choices=["ko", "en", "zh"],
         default="ko",
         help="Report language (default: ko)"
     )

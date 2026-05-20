@@ -151,7 +151,7 @@ class StockAnalysisOrchestrator:
             # Translate Korean company name to English for English channel
             translated_name = await translate_company_name(parsed['company_name']) if parsed['company_name'] else ""
         else:
-            # For other languages (ja, zh, etc.), also translate to English for filename compatibility
+            # For other languages (ja, etc.), also translate to English for filename compatibility
             # This ensures PDF filenames don't contain Korean characters in any broadcast channel
             translated_name = await translate_company_name(parsed['company_name']) if parsed['company_name'] else ""
 
@@ -239,7 +239,6 @@ class StockAnalysisOrchestrator:
                         rf'<img\s+[^>]*>',  # HTML img tag (translated or not)
                         rf'\[Image[^\]]*\]',  # [Image: ...]
                         rf'!\[[^\]]*\]\([^\)]*\)',  # ![alt](url) that's not base64
-                        rf'\[图片[^\]]*\]',  # Chinese: [图片...]
                         rf'\[画像[^\]]*\]',  # Japanese: [画像...]
                     ]
 
@@ -1275,7 +1274,7 @@ async def main():
     parser.add_argument("--language", choices=["ko", "en"], default="ko",
                         help="Analysis language (ko: Korean, en: English)")
     parser.add_argument("--broadcast-languages", type=str, default="",
-                        help="Additional languages for parallel telegram channel broadcasting (comma-separated, e.g., 'en,ja,zh')")
+                        help="Additional languages for parallel telegram channel broadcasting (comma-separated, e.g., 'en,ja')")
     parser.add_argument("--no-telegram", action="store_true",
                         help="Disable telegram message transmission. "
                              "Use when testing without telegram configuration or running locally.")

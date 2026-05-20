@@ -78,7 +78,7 @@ class PortfolioTelegramReporter:
             telegram_token: Telegram bot token
             chat_id: Telegram channel ID
             trading_mode: Trading mode ('demo' or 'real', uses yaml config if None)
-            broadcast_languages: List of languages to broadcast in parallel (e.g., ['en', 'ja', 'zh'])
+            broadcast_languages: List of languages to broadcast in parallel (e.g., ['en', 'ja'])
         """
         # Telegram configuration
         self.telegram_token = telegram_token or os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -544,7 +544,7 @@ async def main():
     parser.add_argument("--token", help="Telegram bot token")
     parser.add_argument("--chat-id", help="Telegram channel ID")
     parser.add_argument("--broadcast-languages", type=str, default="",
-                       help="Additional languages for parallel telegram channel broadcasting (comma-separated, e.g., 'en,ja,zh')")
+                       help="Additional languages for parallel telegram channel broadcasting (comma-separated, e.g., 'en,ja')")
 
     args = parser.parse_args()
 

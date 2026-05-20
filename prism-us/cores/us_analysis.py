@@ -145,8 +145,6 @@ async def analyze_us_stock(
             # Add placeholder for skipped news section
             if language == "ko":
                 section_reports["news_analysis"] = "_뉴스 분석은 Perplexity API 키가 필요합니다. 기술적/재무 분석은 정상적으로 제공됩니다._"
-            elif language == "zh":
-                section_reports["news_analysis"] = "_新闻分析需要 Perplexity API 密钥。技术面和基本面分析仍会正常提供。_"
             else:
                 section_reports["news_analysis"] = "_News analysis requires Perplexity API key. Technical and fundamental analysis are provided normally._"
             logger.info("Skipping news_analysis (Perplexity API not configured)")
@@ -381,8 +379,6 @@ async def analyze_us_stock(
             if report_prose:
                 if language == "ko":
                     macro_header = "### 거시경제 환경\n\n"
-                elif language == "zh":
-                    macro_header = "### 宏观经济环境\n\n"
                 else:
                     macro_header = "### Macroeconomic Environment\n\n"
                 macro_section = macro_header + report_prose + "\n\n"
@@ -414,21 +410,6 @@ async def analyze_us_stock(
                         for r in risks[:3]:
                             macro_section += f"- ⚠️ {r.get('event', '')} (영향: {r.get('severity', 'medium')})\n"
                         macro_section += "\n"
-                elif language == "zh":
-                    macro_section += "### 宏观经济环境\n\n"
-                    macro_section += f"**市场状态**: {regime.replace('_', ' ').title()}\n\n"
-                    if regime_rationale:
-                        macro_section += f"**判断依据**: {regime_rationale}\n\n"
-                    if leading:
-                        sectors_str = ", ".join([s.get("sector", "") for s in leading[:3]])
-                        macro_section += f"**领涨板块**: {sectors_str}\n\n"
-                    if lagging:
-                        sectors_str = ", ".join([s.get("sector", "") for s in lagging[:3]])
-                        macro_section += f"**落后板块**: {sectors_str}\n\n"
-                    if risks:
-                        for r in risks[:3]:
-                            macro_section += f"- ⚠️ {r.get('event', '')}（影响级别: {r.get('severity', 'medium')}）\n"
-                        macro_section += "\n"
                 else:
                     macro_section += "### Macroeconomic Environment\n\n"
                     macro_section += f"**Market Regime**: {regime.replace('_', ' ').title()}\n\n"
@@ -456,17 +437,6 @@ async def analyze_us_stock(
                 "news": "## 3. 최근 주요 뉴스 요약",
                 "market": "## 4. 시장 분석",
                 "strategy": "## 5. 투자 전략 및 의견",
-            }
-        elif language == "zh":
-            headers = {
-                "title": f"# {company_name} ({ticker}) 分析报告",
-                "pub_date": "发布日期",
-                "exec_summary": "## 核心摘要",
-                "tech_analysis": "## 1. 技术面分析",
-                "fundamental": "## 2. 基本面分析",
-                "news": "## 3. 近期重要新闻摘要",
-                "market": "## 4. 市场分析",
-                "strategy": "## 5. 投资策略与观点",
             }
         else:
             headers = {

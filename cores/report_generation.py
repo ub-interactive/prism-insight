@@ -26,7 +26,6 @@ LANGUAGE_NAMES = {
     "ko": "Korean",
     "en": "English",
     "ja": "Japanese",
-    "zh": "Chinese",
     "es": "Spanish",
     "fr": "French",
     "de": "German"
@@ -37,11 +36,6 @@ REPORT_GENERATION_MODEL = get_configured_model("report_generation", "gpt-5.4-min
 
 def _language_output_directive(language: str) -> str:
     """Return strict output-language instruction for non-Korean modes."""
-    if language == "zh":
-        return (
-            "Output must be in Simplified Chinese only. "
-            "Do not output Korean or English except stock tickers/symbols."
-        )
     if language == "en":
         return "Output must be in English only."
     language_name = LANGUAGE_NAMES.get(language, language.upper())
@@ -362,8 +356,6 @@ Comprehensive Analysis Report:
         logger.error(f"Error generating executive summary: {e}")
         if language == "ko":
             return "## 핵심 요약\n\n분석 요약을 생성하는 데 문제가 발생했습니다."
-        if language == "zh":
-            return "## 核心摘要\n\n生成分析摘要时发生问题。"
         return "## Executive Summary\n\nA problem occurred while generating the analysis summary."
 
 
@@ -604,8 +596,6 @@ Please present a consistent and executable investment strategy that investors ca
         logger.error(f"Error processing investment_strategy: {e}")
         if language == "ko":
             return "투자 전략 분석 실패"
-        if language == "zh":
-            return "投资策略分析失败"
         return "Investment strategy analysis failed"
 
 
@@ -628,15 +618,6 @@ def get_disclaimer(language="ko"):
 
 투자는 본인의 판단과 책임 하에 신중하게 이루어져야 하며,
 본 보고서를 참고하여 발생하는 투자 결과에 대한 책임은 투자자 본인에게 있습니다."""
-    if language == "zh":
-        return """## 投资免责声明
-
-本报告仅供信息参考，不构成任何投资建议。
-本报告内容由 AI 基于撰写时可获得的资料生成，
-但不保证其准确性与完整性。
-
-投资需由您自行判断并承担风险，
-依据本报告进行投资所产生的结果由投资者本人负责。"""
     else:  # English or other languages
         return """## Investment Disclaimer
 

@@ -27,7 +27,6 @@ def create_telegram_summary_optimizer_agent(
         "ko": "Korean",
         "en": "English",
         "ja": "Japanese",
-        "zh": "Chinese"
     }
 
     to_lang_name = lang_names.get(to_lang, to_lang.upper())

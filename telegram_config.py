@@ -28,7 +28,7 @@ class TelegramConfig:
             use_telegram: Whether to use telegram (default: True)
             channel_id: Telegram channel ID (auto-loaded from environment variables if not provided)
             bot_token: Telegram bot token (auto-loaded from environment variables if not provided)
-            broadcast_languages: List of languages to broadcast in parallel (e.g., ['en', 'ja', 'zh'])
+            broadcast_languages: List of languages to broadcast in parallel (e.g., ['en', 'ja'])
         """
         self._use_telegram = use_telegram
         self._channel_id = channel_id
@@ -102,7 +102,7 @@ class TelegramConfig:
         Return broadcast channel ID for a specific language
 
         Args:
-            language: Language code (e.g., 'en', 'ja', 'zh')
+            language: Language code (e.g., 'en', 'ja')
 
         Returns:
             Channel ID for the language, or None if not configured

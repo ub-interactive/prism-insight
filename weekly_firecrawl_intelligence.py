@@ -185,7 +185,7 @@ def main():
     parser = argparse.ArgumentParser(description="Weekly Firecrawl Intelligence Report")
     parser.add_argument("--dry-run", action="store_true", help="Print only, don't send")
     parser.add_argument("--broadcast-languages", type=str, default="",
-                        help="Broadcast languages (comma-separated, e.g., 'en,ja,zh')")
+                        help="Broadcast languages (comma-separated, e.g., 'en,ja')")
     args = parser.parse_args()
 
     logging.basicConfig(

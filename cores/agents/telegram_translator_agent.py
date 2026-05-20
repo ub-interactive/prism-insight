@@ -23,7 +23,6 @@ def create_telegram_translator_agent(from_lang: str = "ko", to_lang: str = "en")
         "ko": "Korean",
         "en": "English",
         "ja": "Japanese",
-        "zh": "Chinese",
         "es": "Spanish",
         "fr": "French",
         "de": "German"

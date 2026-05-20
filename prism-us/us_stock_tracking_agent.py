@@ -119,6 +119,12 @@ translate_telegram_message = _translator_module.translate_telegram_message
 # (avoids prism-us/cores/ namespace collision)
 _utils_module = _import_from_main_cores("cores_utils", "cores/utils.py")
 parse_llm_json = _utils_module.parse_llm_json
+_model_config_module = _import_from_main_cores("model_config", "cores/model_config.py")
+get_configured_model = _model_config_module.get_configured_model
+
+US_TRADING_DECISION_MODEL = get_configured_model("us_trading_decision", "gpt-5.5")
+US_SELL_DECISION_MODEL = get_configured_model("us_sell_decision", "gpt-5.5")
+US_TRANSLATION_MODEL = get_configured_model("us_translation", "gpt-5-nano")
 
 try:
     # First try direct import from prism-us directory
@@ -744,7 +750,7 @@ class USStockTrackingAgent:
             response = await llm.generate_str(
                 message=prompt_message,
                 request_params=RequestParams(
-                    model="gpt-5.5",
+                    model=US_TRADING_DECISION_MODEL,
                     maxTokens=30000
                 )
             )
@@ -1357,7 +1363,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
 
             response = await llm.generate_str(
                 message=prompt_message,
-                request_params=RequestParams(model="gpt-5.5", maxTokens=30000)
+                request_params=RequestParams(model=US_SELL_DECISION_MODEL, maxTokens=30000)
             )
 
             if not response or not response.strip():
@@ -2434,7 +2440,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                     translated_queue = []
                     for idx, message in enumerate(self.message_queue, 1):
                         logger.info(f"Translating US message {idx}/{len(self.message_queue)}")
-                        translated = await translate_telegram_message(message, model="gpt-5-nano")
+                        translated = await translate_telegram_message(message, model=US_TRANSLATION_MODEL)
                         translated_queue.append(translated)
                     self.message_queue = translated_queue
                     logger.info("All US messages translated successfully")
@@ -2547,7 +2553,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                             logger.info(f"Translating US tracking message to {lang}")
                             translated_message = await translate_telegram_message(
                                 message,
-                                model="gpt-5-nano",
+                                    model=US_TRANSLATION_MODEL,
                                 from_lang="ko",
                                 to_lang=lang
                             )

@@ -119,6 +119,15 @@ _translator_module = _import_from_main_cores(
 )
 translate_telegram_message = _translator_module.translate_telegram_message
 
+_model_config_module = _import_from_main_cores(
+    "model_config",
+    "cores/model_config.py"
+)
+get_configured_model = _model_config_module.get_configured_model
+
+US_MACRO_ANALYSIS_MODEL = get_configured_model("us_macro_analysis", "gpt-5.4-mini")
+US_TRANSLATION_MODEL = get_configured_model("us_translation", "gpt-5-nano")
+
 # Directory configuration
 US_REPORTS_DIR = PRISM_US_DIR / "reports"
 US_TELEGRAM_MSGS_DIR = PRISM_US_DIR / "telegram_messages"
@@ -306,7 +315,7 @@ class USStockAnalysisOrchestrator:
                 result = await llm.generate_str(
                     message=f"Execute US stock market macro analysis for {reference_date} and output JSON.",
                     request_params=RequestParams(
-                        model="gpt-5.4-mini",
+                        model=US_MACRO_ANALYSIS_MODEL,
                         reasoning_effort="none",
                         maxTokens=16000,
                         parallel_tool_calls=True,
@@ -661,7 +670,7 @@ class USStockAnalysisOrchestrator:
                         logger.info(f"Translating US telegram message to {lang}")
                         translated_message = await translate_telegram_message(
                             original_message,
-                            model="gpt-5-nano",
+                            model=US_TRANSLATION_MODEL,
                             from_lang="ko",
                             to_lang=lang
                         )
@@ -716,7 +725,7 @@ class USStockAnalysisOrchestrator:
 
                         translated_report = await translate_telegram_message(
                             text_for_translation,
-                            model="gpt-5-nano",
+                            model=US_TRANSLATION_MODEL,
                             from_lang="ko",
                             to_lang=lang
                         )
@@ -857,7 +866,7 @@ class USStockAnalysisOrchestrator:
                     logger.info(f"Translating US trigger alert to {lang}")
                     translated_message = await translate_telegram_message(
                         original_message,
-                        model="gpt-5-nano",
+                        model=US_TRANSLATION_MODEL,
                         from_lang="ko",
                         to_lang=lang
                     )

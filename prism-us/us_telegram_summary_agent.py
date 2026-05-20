@@ -48,6 +48,17 @@ if _error_spec and _error_spec.loader:
     _error_spec.loader.exec_module(_error_mod)
     log_openai_error = _error_mod.log_openai_error
 
+_model_cfg_spec = _ilu.spec_from_file_location("prism_root_model_config", _project_root / "cores" / "model_config.py")
+if _model_cfg_spec and _model_cfg_spec.loader:
+    _model_cfg_mod = _ilu.module_from_spec(_model_cfg_spec)
+    _model_cfg_spec.loader.exec_module(_model_cfg_mod)
+    get_configured_model = _model_cfg_mod.get_configured_model
+else:
+    def get_configured_model(_model_key: str, default_model: str) -> str:
+        return default_model
+
+US_TELEGRAM_SUMMARY_MODEL = get_configured_model("us_telegram_summary", "gpt-5.4-mini")
+
 # MCPApp instance
 app = MCPApp(name="us_telegram_summary")
 
@@ -490,7 +501,7 @@ Report Content:
         response = await evaluator_optimizer.generate_str(
             message=prompt_message,
             request_params=RequestParams(
-                model="gpt-5.4-mini",
+                model=US_TELEGRAM_SUMMARY_MODEL,
                 reasoning_effort="none",
                 maxTokens=6000,
                 max_iterations=2

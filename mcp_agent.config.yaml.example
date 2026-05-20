@@ -96,3 +96,10 @@ openai:
   # Secrets (API keys, etc.) are stored in an mcp_agent.secrets.yaml file which can be gitignored
   default_model: gpt-5.1
   reasoning_effort: high
+  # Optional model overrides by workflow
+  models:
+    us_macro_analysis: gpt-5.4-mini
+    us_telegram_summary: gpt-5.4-mini
+    us_trading_decision: gpt-5.5
+    us_sell_decision: gpt-5.5
+    us_translation: gpt-5-nano

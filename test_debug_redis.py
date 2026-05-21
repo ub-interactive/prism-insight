@@ -1,54 +1,12 @@
-#!/usr/bin/env python3
-import os
-import json
-import asyncio
-from pathlib import Path
+"""
+Backward-compatible shim. Implementation: scripts.test_debug_redis.
+"""
 
-# Load .env
-from dotenv import load_dotenv
-load_dotenv(Path('.env'))
+import pathlib
+import runpy
 
-print('=== Debug Test ===')
+_IMPL = pathlib.Path(__file__).resolve().parent / "scripts" / "test_debug_redis.py"
 
-from upstash_redis import Redis
-from messaging.redis_signal_publisher import SignalPublisher
 
-# Test Redis directly
-redis = Redis(
-    url=os.environ['UPSTASH_REDIS_REST_URL'],
-    token=os.environ['UPSTASH_REDIS_REST_TOKEN']
-)
-
-# Test xadd directly
-print('Testing direct xadd...')
-try:
-    result = redis.xadd('prism:trading-signals', {'data': json.dumps({'test': 'direct_test'})})
-    print(f'Direct xadd result: {result}')
-    print(f'Result type: {type(result)}')
-except Exception as e:
-    import traceback
-    print(f'Direct xadd error: {type(e).__name__}: {e}')
-    traceback.print_exc()
-
-# Test SignalPublisher
-publisher = SignalPublisher()
-publisher._redis = redis
-print(f'Publisher _redis is set: {publisher._is_connected()}')
-
-async def test_publish():
-    print('Testing publisher...')
-    try:
-        result = await publisher.publish_buy_signal(
-            ticker='TEST001',
-            company_name='Test',
-            price=10000
-        )
-        print(f'Publisher result: {result}')
-        print(f'Result type: {type(result)}')
-    except Exception as e:
-        import traceback
-        print(f'Publisher error: {type(e).__name__}: {e}')
-        traceback.print_exc()
-
-asyncio.run(test_publish())
-print('=== Done ===')
+if __name__ == "__main__":
+    runpy.run_path(str(_IMPL), run_name="__main__")

@@ -538,6 +538,75 @@ CREATE TABLE IF NOT EXISTS us_holding_decisions (
 )
 """
 
+# Shared journal / memory tables (still used by US journal + compression)
+TABLE_TRADING_JOURNAL = """
+CREATE TABLE IF NOT EXISTS trading_journal (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT NOT NULL,
+    company_name TEXT NOT NULL,
+    trade_date TEXT NOT NULL,
+    trade_type TEXT NOT NULL,
+    buy_price REAL,
+    buy_date TEXT,
+    buy_scenario TEXT,
+    buy_market_context TEXT,
+    sell_price REAL,
+    sell_reason TEXT,
+    profit_rate REAL,
+    holding_days INTEGER,
+    situation_analysis TEXT,
+    judgment_evaluation TEXT,
+    lessons TEXT,
+    pattern_tags TEXT,
+    one_line_summary TEXT,
+    confidence_score REAL,
+    compression_layer INTEGER DEFAULT 1,
+    compressed_summary TEXT,
+    created_at TEXT NOT NULL,
+    last_compressed_at TEXT,
+    market TEXT DEFAULT 'US'
+)
+"""
+
+TABLE_TRADING_PRINCIPLES = """
+CREATE TABLE IF NOT EXISTS trading_principles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scope TEXT NOT NULL,
+    scope_context TEXT,
+    condition TEXT NOT NULL,
+    action TEXT NOT NULL,
+    reason TEXT,
+    priority TEXT,
+    confidence REAL DEFAULT 0.5,
+    supporting_trades INTEGER DEFAULT 0,
+    source_journal_ids TEXT,
+    created_at TEXT NOT NULL,
+    last_validated_at TEXT,
+    is_active INTEGER DEFAULT 1,
+    market TEXT DEFAULT 'US'
+)
+"""
+
+TABLE_TRADING_INTUITIONS = """
+CREATE TABLE IF NOT EXISTS trading_intuitions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
+    subcategory TEXT,
+    scope TEXT,
+    condition TEXT NOT NULL,
+    insight TEXT NOT NULL,
+    confidence REAL,
+    supporting_trades INTEGER DEFAULT 0,
+    supporting_count INTEGER DEFAULT 0,
+    success_rate REAL,
+    source_journal_ids TEXT,
+    created_at TEXT NOT NULL,
+    last_validated_at TEXT,
+    is_active INTEGER DEFAULT 1,
+    market TEXT DEFAULT 'US'
+)
+"""
+
 # Table: us_pending_orders - Queued reserved orders (when placed outside KIS API time window)
 # KIS API reserved order window: 10:00~23:20 KST (except 16:30~16:45)
 # Orders placed before 10:00 KST are queued here and processed by us_pending_order_batch.py at 10:05 KST
@@ -619,6 +688,12 @@ US_INDEXES = [
     # us_portfolio_adjustment_log indexes
     "CREATE INDEX IF NOT EXISTS idx_us_adj_log_ticker ON us_portfolio_adjustment_log(account_key, ticker)",
     "CREATE INDEX IF NOT EXISTS idx_us_adj_log_date ON us_portfolio_adjustment_log(adjusted_at DESC)",
+    # trading journal indexes
+    "CREATE INDEX IF NOT EXISTS idx_journal_ticker ON trading_journal(ticker)",
+    "CREATE INDEX IF NOT EXISTS idx_journal_pattern ON trading_journal(pattern_tags)",
+    "CREATE INDEX IF NOT EXISTS idx_journal_date ON trading_journal(trade_date)",
+    "CREATE INDEX IF NOT EXISTS idx_journal_market ON trading_journal(market)",
+    "CREATE INDEX IF NOT EXISTS idx_intuitions_category ON trading_intuitions(category)",
 ]
 
 # =============================================================================
@@ -943,6 +1018,9 @@ def create_tables(cursor, conn):
         ("us_holding_decisions", TABLE_US_HOLDING_DECISIONS),
         ("us_pending_orders", TABLE_US_PENDING_ORDERS),
         ("us_portfolio_adjustment_log", TABLE_US_PORTFOLIO_ADJUSTMENT_LOG),
+        ("trading_journal", TABLE_TRADING_JOURNAL),
+        ("trading_principles", TABLE_TRADING_PRINCIPLES),
+        ("trading_intuitions", TABLE_TRADING_INTUITIONS),
     ]
 
     for table_name, table_sql in tables:

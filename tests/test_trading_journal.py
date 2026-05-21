@@ -22,6 +22,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+pytestmark = pytest.mark.skip(
+    reason=(
+        "Legacy KR-era journal assertions; use tests/test_journal_schema_smoke.py for US DDL/stats smoke."
+    ),
+)
+
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 

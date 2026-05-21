@@ -15,15 +15,24 @@ Scale: ~75,000+ LOC, specialized analysis agents & trading loop, US-only pipelin
 
 ```
 prism-insight/
-├── cores/                    # AI Analysis Engine
-│   ├── agents/              # Analysis & trading agents
-│   ├── chatgpt_proxy/       # ChatGPT OAuth Proxy (Codex endpoint)
-│   ├── analysis.py          # Core orchestration
-│   └── report_generation.py # Report templates
-├── trading/                  # KIS API Trading (US)
-├── examples/                 # Dashboards, messaging
-└── tests/                    # Test suite
+├── cores/                     # AI analysis engine
+│   ├── agents/               # Analysis & trading agents
+│   ├── chatgpt_proxy/      # ChatGPT OAuth Proxy (Codex endpoint)
+│   ├── analysis.py         # Core orchestration
+│   └── report_generation.py # Shared markdown section templates / prompts
+├── scripts/                   # Operational CLIs & cron entrypoints (implementations)
+├── integrations/              # firebase_bridge, firecrawl_client, archive_api/query
+├── reporting/                 # report_generator, pdf_converter, analysis_manager
+├── trading/                   # KIS API trading (US)
+├── tracking/                  # SQLite helpers, journal, compression
+├── messaging/                 # Redis / GCP publishers
+├── examples/                  # Dashboards, subscriber examples
+├── tests/                     # pytest (see pytest.ini pythonpath)
+├── repo_paths.py              # REPO_ROOT — resolve reports/DB vs cwd
+└── *.py (repo root)           # Thin shims: same CLI names, delegate into scripts/ etc.
 ```
+
+Legacy commands like `python stock_analysis_orchestrator.py` still work via root shims; implementations live under `scripts/`.
 
 ## Analysis Pipeline
 

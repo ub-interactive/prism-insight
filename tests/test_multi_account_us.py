@@ -1,9 +1,18 @@
 import sqlite3
 import sys
 import types
+from datetime import datetime
 from pathlib import Path
 
-import pending_order_batch as pending_batch
+import pytz
+
+import scripts.pending_order_batch as pending_batch
+
+KST = pytz.timezone("Asia/Seoul")
+
+
+def _kst_today_str() -> str:
+    return datetime.now(KST).strftime("%Y-%m-%d")
 
 
 class _FakeTrader:
@@ -52,12 +61,13 @@ def test_pending_order_query_uses_canonical_table(tmp_path):
         """
         INSERT INTO pending_orders
         (account_key, account_name, product_code, mode, ticker, order_type, limit_price, buy_amount, exchange, status, created_at)
-        VALUES ('vps:batch-account:01', 'batch-account', '03', 'real', 'AAPL', 'buy', 190.0, 500.0, 'NASD', 'pending', date('now'))
-        """
+        VALUES ('vps:batch-account:01', 'batch-account', '03', 'real', 'AAPL', 'buy', 190.0, 500.0, 'NASD', 'pending', ?)
+        """,
+        (_kst_today_str(),),
     )
     conn.commit()
 
-    rows = pending_batch.get_pending_orders(conn, today_str=conn.execute("SELECT date('now')").fetchone()[0])
+    rows = pending_batch.get_pending_orders(conn, today_str=_kst_today_str())
     conn.close()
 
     assert len(rows) == 1
@@ -92,8 +102,9 @@ def test_pending_order_batch_processes_with_account_context(monkeypatch, tmp_pat
         """
         INSERT INTO pending_orders
         (account_key, account_name, product_code, mode, ticker, order_type, limit_price, buy_amount, exchange, status, created_at)
-        VALUES ('vps:batch-account:01', 'batch-account', '03', 'real', 'AAPL', 'buy', 190.0, 500.0, 'NASD', 'pending', date('now'))
-        """
+        VALUES ('vps:batch-account:01', 'batch-account', '03', 'real', 'AAPL', 'buy', 190.0, 500.0, 'NASD', 'pending', ?)
+        """,
+        (_kst_today_str(),),
     )
     conn.commit()
     conn.close()

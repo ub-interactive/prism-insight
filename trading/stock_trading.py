@@ -29,9 +29,9 @@ from typing import Optional, Dict, List, Any
 import yaml
 import pytz
 
-# Path to directory where current file is located
+# Path to repository root (parent of trading/)
 TRADING_DIR = Path(__file__).parent
-PROJECT_ROOT = TRADING_DIR.parent.parent
+PROJECT_ROOT = TRADING_DIR.parent
 
 # Import KIS auth from parent trading directory
 import sys
@@ -879,7 +879,7 @@ class USStockTrading:
         from pathlib import Path
 
         try:
-            db_path = Path(__file__).resolve().parent.parent.parent / "stock_tracking_db.sqlite"
+            db_path = PROJECT_ROOT / "stock_tracking_db.sqlite"
             conn = sqlite3.connect(str(db_path))
             cursor = conn.cursor()
 

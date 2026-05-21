@@ -29,8 +29,12 @@ from tracking.trading_ops import (
     calculate_profit_rate,
     calculate_holding_days,
 )
-from tracking.journal import JournalManager
-from tracking.compression import CompressionManager
+from tracking.journal import USJournalManager
+from tracking.compression import USCompressionManager
+
+# Historical names kept for callers that relied on Korean-era tracking package imports.
+JournalManager = USJournalManager
+CompressionManager = USCompressionManager
 
 __all__ = [
     # Database

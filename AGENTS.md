@@ -16,13 +16,19 @@ Primary source material for project context lives in `CLAUDE.md` and supporting 
 
 ## Repository Map
 
-- `cores/`: main analysis engine, report generation, agent definitions, ChatGPT OAuth proxy
+- `cores/`: main analysis engine, shared report markdown (`report_generation.py`), agent definitions, ChatGPT OAuth proxy
 - `cores/agents/`: specialized analysis, communication, and trading agents
+- `scripts/`: operational CLIs and batch jobs
+- `integrations/`: firebase, Firecrawl, archive API/query
+- `reporting/`: PDF/report assembly (`report_generator`, etc.)
 - `trading/`: US trading integration and account handling
 - `tracking/`: journal, memory, trading state helpers
 - `messaging/`: Redis and GCP Pub/Sub messaging
-- `tests/`: targeted regression tests
+- `tests/`: targeted regression tests (`pytest.ini`: `pythonpath = .`)
 - `docs/`: setup, troubleshooting, and agent references
+- `examples/`: dashboards, subscriber examples
+- `repo_paths.py`: canonical `REPO_ROOT`
+- Root `*.py` shims: delegate to `scripts/` (same `python demo.py` paths as before)
 
 ## Preferred Commands
 

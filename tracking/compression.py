@@ -38,7 +38,11 @@ class USCompressionManager:
         """
         try:
             stats = {
-                "entries_by_layer": {},
+                "entries_by_layer": {
+                    "layer1_detailed": 0,
+                    "layer2_summarized": 0,
+                    "layer3_compressed": 0,
+                },
                 "active_intuitions": 0,
                 "active_principles": 0,
                 "oldest_uncompressed": None,
@@ -57,7 +61,8 @@ class USCompressionManager:
             layer_labels = {1: "layer1_detailed", 2: "layer2_summarized", 3: "layer3_compressed"}
             for row in self.cursor.fetchall():
                 layer = row[0] or 1
-                stats["entries_by_layer"][layer_labels.get(layer, f"layer{layer}")] = row[1]
+                label = layer_labels.get(layer, f"layer{layer}")
+                stats["entries_by_layer"][label] = row[1]
 
             # Active intuitions for US
             self.cursor.execute("""

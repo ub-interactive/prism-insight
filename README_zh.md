@@ -127,7 +127,7 @@ python3 demo.py TSLA --language ko  # Tesla (Korean report)
 
 > **获取 OpenAI API 密钥**：访问 [OpenAI Platform](https://platform.openai.com/api-keys)
 >
-> **可选**：将 [Perplexity API 密钥](https://www.perplexity.ai/) 添加到 `mcp_agent.config.yaml` 以启用新闻分析功能
+> **可选**：在 `.env` 中设置 `PERPLEXITY_API_KEY`（[Perplexity](https://www.perplexity.ai/)），用于增强新闻风格分析
 
 AI 生成的 PDF 报告将保存在 `pdf_reports/` 目录中。
 
@@ -173,11 +173,9 @@ python3 -m playwright install chromium
 # 3. Install perplexity-ask MCP server
 cd perplexity-ask && npm install && npm run build && cd ..
 
-# 4. Setup config
-cp mcp_agent.config.yaml.example mcp_agent.config.yaml
-cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
-# Edit mcp_agent.secrets.yaml with your OpenAI API key
-# Edit mcp_agent.config.yaml with KRX credentials (Kakao account)
+# 4. 配置 `.env`（仓库已附带默认 `mcp_agent.config.yaml`，不含明文密钥）
+cp .env.example .env
+# 编辑 `.env`：`OPENAI_API_KEY`、可选 MCP 密钥等（参阅 .env.example）
 
 # 5. Run analysis
 python stock_analysis_orchestrator.py --mode morning
@@ -189,9 +187,8 @@ python stock_analysis_orchestrator.py --mode morning
 # 1. Clone & Configure
 git clone https://github.com/dragon1086/prism-insight.git
 cd prism-insight
-cp mcp_agent.config.yaml.example mcp_agent.config.yaml
-cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
-# Edit config files with your API keys
+cp .env.example .env
+# 编辑 `.env`（密钥说明见 .env.example）。默认 `mcp_agent.config.yaml` 已随仓库提供。
 
 # 2. Build & Run
 docker compose up -d

@@ -59,13 +59,10 @@ cd prism-insight
 ### Step 2: Prepare Configuration Files
 
 ```bash
-# Core configuration (required)
-cp mcp_agent.config.yaml.example mcp_agent.config.yaml
-cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
+# LLM/vendor API keys live in `.env` — see `.env.example`.
+cp .env.example .env
 
-# Edit config files with your API keys
-# - mcp_agent.secrets.yaml: OpenAI API key
-# - mcp_agent.config.yaml: KRX credentials (Kakao account)
+# MCP layout + model overrides ship as tracked `mcp_agent.config.yaml` (no secrets inside).
 ```
 
 ### Step 3: Build and Run
@@ -126,14 +123,10 @@ pip install -r requirements.txt
 
 ### Step 3: Prepare Configuration Files
 
-Copy example files to create your configuration:
+Copy tuning / optional files:
 
 ```bash
-# Core configuration (required)
-cp mcp_agent.config.yaml.example mcp_agent.config.yaml
-cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
-
-# Environment variables (optional tuning & Firebase bridge)
+# OPENAI_API_KEY, ANTHROPIC_API_KEY, optional MCP vendor keys — copy template then edit (.env.example)
 cp .env.example .env
 
 # Streamlit dashboard (optional)
@@ -145,46 +138,22 @@ cp ./trading/config/kis_devlp.yaml.example ./trading/config/kis_devlp.yaml
 
 ### Step 4: Configure API Keys
 
-Edit `mcp_agent.secrets.yaml` with your API keys:
+Keys live in **`.env`** (loaded via `python-dotenv` wherever needed).
 
-```yaml
-# Required
-OPENAI_API_KEY: "sk-..."
-
-# Optional (for full features)
-ANTHROPIC_API_KEY: "sk-ant-..."
-FIRECRAWL_API_KEY: "fc-..."
-PERPLEXITY_API_KEY: "pplx-..."
+```bash
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+FIRECRAWL_API_KEY=fc-...
+PERPLEXITY_API_KEY=pplx-...
+# SEC Edgar MCP user-agent (required for sec-edgar-mcp polite access)
+SEC_EDGAR_USER_AGENT="Your Org (contact@yourdomain.example)"
 ```
 
-### Step 5: Configure MCP Servers
+### Step 5: Customize MCP Servers (optional)
 
-Edit `mcp_agent.config.yaml`:
+**`mcp_agent.config.yaml`** is versioned defaults (command lines, timeouts, model map). Edit locally if you add/remove MCP servers — keep secrets out of this file.
 
-```yaml
-execution_engine: asyncio
-
-mcp:
-  servers:
-    yahoo_finance:
-      command: "python3"
-      args: ["-m", "yahoo_finance_mcp"]
-
-    sec_edgar:
-      command: "python3"
-      args: ["-m", "sec_edgar_mcp"]
-
-    firecrawl: firecrawl-mcp
-    perplexity: npx -y @perplexity-ai/mcp-server
-    sqlite: uv run mcp-server-sqlite --directory sqlite stock_tracking_db.sqlite
-    time: uvx mcp-server-time
-
-openai:
-  default_model: gpt-5
-  reasoning_effort: medium
-```
-
-> **Note**: Configure only US-market MCP servers for this repository.
+> **Note**: Use only US-market MCP servers documented in this repository.
 
 ### Step 6: Install Playwright (PDF Generation)
 
@@ -205,7 +174,7 @@ See [Platform-Specific Setup](#platform-specific-setup) for detailed instruction
 npm install -g @perplexity-ai/mcp-server
 
 # Option B: Use npx (no install needed, runs on demand)
-# The mcp_agent.config.yaml.example already uses npx
+# Tracked `mcp_agent.config.yaml` already uses `npx` for Perplexity
 ```
 
 ### Step 8: Install Korean Fonts (Linux Only)
@@ -220,8 +189,8 @@ Required for Korean text in charts. See [Platform-Specific Setup](#platform-spec
 
 | File | Purpose |
 |------|---------|
-| `mcp_agent.config.yaml` | MCP server configuration |
-| `mcp_agent.secrets.yaml` | API keys and secrets |
+| `mcp_agent.config.yaml` | Tracked MCP server layout + OpenAI model map (no API keys). |
+| `.env` | Secrets + runtime toggles: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, vendor MCP keys, Firebase, etc. |
 
 ### Companion app / Firebase (Optional)
 
@@ -415,7 +384,7 @@ Successful run will create:
 |-------|----------|
 | Playwright PDF fails | Run `python3 -m playwright install chromium` |
 | Korean fonts missing | Install fonts and run `fc-cache -fv` |
-| MCP server fails | Check API keys in `mcp_agent.secrets.yaml` |
+| MCP server fails | Check API keys in `.env` and process environment |
 | Kakao auth fails | Disable 2-step verification or confirm in app |
 | JSON parsing error | Library auto-repairs; check logs for details |
 

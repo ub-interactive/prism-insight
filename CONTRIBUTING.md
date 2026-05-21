@@ -42,8 +42,6 @@ pip install -r requirements.txt
 # Prepare configuration files
 cp .env.example .env
 cp config.py.example config.py
-cp mcp_agent.config.yaml.example mcp_agent.config.yaml
-cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
 ```
 
 ### Test Environment

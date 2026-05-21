@@ -15,9 +15,8 @@ Please answer these:
    - `api_key`  (using deepseek openai compatible mode, api key see below)
 
 5. **Do you already have these files ready?**  
-   - `.env`  missing
-   - `mcp_agent.secrets.yaml`  missing
-   - `mcp_agent.config.yaml`  missing
+   - `.env`  missing  
+   - `mcp_agent.config.yaml`  ships with repo (edit locally only if customizing MCP servers)  
    - `trading/config/kis_devlp.yaml`  missing
 
 6. **US sentiment (optional):** do you want Adanos enabled?  

@@ -3,8 +3,8 @@ set -euo pipefail
 
 PROJECT_ROOT="/app/prism-insight"
 CONFIG_DIR="${PROJECT_ROOT}/quickstart-config"
-SECRETS_PATH="${CONFIG_DIR}/mcp_agent.secrets.yaml"
 CONFIG_PATH="${CONFIG_DIR}/mcp_agent.config.yaml"
+BUNDLED_CONFIG="${PROJECT_ROOT}/mcp_agent.config.yaml"
 
 echo "========================================"
 echo "  PRISM-INSIGHT Quick Start"
@@ -20,56 +20,23 @@ if [ -z "${OPENAI_API_KEY:-}" ]; then
     exit 1
 fi
 
-if [ ! -f "${SECRETS_PATH}" ]; then
-    echo "[INIT] Creating quickstart secrets config..."
-    cat > "${SECRETS_PATH}" <<EOF
-\$schema: ../../schema/mcp-agent.config.schema.json
-
-openai:
-  api_key: ${OPENAI_API_KEY}
-
-anthropic:
-  api_key: ""
-EOF
+if [ ! -f "${BUNDLED_CONFIG}" ]; then
+    echo "[ERROR] Missing bundled ${BUNDLED_CONFIG} in image build."
+    exit 1
 fi
 
-echo "[INIT] Writing quickstart MCP config..."
-{
-    cat <<EOF
-\$schema: ../../schema/mcp-agent.config.schema.json
+if [ ! -f "${CONFIG_PATH}" ]; then
+    echo "[INIT] Seeding MCP config from repository defaults..."
+    cp "${BUNDLED_CONFIG}" "${CONFIG_PATH}"
+fi
 
-execution_engine: asyncio
-logger:
-  type: console
-  level: info
+# Legacy images / volumes may have shipped mcp_agent.secrets.yaml — keys now live only in `.env`/env.
+rm -f "${PROJECT_ROOT}/mcp_agent.secrets.yaml"
 
-mcp:
-  servers:
-    yahoo_finance:
-      command: "uvx"
-      args: ["--from", "yahoo-finance-mcp", "yahoo-finance-mcp"]
-      read_timeout_seconds: 120
-EOF
-    if [ -n "${PERPLEXITY_API_KEY:-}" ]; then
-        cat <<EOF
-    perplexity:
-      command: "npx"
-      args: ["-y", "@perplexity-ai/mcp-server"]
-      env:
-        PERPLEXITY_API_KEY: "${PERPLEXITY_API_KEY}"
-EOF
-    fi
-    cat <<EOF
-openai:
-  default_model: gpt-5.1
-  reasoning_effort: high
-EOF
-} > "${CONFIG_PATH}"
-
-cp "${SECRETS_PATH}" "${PROJECT_ROOT}/mcp_agent.secrets.yaml"
+echo "[INIT] Applying quickstart MCP config to repo root..."
 cp "${CONFIG_PATH}" "${PROJECT_ROOT}/mcp_agent.config.yaml"
 
-echo "[INIT] Quickstart config ready"
+echo "[INIT] Quickstart config ready (LLM/API keys via OPENAI_* in compose environment and/or .env)"
 echo "[INIT] Reports will be written to ./quickstart-output/"
 echo "[INIT] Run a demo with:"
 echo "       docker exec -it prism-quickstart python3 demo.py NVDA"

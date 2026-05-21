@@ -3,12 +3,10 @@
 Firecrawl Client Module
 
 Singleton FirecrawlApp instance with helper functions for search and agent calls.
-API key is loaded from FIRECRAWL_API_KEY env var or mcp_agent.config.yaml fallback.
+API key is read from FIRECRAWL_API_KEY (`.env` or environment).
 """
 import logging
 import os
-from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -22,25 +20,14 @@ _firecrawl_app = None
 
 
 def _get_api_key() -> str:
-    """Resolve Firecrawl API key from environment or mcp_agent.config.yaml."""
+    """Resolve Firecrawl API key from environment (standard: FIRECRAWL_API_KEY in .env)."""
     key = os.getenv("FIRECRAWL_API_KEY")
-    if key:
-        return key
+    if key and key.strip():
+        return key.strip()
 
-    # Fallback: read from mcp_agent.config.yaml
-    try:
-        import yaml
-        config_path = str(Path(__file__).resolve().parents[1] / "mcp_agent.config.yaml")
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-        key = config.get("mcp", {}).get("servers", {}).get("firecrawl", {}).get("env", {}).get("FIRECRAWL_API_KEY")
-        if key:
-            logger.info("FIRECRAWL_API_KEY loaded from mcp_agent.config.yaml")
-            return key
-    except Exception as e:
-        logger.warning(f"Failed to read mcp_agent.config.yaml: {e}")
-
-    raise ValueError("FIRECRAWL_API_KEY not found in environment or mcp_agent.config.yaml")
+    raise ValueError(
+        "FIRECRAWL_API_KEY is not set. Add it to your .env — see .env.example."
+    )
 
 
 def get_firecrawl_app():

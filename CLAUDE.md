@@ -95,17 +95,17 @@ Specialized agents are organized across `cores/agents/` and orchestrated sequent
 
 | File | Purpose |
 |------|---------|
-| `.env` | Redis/GCP/Firebase toggles, `PRISM_OPENAI_AUTH_MODE`, optional Adanos signals |
-| `mcp_agent.secrets.yaml` | API keys (OpenAI, Anthropic, Firecrawl, etc.) |
-| `mcp_agent.config.yaml` | MCP server configuration |
+| `.env` | Redis/GCP/Firebase toggles, `OPENAI_*` / `ANTHROPIC_*` / MCP vendor keys, `PRISM_OPENAI_AUTH_MODE`, optional Adanos signals |
+| `mcp_agent.config.yaml` | Tracked MCP server configuration (no API keys inside) |
 | `trading/config/kis_devlp.yaml` | KIS trading API credentials |
 
-**Setup**: Copy `*.example` files and fill in credentials.
+**Setup**: Copy `.env.example` → `.env` and fill in secrets. Repo ships default `mcp_agent.config.yaml`.
 
 ### Key Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
+| `OPENAI_API_KEY` | ⚠️ (unless ChatGPT OAuth) | GPT models via MCP Agent (`api_key` auth mode) |
 | `PRISM_OPENAI_AUTH_MODE` | ✅ | `api_key` (default) or `chatgpt_oauth` |
 | `ADANOS_API_KEY` | ⬜ | US social sentiment (Adanos). Omit to disable |
 | `ENABLE_TRADING_JOURNAL` | ⬜ | `true` to enable trading journal agent |

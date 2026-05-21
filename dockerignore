@@ -50,7 +50,6 @@ logs/
 
 # 설정 파일 (예시 파일은 포함)
 .env
-mcp_agent.config.yaml
 mcp_agent.secrets.yaml
 trading/config/kis_devlp.yaml
 

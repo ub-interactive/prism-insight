@@ -101,15 +101,7 @@ pwd
 # Create and edit .env file
 cp .env.example .env
 nano .env
-# Or use your preferred editor: vi, vim, code, etc.
-
-# Create and edit MCP config file
-cp mcp_agent.config.yaml.example mcp_agent.config.yaml
-nano mcp_agent.config.yaml
-
-# Create and edit MCP secrets file
-cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
-nano mcp_agent.secrets.yaml
+# Keys (OpenAI, optional vendor MCP APIs) belong here — tracked `mcp_agent.config.yaml` has no embedded secrets.
 ```
 
 **Important**: This step must be done **before running the container** on your local computer!
@@ -164,71 +156,37 @@ docker exec -it prism-insight-container /bin/bash
 
 ## ⚙️ Configuration Files
 
-### 3 Required Configuration Files
+### Configuration files (`.env` + tracked `mcp_agent.config.yaml`)
 
 #### 1. `.env` File
 ```bash
+OPENAI_API_KEY=sk-...
+# Optional vendor MCP keys (inherit into subprocesses; see .env.example):
+# ANTHROPIC_API_KEY=...
+# FIRECRAWL_API_KEY=...
+# PERPLEXITY_API_KEY=...
+# SEC_EDGAR_USER_AGENT=Your Org (contact@example.com)
+
 # Optional Firebase / PRISM-Mobile bridge (defaults off)
 # FIREBASE_BRIDGE_ENABLED=false
 # GOOGLE_APPLICATION_CREDENTIALS=/path/to/firebase-admin.json
-
-# Typical LLM/API keys instead live under mcp_agent.secrets.yaml
 ```
 
 #### 2. `mcp_agent.config.yaml` File
-```yaml
-$schema: ../../schema/mcp-agent.config.schema.json
-execution_engine: asyncio
-logger:
-  type: console
-  level: info
-mcp:
-  servers:
-    firecrawl:
-      command: "npx"
-      args: [ "-y", "firecrawl-mcp" ]
-      env:
-        FIRECRAWL_API_KEY: "your_firecrawl_api_key_here"
-    yahoo_finance:
-      command: "uvx"
-      args: ["--from", "yahoo-finance-mcp", "yahoo-finance-mcp"]
-    perplexity:
-      command: "npx"
-      args:
-        [
-          "-y",
-          "@perplexity-ai/mcp-server"
-        ]
-      env:
-        PERPLEXITY_API_KEY: "your_perplexity_api_key_here"
-    sqlite:
-      command: "uv"
-      args: ["--directory", "sqlite", "run", "mcp-server-sqlite", "--db-path", "stock_tracking_db"]
-    time:
-      command: "uvx"
-      args: ["mcp-server-time"]
-openai:
-  default_model: gpt-5.1
-  reasoning_effort: high
-```
 
-#### 3. `mcp_agent.secrets.yaml` File
+Tracked in Git (no embedded API keys). Use `.env` for `FIRECRAWL_API_KEY`, `PERPLEXITY_API_KEY`, `SEC_EDGAR_USER_AGENT`, etc.—the MCP launcher merges subprocess env with the host environment (`get_default_environment()`).
+
 ```yaml
-$schema: ../../schema/mcp-agent.config.schema.json
-openai:
-  api_key: your_openai_api_key_here
-anthropic:
-  api_key: your_anthropic_api_key_here
+# See repository root `mcp_agent.config.yaml` for the authoritative layout.
 ```
 
 ### Security Notes
 ```bash
 # Set file permissions
 chmod 600 .env
-chmod 600 mcp_agent.secrets.yaml
 
-# Verify Git exclusion
-cat .gitignore | grep -E "\.env|secrets"
+# Verify Git excludes local secret files (.env stays gitignored even if recreated)
+grep -nE '^\.env$|mcp_agent\.secrets\.yaml' .gitignore || true
 ```
 
 ---
@@ -517,7 +475,6 @@ docker-compose restart
 # Uncomment these lines in docker-compose.yml:
 # - ./.env:/app/prism-insight/.env
 # - ./mcp_agent.config.yaml:/app/prism-insight/mcp_agent.config.yaml
-# - ./mcp_agent.secrets.yaml:/app/prism-insight/mcp_agent.secrets.yaml
 ```
 
 ### 3. Command Execution Location
@@ -570,11 +527,10 @@ which python
 ### API Key Recognition Error
 
 ```bash
-# 1. Check config files on host/local
-cat .env
-cat mcp_agent.secrets.yaml
+# 1. Check config on host/local
+grep -v '^#' .env | grep -v '^$' || true
 
-# 2. Verify proper mounting in container (on host/local)
+# 2. Verify `.env` is mounted correctly (on host/local)
 docker-compose exec prism-insight cat /app/prism-insight/.env
 
 # 3. Restart container (on host/local)

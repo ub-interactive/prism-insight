@@ -46,7 +46,6 @@ tmp*.md
 
 # Secrets (should be mounted)
 .env
-mcp_agent.config.yaml
 mcp_agent.secrets.yaml
 trading/config/kis_devlp.yaml
 

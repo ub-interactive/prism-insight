@@ -1,5 +1,6 @@
-# Same defaults as tracked `mcp_agent.config.yaml`. Copy only if you need a
-# local template to diff against; secrets belong in `.env` (see .env.example).
+# Committed MCP layout — keep API keys out of YAML; put them only in `.env` (`.env.example`).
+# OPENAI_API_KEY, ANTHROPIC_API_KEY, FIRECRAWL_API_KEY, PERPLEXITY_API_KEY,
+# SEC_EDGAR_USER_AGENT (see .env.example).
 $schema: ../../schema/mcp-agent.config.schema.json
 
 execution_engine: asyncio
@@ -17,7 +18,7 @@ mcp:
   servers:
     webresearch:
       command: "npx"
-      args: [ "-y", "@mzxrai/mcp-webresearch@latest" ]
+      args: ["-y", "@mzxrai/mcp-webresearch@latest"]
       read_timeout_seconds: 120
 
     firecrawl:
@@ -42,31 +43,21 @@ mcp:
           "run",
           "mcp-server-sqlite",
           "--db-path",
-          "stock_tracking_db"
+          "stock_tracking_db",
         ]
 
     time:
       command: "uvx"
       args:
         [
-          "mcp-server-time"
+          "mcp-server-time",
         ]
 
-    # ==========================================================================
-    # US Stock Market Servers
-    # ==========================================================================
-
-    # Yahoo Finance MCP server for US stock data (PyPI: yahoo-finance-mcp)
-    # Python-based, uses stable yfinance library (not deprecated yahoo-finance2)
-    # Provides: OHLCV, company info, financials, institutional holders, news, recommendations
     yahoo_finance:
       command: "uvx"
       args: ["--from", "yahoo-finance-mcp", "yahoo-finance-mcp"]
       read_timeout_seconds: 120
 
-    # SEC EDGAR MCP server for official SEC filings and financial data (PyPI: sec-edgar-mcp)
-    # FREE - no API key required, just user agent for rate limiting
-    # Provides: 10-K/10-Q/8-K filings, XBRL financials, insider trading
     sec_edgar:
       command: "uvx"
       args: ["--from", "sec-edgar-mcp", "sec-edgar-mcp"]
@@ -75,7 +66,6 @@ mcp:
 openai:
   default_model: gpt-5.1
   reasoning_effort: high
-  # Optional model overrides by workflow (keys used by cores/model_config.py)
   models:
     report_generation: gpt-5.4-mini
     us_journal: gpt-5.4-mini
@@ -93,19 +83,9 @@ openai:
     - gpt-4.1-mini
     - gpt-4.1
     - gpt-4.1-nano
-  # When set, overrides every bundled ChatGPT-proxy Codex map target (see chatgpt_proxy_model_map).
-  # chatgpt_proxy_fallback_model: gpt-5.4-mini
-  # Explicit per-alias overrides for Codex-compatible gateway:
-  # chatgpt_proxy_model_map:
-  #   gpt-4o: gpt-5.4-mini
   chatgpt_proxy_request_default_model: gpt-4o
 
 anthropic:
   default_model: claude-sonnet-4-6
   models:
     firecrawl_analyst: claude-sonnet-4-6
-
-# Optional: Spark model for firecrawl_client.firecrawl_agent (default spark-1-mini)
-# firecrawl:
-#   spark_agent_model: spark-1-pro
-

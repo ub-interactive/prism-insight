@@ -197,9 +197,10 @@ mcp:
     your_server: python3 -m your_mcp_server
 ```
 
-```yaml
-# 3. Add credentials to mcp_agent.secrets.yaml (if needed)
-YOUR_SERVER_API_KEY: "your-api-key"
+```bash
+# 3. Put vendor keys in `.env` (never commit):
+# FIRECRAWL_API_KEY=...
+# PERPLEXITY_API_KEY=...
 ```
 
 ```python

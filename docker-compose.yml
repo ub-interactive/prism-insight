@@ -24,7 +24,6 @@ services:
       # 설정 파일 (호스트에서 수정 가능)
       - ./.env:/app/prism-insight/.env
       - ./mcp_agent.config.yaml:/app/prism-insight/mcp_agent.config.yaml
-      - ./mcp_agent.secrets.yaml:/app/prism-insight/mcp_agent.secrets.yaml
 
       # 로그 파일
       - ./logs:/app/prism-insight/logs

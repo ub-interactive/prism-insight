@@ -75,8 +75,8 @@ grep -n "yahoo_finance" mcp_agent.config.yaml
 # 3. Smoke-check the package (needs network).
 uvx --from yahoo-finance-mcp yahoo-finance-mcp --help || true
 
-# 4. Confirm API-related secrets for other MCPs (firecrawl, perplexity) in mcp_agent.secrets.yaml / env blocks.
-cat mcp_agent.secrets.yaml | head
+# 4. Confirm API-related secrets for other MCPs (firecrawl, perplexity) in `.env`:
+grep -v '^#' .env | grep -E 'FIRECRAWL_|PERPLEXITY_' || true
 ```
 
 ---

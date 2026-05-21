@@ -67,17 +67,11 @@ ARCHIVE_API_URL=http://127.0.0.1:8765   # SSH 터널 경유
 ARCHIVE_API_KEY=<db-server와 동일 값>
 ```
 
-### API 키 (선택 파일)
+### LLM / MCP API 키 (`.env` 전용)
 
-`mcp_agent.secrets.yaml`:
-```yaml
-openai:
-  api_key: sk-...
-anthropic:
-  api_key: sk-ant-...
-```
+OpenAI, Anthropic, Perplexity, Firecrawl 등은 레포에서 제거된 secrets YAML 파일 없이 **`.env`** 에만 두세요 (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY` 등 — `.env.example` 참조).
 
-Perplexity / Firecrawl 키는 `mcp_agent.config.yaml`의 각 서버 `env:` 블록에 넣습니다 (예시는 `mcp_agent.config.yaml.example` 참조).
+Perplexity · Firecrawl 는 **`.env`**의 `PERPLEXITY_API_KEY`, `FIRECRAWL_API_KEY` 로 설정합니다. `mcp_agent.config.yaml` 은 MCP 서버 정의만 포함합니다(Git 에서 추적, 비밀 값 없음). 로컬에서만 구조를 덮어쓰려면 `mcp_agent.config.yaml.example` 을 참고해 편집합니다.
 
 ### 전체 환경변수 레퍼런스
 
@@ -108,9 +102,7 @@ npm install -g npx   # MCP 서버용
 
 ```bash
 cp .env.example .env
-cp mcp_agent.config.yaml.example mcp_agent.config.yaml
-cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
-# 위 3개 파일 편집하여 토큰/키 채우기
+# 저장소에 포함된 기본 `mcp_agent.config.yaml` 사용 또는 로컬에서 편집 — `.env`에 API 키 입력
 ```
 
 ### Step 3. DB 마이그레이션
@@ -320,7 +312,7 @@ systemctl enable --now archive-tunnel              # app-server
 - [ ] `ARCHIVE_API_HOST=127.0.0.1` — 공용 인터넷 노출 금지
 - [ ] `ss -tln | grep 8765`로 바인드 확인
 - [ ] db-server `authorized_keys`에서 app-server 키에 `command="echo tunnel-only", permitopen="127.0.0.1:8765"` 제한 적용
-- [ ] `mcp_agent.secrets.yaml` git ignored
+- [ ] `.env` git ignored (`chmod 600 .env`)
 - [ ] `.gitignore`에 `archive.db*`, `*.db`, `logs/`, `.env` 포함
 - [ ] cron 로그 주기적 로테이션 (logrotate)
 

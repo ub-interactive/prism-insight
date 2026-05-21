@@ -18,31 +18,28 @@ import sys
 import subprocess
 import time
 from datetime import datetime
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 _repo = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_repo))
 from repo_paths import REPO_ROOT
 
 project_root = REPO_ROOT
+load_dotenv(project_root / ".env")
 
 from cores.analysis import analyze_us_stock
 
 
 def check_perplexity_configured() -> bool:
-    """Check if Perplexity API key is configured."""
-    import yaml
-    config_path = project_root / "mcp_agent.config.yaml"
-    if not config_path.exists():
+    """True when PERPLEXITY_API_KEY is set (.env or process environment)."""
+    key = (os.getenv("PERPLEXITY_API_KEY") or "").strip()
+    if not key or key.upper() == "YOUR_API_KEY":
         return False
-    try:
-        with open(config_path, "r") as f:
-            config = yaml.safe_load(f)
-        perplexity_key = config.get("mcp", {}).get("servers", {}).get("perplexity", {}).get("env", {}).get("PERPLEXITY_API_KEY", "")
-        # Check if it's a real key (not placeholder)
-        return perplexity_key and perplexity_key not in ["example key", "", "your-api-key", "YOUR_API_KEY"]
-    except Exception:
-        return False
+    placeholders_lower = {"", "your-api-key", "example key"}
+    return key.lower() not in placeholders_lower
 
 
 def get_company_name(ticker: str) -> str:

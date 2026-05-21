@@ -61,7 +61,7 @@ Avoid broad production-like runs unless the task requires them.
 ## Change Rules
 
 - Default to safe paths: prefer `--dry-run`, demo mode, or isolated tests.
-- Do not change or commit real credentials, tokens, or secrets in `.env`, `mcp_agent.secrets.yaml`, or `trading/config/kis_devlp.yaml`.
+- Do not commit real credentials, tokens, or secrets in `.env` or `trading/config/kis_devlp.yaml`.
 - Treat generated logs, PDFs, JSON outputs, and SQLite databases as user data unless the task explicitly targets them.
 - Keep changes narrow and consistent with existing patterns; this repo has substantial behavior encoded in prompts and orchestration order.
 

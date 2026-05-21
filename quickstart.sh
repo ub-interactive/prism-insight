@@ -66,20 +66,18 @@ echo -e "${BLUE}[3/5]${NC} Installing Playwright for PDF generation..."
 python3 -m playwright install chromium > /dev/null 2>&1
 echo -e "       Playwright installed ✓"
 
-# Configure API keys
+# Configure API keys (.env — mcp_agent.config.yaml stays committed defaults)
 echo -e "${BLUE}[4/5]${NC} Configuring API keys..."
-cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
-cp mcp_agent.config.yaml.example mcp_agent.config.yaml
-
-# Update the secrets file with the API key
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-    sed -i '' "s/example key/$OPENAI_API_KEY/" mcp_agent.secrets.yaml
-else
-    # Linux
-    sed -i "s/example key/$OPENAI_API_KEY/" mcp_agent.secrets.yaml
+touch .env
+if [ ! -s .env ] && [ -f .env.example ]; then
+    cp .env.example .env
 fi
-echo -e "       API key configured ✓"
+if ! grep -q '^OPENAI_API_KEY=' .env 2>/dev/null; then
+    printf '\nOPENAI_API_KEY=%s\n' "$OPENAI_API_KEY" >> .env
+else
+    echo -e "${YELLOW}       OPENAI_API_KEY already present in .env (left unchanged).${NC}"
+fi
+echo -e "       OPENAI_API_KEY stored in .env ✓"
 
 # Run demo analysis (single stock report, not full pipeline)
 echo -e "${BLUE}[5/5]${NC} Generating AI analysis report for Apple (AAPL)..."

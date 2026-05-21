@@ -80,8 +80,6 @@ RUN fc-cache -fv || true
 
 # 설정 파일 복사 (예시 파일들)
 RUN cp .env.example .env && \
-    cp mcp_agent.config.yaml.example mcp_agent.config.yaml && \
-    cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml && \
     cp trading/config/kis_devlp.yaml.example trading/config/kis_devlp.yaml
 
 # SQLite 데이터베이스 디렉토리 생성

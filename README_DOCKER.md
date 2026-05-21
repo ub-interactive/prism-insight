@@ -26,20 +26,21 @@ Run Ubuntu 24.04-based AI stock analysis system easily with Docker.
 - **Node.js**: 22.x LTS
 - **UV**: Python package manager
 - **Playwright**: Chromium-based PDF generation (modern HTML to PDF converter)
-- **Korean Fonts**: Nanum font family
-- **Cron**: Built-in scheduled task automation (KR/US stock analysis)
+- **Korean Fonts**: Nanum font family (Korean Telegram/report text)
+- **Cron**: Scheduled task automation (US stock analysis pipelines)
 
 #### Python Packages
 - OpenAI API (GPT-4.1, GPT-5.1)
 - Anthropic API (Claude Sonnet 4.5)
 - MCP Agent and related servers
-- pykrx (Korean stock data)
+- yfinance / US market data stack (via Yahoo Finance MCP in config)
 - matplotlib, seaborn (data visualization)
 - All packages from project requirements.txt
 
 #### MCP Servers
-- **kospi-kosdaq**: Korean stock data
-- **perplexity-ask**: AI search
+- **yahoo_finance**: US equities OHLCV and fundamentals (`yahoo-finance-mcp`)
+- **sec_edgar** (optional): SEC filings (`sec-edgar-mcp`)
+- **perplexity**: AI search
 - **firecrawl**: Web crawling
 - **sqlite**: Database
 - **time**: Time management
@@ -190,12 +191,16 @@ mcp:
       args: [ "-y", "firecrawl-mcp" ]
       env:
         FIRECRAWL_API_KEY: "your_firecrawl_api_key_here"
-    kospi_kosdaq:
-      command: "python3"
-      args: ["-m", "kospi_kosdaq_stock_server"]
+    yahoo_finance:
+      command: "uvx"
+      args: ["--from", "yahoo-finance-mcp", "yahoo-finance-mcp"]
     perplexity:
-      command: "node"
-      args: ["perplexity-ask/dist/index.js"]
+      command: "npx"
+      args:
+        [
+          "-y",
+          "@perplexity-ai/mcp-server"
+        ]
       env:
         PERPLEXITY_API_KEY: "your_perplexity_api_key_here"
     sqlite:
@@ -309,10 +314,12 @@ Cron job outputs are saved to `/app/prism-insight/logs/`:
 
 | Log File | Description |
 |----------|-------------|
-| `kr_morning_YYYYMMDD.log` | KR morning batch output |
-| `kr_afternoon_YYYYMMDD.log` | KR afternoon batch output |
-| `us_morning_YYYYMMDD.log` | US morning batch output |
-| `us_afternoon_YYYYMMDD.log` | US afternoon batch output |
+| `morning_YYYYMMDD.log` | US morning orchestrator run (`--mode morning`) |
+| `midday_YYYYMMDD.log` | US midday orchestrator run |
+| `afternoon_YYYYMMDD.log` | US afternoon orchestrator run |
+| `pending_orders_YYYYMMDD.log` | Reserved US pending order batch |
+| `performance_YYYYMMDD.log` | Performance tracker batch |
+| `dashboard.log` | Dashboard JSON generator |
 | `backup.log` | Config backup logs |
 | `cleanup.log` | Log cleanup logs |
 | `compression.log` | Memory compression logs |
@@ -321,8 +328,7 @@ Cron job outputs are saved to `/app/prism-insight/logs/`:
 
 | File Type | Retention | Frequency |
 |-----------|-----------|-----------|
-| KR log files | **7 days** | Daily 03:00 |
-| US log files | **30 days** | Daily 03:30 |
+| Log files (non-backup) | **30 days** | Daily cleanup job |
 | Trigger JSON | 7 days | Daily 03:00 |
 | Config backups | **7 days** | Daily 02:00 |
 
@@ -379,18 +385,15 @@ EOF
 
 ```bash
 python3 << 'EOF'
-from pykrx import stock
-from datetime import datetime, timedelta
-
-today = datetime.now().strftime("%Y%m%d")
-week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
+import yfinance as yf
 
 try:
-    df = stock.get_market_ohlcv(week_ago, today, "005930")
-    print("✅ Samsung Electronics stock data query successful!")
-    print(df.tail())
+    t = yf.Ticker("AAPL")
+    hist = t.history(period="5d")
+    print("✅ Yahoo Finance (yfinance) US quote query successful!")
+    print(hist.tail())
 except Exception as e:
-    print(f"⚠️ Error (may be weekend/holiday): {e}")
+    print(f"⚠️ Error (network or dependency): {e}")
 EOF
 ```
 

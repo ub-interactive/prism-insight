@@ -37,7 +37,7 @@ class TestJSONParser:
   "investment_period": "단기",
   "rationale": "밸류에이션 매력 제한(PER N/A, PBR 높음)과 유동주식 6.56%의 극단적 변동성. 4만~4.5만원 지지 구간 인접은 기술적 반등 여지. 거래대금 급감·외국인 수급 변동성으로 모멘텀 약화.",
   "sector": "자동차 유통/모빌리티",
-  "market_condition": "KOSPI 강세·KOSDAQ 중립, 전체 리스크 중간. 본 종목 거래대금 전일 대비 -76.9%로 관망세/모멘텀 둔화. 외국인 수급 변화가 주가 단기 방향 핵심 변수.",
+  "market_condition": "S&P 500 강세·나스닥 중립 맥락, 변동성 중간. 본 종목 거래대금 전일 대비 감소로 관망/모멘텀 약화. 유동성·매크로 이벤트가 단기 방향 핵심 변수.",
   "max_portfolio_size": "6",
   "trading_scenarios": {
     "key_levels": {

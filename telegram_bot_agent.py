@@ -131,7 +131,7 @@ class TelegramBotAgent:
             caption (str, optional): File description
             retry_count (int): Current retry count
             max_retries (int): Maximum retry attempts
-            market (str, optional): Market identifier ('kr' or 'us'). Auto-detected if None.
+            market (str, optional): Market identifier (`us` only). Auto-detected if None.
 
         Returns:
             bool: Transmission success status

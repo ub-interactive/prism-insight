@@ -16,7 +16,7 @@ interface TradingHistoryPageProps {
   market?: Market
 }
 
-export function TradingHistoryPage({ history, summary, prismPerformance = [], marketCondition = [], market = "KR" }: TradingHistoryPageProps) {
+export function TradingHistoryPage({ history, summary, prismPerformance = [], marketCondition = [], market = "US" }: TradingHistoryPageProps) {
   const { t, language } = useLanguage()
 
   const formatCurrency = (value: number) => {
@@ -177,9 +177,9 @@ export function TradingHistoryPage({ history, summary, prismPerformance = [], ma
       return { alpha: 0, beta: 0, sharpeRatio: 0, informationRatio: 0 }
     }
 
-    // 시작 시점 KOSPI 지수
-    const startKospi = filteredMarket[0]?.kospi_index || 0
-    if (startKospi === 0) {
+    // 시작 시점 S&P 500 지수
+    const startSpx = filteredMarket[0]?.spx_index || 0
+    if (startSpx === 0) {
       return { alpha: 0, beta: 0, sharpeRatio: 0, informationRatio: 0 }
     }
 
@@ -191,7 +191,7 @@ export function TradingHistoryPage({ history, summary, prismPerformance = [], ma
 
     // 일별 수익률 계산
     // 프리즘: 누적 수익률의 차이 (이미 % 단위)
-    // 시장: KOSPI 지수의 일별 변화율 (% 단위)
+    // 시장: S&P 500 지수의 일별 변화율 (% 단위)
     const prismDailyReturns: number[] = []
     const marketDailyReturns: number[] = []
 
@@ -204,10 +204,12 @@ export function TradingHistoryPage({ history, summary, prismPerformance = [], ma
       const currPrism = prismMap.get(currDate) || 0
       const prismDailyReturn = currPrism - prevPrism // 이미 % 단위
 
-      // 시장: KOSPI 일별 수익률
-      const prevKospi = filteredMarket[i - 1].kospi_index
-      const currKospi = filteredMarket[i].kospi_index
-      const marketDailyReturn = prevKospi > 0 ? ((currKospi - prevKospi) / prevKospi) * 100 : 0
+      // 시장: S&P 500 일별 수익률
+      const prevSpx = filteredMarket[i - 1].spx_index
+      const currSpx = filteredMarket[i].spx_index
+      const marketDailyReturn = prevSpx > 0 && prevSpx !== undefined && currSpx !== undefined
+        ? ((currSpx - prevSpx) / prevSpx) * 100
+        : 0
 
       prismDailyReturns.push(prismDailyReturn)
       marketDailyReturns.push(marketDailyReturn)
@@ -219,8 +221,8 @@ export function TradingHistoryPage({ history, summary, prismPerformance = [], ma
 
     // 누적 수익률 계산 (최종 값)
     const latestPrismReturn = prismPerformance[prismPerformance.length - 1]?.prism_simulator_return || 0
-    const latestKospi = filteredMarket[filteredMarket.length - 1]?.kospi_index || startKospi
-    const totalMarketReturn = ((latestKospi - startKospi) / startKospi) * 100
+    const latestSpx = filteredMarket[filteredMarket.length - 1]?.spx_index || startSpx
+    const totalMarketReturn = ((latestSpx - startSpx) / startSpx) * 100
 
     // ============================================
     // 알파 (Alpha) - 단순 초과수익률

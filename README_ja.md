@@ -209,7 +209,7 @@ docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mod
 
 ## PRISM-INSIGHTとは？
 
-PRISM-INSIGHTは、**韓国（KOSPI/KOSDAQ）** および **米国（NYSE/NASDAQ）** 市場に対応した、**完全オープンソース・無料** のAI駆動型株式分析システムです。
+PRISM-INSIGHTは、**米国株式市場（NYSE/NASDAQ）** を対象とする、**完全オープンソース・無料** のAI駆動型株式分析システムです（レポート出力言語として韓国語などに対応）。
 
 ### コア機能
 - **急騰銘柄検出** — 異常な出来高・価格変動を示す銘柄の自動検出
@@ -276,24 +276,11 @@ PRISM-INSIGHTは、**韓国（KOSPI/KOSDAQ）** および **米国（NYSE/NASDAQ
 
 ---
 
-## トレーディングパフォーマンス
-
-### 韓国市場 — シーズン2
+## トレーディングパフォーマンス（米国株）
 
 | 指標 | 値 |
 |------|-----|
-| 期間 | 2025.09.30 〜 2026.03.24 |
-| 総取引数 | 86 |
-| 勝率 | 45.35% |
-| 平均取引リターン | +2.84% |
-| **累積リターン** | **+244.63%** |
-| 現在保有銘柄数 | 5銘柄 |
-
-### 米国市場（ベータ）
-
-| 指標 | 値 |
-|------|-----|
-| 期間 | 2026.01.28 〜 2026.03.21 |
+| 期間 | 2026.01.28 〜 2026.03.21（スナップショット／詳細はダッシュボード） |
 | 総取引数 | 13 |
 | 現在保有銘柄数 | 6銘柄 |
 
@@ -301,9 +288,7 @@ PRISM-INSIGHTは、**韓国（KOSPI/KOSDAQ）** および **米国（NYSE/NASDAQ
 
 ---
 
-## 米国株モジュール
-
-米国市場にも同じAI駆動ワークフローを適用：
+## US分析パイプラインの実行
 
 ```bash
 # Run US analysis
@@ -342,23 +327,19 @@ npm run dev
 # Visit http://localhost:3000
 ```
 
-**特徴**: ポートフォリオ概要、取引履歴、パフォーマンス指標、市場セレクター（韓国/米国）、KOSPI/KOSDAQとのリターン比較
+**特徴**: ポートフォリオ概要、取引履歴、パフォーマンス指標、S&P 500 / Nasdaq ベンチマークとの比較（サンプルダッシュボード）
 
 **ダッシュボードセットアップガイド**: [examples/dashboard/DASHBOARD_README.md](examples/dashboard/DASHBOARD_README.md)
 
 ---
 
-## MCPサーバー
+## MCPサーバー（米国株中心）
 
-### 韓国市場
-- **[kospi_kosdaq](https://github.com/dragon1086/kospi-kosdaq-stock-server)** — KRX株式データ
-- **[firecrawl](https://github.com/mendableai/firecrawl-mcp-server)** — Webクローリング
+- **[yahoo-finance-mcp](https://pypi.org/project/yahoo-finance-mcp/)** — OHLCV、財務・ニュース
+- **[sec-edgar-mcp](https://pypi.org/project/sec-edgar-mcp/)** — SEC開示・ファイリング
+- **[firecrawl](https://github.com/mendableai/firecrawl-mcp-server)** — Webクロール
 - **[perplexity](https://github.com/perplexityai/modelcontextprotocol)** — Web検索
-- **[sqlite](https://github.com/modelcontextprotocol/servers-archived)** — トレーディングシミュレーションDB
-
-### 米国市場
-- **[yahoo-finance-mcp](https://pypi.org/project/yahoo-finance-mcp/)** — OHLCV、財務データ
-- **[sec-edgar-mcp](https://pypi.org/project/sec-edgar-mcp/)** — SEC提出書類、インサイダー取引
+- **[sqlite](https://github.com/modelcontextprotocol/servers-archived)** — トレード/シミュレーションDB
 
 ---
 

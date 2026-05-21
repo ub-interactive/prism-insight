@@ -227,7 +227,7 @@ python demo.py AAPL`
           <div className="h-16 md:h-12 mb-8">
             <p className="text-xl md:text-2xl font-mono text-zinc-400">
               <TypewriterText
-                text="AI-powered Korean & US stock analysis with automated trading"
+                text="AI-powered US stock analysis with automated trading"
                 delay={40}
               />
             </p>
@@ -370,9 +370,9 @@ python demo.py AAPL`
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 mb-6">
                 <Globe className="w-8 h-8 text-emerald-400" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Dual Market Support</h3>
+              <h3 className="text-xl font-semibold mb-3">US Market Coverage</h3>
               <p className="text-zinc-500">
-                KOSPI/KOSDAQ and NYSE/NASDAQ. Analyze any market with the same powerful engine.
+                NYSE/NASDAQ focus with S&P 500 and Nasdaq macro context. One engine tuned for listed US equities.
               </p>
             </div>
 

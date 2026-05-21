@@ -307,7 +307,7 @@ async def notify(
 
     Args:
         message: The telegram message text
-        market: Market identifier ('kr' or 'us'). Auto-detected if None.
+        market: Market identifier (`us` only). Auto-detected if None.
         msg_type: Message type. Auto-detected if None.
         telegram_message_id: Telegram message ID for deep link
         channel_id: Telegram channel ID (for reference)

@@ -90,27 +90,19 @@ def setup_logging(log_file: str = None) -> logging.Logger:
 
 
 async def execute_buy_trade(ticker: str, company_name: str, logger: logging.Logger) -> Dict[str, Any]:
-    """
-    Execute actual buy order (async)
-
-    Args:
-        ticker: Stock ticker
-        company_name: Company name
-        logger: Logger
-
-    Returns:
-        Trade result dictionary
-    """
+    """Execute US buy via KIS overseas API."""
     try:
-        from trading.domestic_stock_trading import AsyncTradingContext
+        from trading.stock_trading import USStockTrading
 
-        async with AsyncTradingContext() as trading:
-            trade_result = await trading.async_buy_stock(stock_code=ticker)
+        trading = USStockTrading()
+        price_info = trading.get_current_price(ticker)
+        limit_price = price_info["current_price"] if price_info else None
+        trade_result = await trading.async_buy_stock(ticker=ticker, limit_price=limit_price)
 
         if trade_result['success']:
-            logger.info(f"✅ Actual buy successful: {company_name}({ticker}) - {trade_result['message']}")
+            logger.info(f"✅ US buy successful: {company_name}({ticker}) - {trade_result['message']}")
         else:
-            logger.error(f"❌ Actual buy failed: {company_name}({ticker}) - {trade_result['message']}")
+            logger.error(f"❌ US buy failed: {company_name}({ticker}) - {trade_result['message']}")
 
         return trade_result
 
@@ -123,27 +115,19 @@ async def execute_buy_trade(ticker: str, company_name: str, logger: logging.Logg
 
 
 async def execute_sell_trade(ticker: str, company_name: str, logger: logging.Logger) -> Dict[str, Any]:
-    """
-    Execute actual sell order (async)
-
-    Args:
-        ticker: Stock ticker
-        company_name: Company name
-        logger: Logger
-
-    Returns:
-        Trade result dictionary
-    """
+    """Execute US sell via KIS overseas API."""
     try:
-        from trading.domestic_stock_trading import AsyncTradingContext
+        from trading.stock_trading import USStockTrading
 
-        async with AsyncTradingContext() as trading:
-            trade_result = await trading.async_sell_stock(stock_code=ticker)
+        trading = USStockTrading()
+        price_info = trading.get_current_price(ticker)
+        limit_price = price_info["current_price"] if price_info else None
+        trade_result = await trading.async_sell_stock(ticker=ticker, limit_price=limit_price)
 
         if trade_result['success']:
-            logger.info(f"✅ Actual sell successful: {company_name}({ticker}) - {trade_result['message']}")
+            logger.info(f"✅ US sell successful: {company_name}({ticker}) - {trade_result['message']}")
         else:
-            logger.error(f"❌ Actual sell failed: {company_name}({ticker}) - {trade_result['message']}")
+            logger.error(f"❌ US sell failed: {company_name}({ticker}) - {trade_result['message']}")
 
         return trade_result
 

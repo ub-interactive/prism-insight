@@ -15,8 +15,8 @@ Usage:
 Endpoints:
     GET  /health
     GET  /stats
-    GET  /search?keyword=반도체&market=kr&limit=10
-    POST /query   {"question": "...", "market": "kr", "ticker": null}
+    GET  /search?keyword=semiconductor&market=us&limit=10
+    POST /query   {"question": "...", "market": "us", "ticker": null}
 """
 
 from __future__ import annotations
@@ -83,7 +83,7 @@ app = FastAPI(
 
 class QueryRequest(BaseModel):
     question: str
-    market: Optional[str] = None       # "kr" | "us" | None (both)
+    market: Optional[str] = "us"       # US-only; omit or "us"
     ticker: Optional[str] = None
     date_from: Optional[str] = None    # YYYY-MM-DD
     date_to: Optional[str] = None      # YYYY-MM-DD
@@ -165,8 +165,10 @@ async def stats(_key: str = Depends(_verify_key)):
 
         async with aiosqlite.connect(db_path) as conn:
             total = (await (await conn.execute("SELECT COUNT(*) FROM report_archive")).fetchone())[0]
-            kr    = (await (await conn.execute("SELECT COUNT(*) FROM report_archive WHERE market='kr'")).fetchone())[0]
-            us    = (await (await conn.execute("SELECT COUNT(*) FROM report_archive WHERE market='us'")).fetchone())[0]
+            cur = await conn.execute(
+                "SELECT market, COUNT(*) AS c FROM report_archive GROUP BY market ORDER BY market"
+            )
+            by_market = {row[0]: row[1] for row in await cur.fetchall()}
             enriched = (await (await conn.execute("SELECT COUNT(*) FROM report_enrichment")).fetchone())[0]
             cached   = (await (await conn.execute("SELECT COUNT(*) FROM insights")).fetchone())[0]
             date_row = await (await conn.execute(
@@ -175,8 +177,7 @@ async def stats(_key: str = Depends(_verify_key)):
 
         return StatsResponse(stats={
             "total_reports": total,
-            "kr_reports": kr,
-            "us_reports": us,
+            "reports_by_market": by_market,
             "enriched": enriched,
             "cached_insights": cached,
             "date_range": {
@@ -192,13 +193,19 @@ async def stats(_key: str = Depends(_verify_key)):
 @app.get("/search", response_model=SearchResponse)
 async def search(
     keyword: str,
-    market: Optional[str] = None,
+    market: Optional[str] = "us",
     limit: int = 10,
     _key: str = Depends(_verify_key),
 ):
     """FTS5 keyword search — fast, no LLM."""
     if not keyword or len(keyword.strip()) < 1:
         raise HTTPException(status_code=400, detail="keyword is required")
+    if market is not None and market not in ("us", ""):
+        raise HTTPException(
+            status_code=400,
+            detail="market must be 'us' or omitted (US-only archive)",
+        )
+    market = "us"
     limit = min(limit, 50)
 
     try:
@@ -228,7 +235,12 @@ async def query(req: QueryRequest, _key: str = Depends(_verify_key)):
         raise HTTPException(status_code=400, detail="question is required")
 
     question = req.question.strip()[:500]
-    market = req.market if req.market in ("kr", "us") else None
+    if req.market is not None and req.market not in ("us", ""):
+        raise HTTPException(
+            status_code=400,
+            detail="market must be 'us' or omitted (US-only archive)",
+        )
+    market: Optional[str] = "us"
 
     try:
         from cores.archive.query_engine import ask

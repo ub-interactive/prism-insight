@@ -13,13 +13,13 @@ from firebase_bridge import (
 )
 
 
-def test_detect_market_kr():
-    """Korean market detection."""
+def test_detect_market_always_us_legacy_korean_text():
+    """US-only runtime: Korean-looking alerts still classify as ``us``."""
     msg = "삼성전자(005930) 급등 포착\n현재가: 82,500원 (+5.2%)"
-    assert detect_market(msg) == 'kr'
+    assert detect_market(msg) == "us"
 
     msg2 = "코스피 3,200 돌파! 외국인 매수세 강화"
-    assert detect_market(msg2) == 'kr'
+    assert detect_market(msg2) == "us"
 
 
 def test_detect_market_us():
@@ -48,13 +48,13 @@ def test_detect_type_analysis():
 
 def test_detect_type_portfolio():
     """Portfolio type detection."""
-    msg = "포트폴리오 수익률 현황: +12.5%"
+    msg = "포트폴리오 현황: +12.5%"
     assert detect_type(msg) == 'portfolio'
 
 
 def test_detect_type_pdf():
-    """PDF type detection."""
-    msg = "삼성전자 분석 리포트 PDF 생성 완료"
+    """PDF type detection (.pdf substring before other keywords)."""
+    msg = "AAPL_20260301_report.pdf 업로드 완료"
     assert detect_type(msg) == 'pdf'
 
 
@@ -91,12 +91,12 @@ def test_extract_preview_long():
     assert preview.endswith('...')
 
 
-def test_extract_stock_info_kr():
-    """Korean stock info extraction."""
-    msg = "삼성전자(005930) 급등 포착"
+def test_extract_stock_info_us_ticker():
+    """US ticker extraction (ASCII symbol)."""
+    msg = "AAPL earnings beat (+3%)"
     code, name = extract_stock_info(msg)
-    assert code == '005930'
-    assert name is not None and '삼성' in name
+    assert code == "AAPL"
+    assert name is None
 
 
 def test_extract_stock_info_none():

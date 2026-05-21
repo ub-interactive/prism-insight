@@ -115,7 +115,6 @@ with open(os.path.join(config_root, "kis_devlp.yaml"), encoding="UTF-8") as f:
 
 
 DEFAULT_PRODUCT_CODE = str(_cfg.get("default_product_code", "01"))
-DEFAULT_BUY_AMOUNT_KRW = int(_cfg.get("default_unit_amount", 0) or 0)
 DEFAULT_BUY_AMOUNT_USD = float(_cfg.get("default_unit_amount_usd", 0) or 0)
 MAX_CONFIGURED_ACCOUNTS = 10
 
@@ -133,24 +132,29 @@ def mask_account_number(account_number: str | None) -> str:
 
 
 def _normalize_market(market: str | None) -> str | None:
+    """Normalize configured market tag. US-only runtime: ``all``/``both`` map to ``us``."""
     if market is None:
         return None
     normalized = str(market).strip().lower()
-    aliases = {
-        "kr": "kr",
-        "korea": "kr",
-        "domestic": "kr",
-        "kor": "kr",
-        "us": "us",
-        "usa": "us",
-        "america": "us",
-        "overseas": "us",
-        "all": "all",
-        "both": "all",
+    banned = {"kr", "korea", "domestic", "kor", "kospi", "kosdaq"}
+    if normalized in banned:
+        raise ValueError(
+            f"Korean domestic market '{market}' is not supported. "
+            "Use market: us (overseas US) in kis_devlp.yaml."
+        )
+    us_aliases = {
+        "us",
+        "usa",
+        "america",
+        "overseas",
+        "all",
+        "both",
     }
-    if normalized not in aliases:
-        raise ValueError(f"Unknown market '{market}'. Expected one of: kr, us, all.")
-    return aliases[normalized]
+    if normalized in us_aliases:
+        return "us"
+    raise ValueError(
+        f"Unknown market '{market}'. Expected one of: us, usa, overseas, all, both."
+    )
 
 
 def _normalize_server_mode(mode: str | None) -> str | None:
@@ -200,7 +204,7 @@ def _build_normalized_account(
 
     account_mode = _normalize_server_mode(item.get("mode") or item.get("svr") or item.get("environment"))
     product = str(item.get("product") or item.get("product_code") or DEFAULT_PRODUCT_CODE)
-    market = _normalize_market(item.get("market") or "all") or "all"
+    market = _normalize_market(item.get("market") or "us") or "us"
     account_name = str(item.get("name") or item.get("id") or f"account-{index + 1}")
 
     normalized = {
@@ -210,7 +214,6 @@ def _build_normalized_account(
         "account": str(account_number),
         "market": market,
         "primary": _to_bool(item.get("primary"), default=primary_default),
-        "buy_amount_krw": _normalize_buy_amount(item.get("buy_amount_krw") or item.get("buy_amount")),
         "buy_amount_usd": _normalize_buy_amount(item.get("buy_amount_usd")),
         # Per-account API credentials (optional; fall back to global my_app/my_sec if absent)
         "app_key": item.get("app_key") or item.get("appkey") or None,
@@ -224,10 +227,10 @@ def _build_legacy_accounts() -> list[dict[str, Any]]:
     """Build normalized accounts from legacy config keys."""
     legacy_accounts: list[dict[str, Any]] = []
     legacy_candidates = [
-        ("my_acct_stock", "prod", "legacy-real-stock", True, "all"),
-        ("my_paper_stock", "vps", "legacy-demo-stock", True, "all"),
-        ("my_acct_future", "prod", "legacy-real-future", False, "kr"),
-        ("my_paper_future", "vps", "legacy-demo-future", False, "kr"),
+        ("my_acct_stock", "prod", "legacy-real-stock", True, "us"),
+        ("my_paper_stock", "vps", "legacy-demo-stock", True, "us"),
+        ("my_acct_future", "prod", "legacy-real-future", False, "us"),
+        ("my_paper_future", "vps", "legacy-demo-future", False, "us"),
     ]
 
     for key, svr, name, primary, market in legacy_candidates:
@@ -247,7 +250,6 @@ def _build_legacy_accounts() -> list[dict[str, Any]]:
                     "product": str(_cfg.get("my_prod", DEFAULT_PRODUCT_CODE)),
                     "market": market,
                     "primary": primary,
-                    "buy_amount_krw": DEFAULT_BUY_AMOUNT_KRW,
                     "buy_amount_usd": DEFAULT_BUY_AMOUNT_USD,
                 },
                 primary_default=primary,
@@ -307,7 +309,7 @@ def get_configured_accounts(
             continue
         if requested_product and account["product"] != requested_product:
             continue
-        if requested_market and account["market"] not in {requested_market, "all", "both"}:
+        if requested_market and account["market"] != requested_market:
             continue
         if primary_only and not account.get("primary", False):
             continue
@@ -318,7 +320,7 @@ def get_configured_accounts(
             account for account in normalized_accounts
             if (not requested_svr or account["svr"] == requested_svr)
             and (not requested_product or account["product"] == requested_product)
-            and (not requested_market or account["market"] in {requested_market, "all", "both"})
+            and (not requested_market or account["market"] == requested_market)
         ]
         filtered_accounts = filtered_accounts[:1]
 

@@ -9,6 +9,8 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from trading import kis_auth
+
 logger = logging.getLogger(__name__)
 
 
@@ -388,26 +390,6 @@ def get_us_holding(cursor, ticker: str, account_key: Optional[str] = None) -> Op
 
 def is_us_ticker_in_holdings(cursor, ticker: str, account_key: Optional[str] = None) -> bool:
     return get_us_holding(cursor, ticker, account_key=account_key) is not None
-"""
-Database Schema for US Stock Tracking
-
-Contains table creation SQL and index definitions for US market.
-Tables use us_* prefix to separate from Korean market tables.
-
-Shared tables (trading_journal, trading_principles, trading_intuitions)
-are used with 'market' column to distinguish between KR and US.
-"""
-
-import logging
-from typing import Optional
-
-from trading import kis_auth
-
-logger = logging.getLogger(__name__)
-
-# =============================================================================
-# US-Specific Tables (us_* prefix)
-# =============================================================================
 
 # Table: us_stock_holdings - Current US stock positions
 TABLE_US_STOCK_HOLDINGS = """
@@ -644,9 +626,9 @@ US_INDEXES = [
 # =============================================================================
 
 MARKET_COLUMN_MIGRATIONS = [
-    ("trading_journal", "market TEXT DEFAULT 'KR'"),
-    ("trading_principles", "market TEXT DEFAULT 'KR'"),
-    ("trading_intuitions", "market TEXT DEFAULT 'KR'"),
+    ("trading_journal", "market TEXT DEFAULT 'US'"),
+    ("trading_principles", "market TEXT DEFAULT 'US'"),
+    ("trading_intuitions", "market TEXT DEFAULT 'US'"),
 ]
 
 

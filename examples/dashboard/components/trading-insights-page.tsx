@@ -40,7 +40,7 @@ import { useLanguage } from "@/components/language-provider"
 import type { TradingInsightsData, TradingPrinciple, TradingJournal, TradingIntuition, SituationAnalysis, JudgmentEvaluation, Market, TriggerReliabilityData } from "@/types/dashboard"
 import { TriggerReliabilityCard } from "./trigger-reliability-card"
 
-type MarketFilter = "all" | "KR" | "US"
+type MarketFilter = "all" | "US"
 
 interface TradingInsightsPageProps {
   data: TradingInsightsData
@@ -57,7 +57,7 @@ function tryParseJSON<T>(str: string | T): T | null {
   }
 }
 
-export function TradingInsightsPage({ data, market = "KR" }: TradingInsightsPageProps) {
+export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPageProps) {
   const { t, language } = useLanguage()
   const [marketFilter, setMarketFilter] = useState<MarketFilter>("all")
 
@@ -173,19 +173,6 @@ export function TradingInsightsPage({ data, market = "KR" }: TradingInsightsPage
               `}
             >
               {language === "ko" ? "전체" : "All"}
-            </button>
-            <button
-              onClick={() => setMarketFilter("KR")}
-              className={`
-                flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all
-                ${marketFilter === "KR"
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }
-              `}
-            >
-              <span>🇰🇷</span>
-              <span>{language === "ko" ? "한국" : "Korea"}</span>
             </button>
             <button
               onClick={() => setMarketFilter("US")}
@@ -309,12 +296,8 @@ export function TradingInsightsPage({ data, market = "KR" }: TradingInsightsPage
               </div>
               <span className="font-semibold">{t("insights.category.wisdom")}</span>
               {marketFilter !== "all" && (
-                <Badge variant="outline" className={
-                  marketFilter === "KR"
-                    ? "bg-blue-500/10 text-blue-600 border-blue-500/20 text-xs"
-                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs"
-                }>
-                  {marketFilter === "KR" ? "🇰🇷" : "🇺🇸"} {language === "ko" ? "필터 적용" : "Filtered"}
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">
+                  🇺🇸 {language === "ko" ? "필터 적용" : "Filtered"}
                 </Badge>
               )}
             </div>
@@ -872,13 +855,9 @@ export function TradingInsightsPage({ data, market = "KR" }: TradingInsightsPage
             {marketFilter !== "all" && (
               <Badge
                 variant="outline"
-                className={
-                  marketFilter === "KR"
-                    ? "bg-blue-500/10 text-blue-600 border-blue-500/20 text-xs"
-                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs"
-                }
+                className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs"
               >
-                {marketFilter === "KR" ? "🇰🇷" : "🇺🇸"} {marketFilter}
+                🇺🇸 {marketFilter}
               </Badge>
             )}
           </div>
@@ -957,7 +936,7 @@ export function TradingInsightsPage({ data, market = "KR" }: TradingInsightsPage
             <BookOpen className="w-5 h-5 text-blue-500" />
             <CardTitle>{t("insights.journal")}</CardTitle>
             <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-xs">
-              {language === "ko" ? "KR+US 공통" : "All Markets"}
+              {language === "ko" ? "통합 트레이딩 저널" : "Trading journal"}
             </Badge>
           </div>
           <CardDescription>{t("insights.journalDescription")}</CardDescription>
@@ -1288,13 +1267,9 @@ export function TradingInsightsPage({ data, market = "KR" }: TradingInsightsPage
             {marketFilter !== "all" && (
               <Badge
                 variant="outline"
-                className={
-                  marketFilter === "KR"
-                    ? "bg-blue-500/10 text-blue-600 border-blue-500/20 text-xs"
-                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs"
-                }
+                className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs"
               >
-                {marketFilter === "KR" ? "🇰🇷" : "🇺🇸"} {marketFilter}
+                🇺🇸 {marketFilter}
               </Badge>
             )}
           </div>

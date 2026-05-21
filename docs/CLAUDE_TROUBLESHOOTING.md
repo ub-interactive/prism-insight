@@ -71,26 +71,26 @@ python3 -c "import matplotlib.font_manager as fm; fm.fontManager.rebuild()"
 
 ---
 
-### Issue 4: MCP Server Connection Failed
+### Issue 4: MCP Server Connection Failed (e.g. Yahoo Finance MCP)
 
 **Symptoms**:
 ```
-Error: MCP server 'kospi_kosdaq' not responding
+Error: MCP server 'yahoo_finance' not responding
 ```
 
 **Solution**:
 ```bash
-# 1. Check MCP server installation
-python3 -m kospi_kosdaq_stock_server  # Should start server
+# 1. Ensure uv / uvx is available
+uvx --version
 
-# 2. Verify mcp_agent.config.yaml
-cat mcp_agent.config.yaml | grep kospi_kosdaq
+# 2. Verify mcp_agent.config.yaml has the yahoo_finance entry
+grep -n "yahoo_finance" mcp_agent.config.yaml
 
-# 3. Check API keys in mcp_agent.secrets.yaml
-cat mcp_agent.secrets.yaml | grep WISEREPORT
+# 3. Smoke-check the package (needs network).
+uvx --from yahoo-finance-mcp yahoo-finance-mcp --help || true
 
-# 4. Test individual server
-cd perplexity-ask && npm install && node dist/index.js
+# 4. Confirm API-related secrets for other MCPs (firecrawl, perplexity) in mcp_agent.secrets.yaml / env blocks.
+cat mcp_agent.secrets.yaml | head
 ```
 
 ---

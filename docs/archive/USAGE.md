@@ -13,13 +13,13 @@ PRISM Archive를 사용하는 세 가지 인터페이스: **텔레그램 봇**, 
 ```
 사용자: /insight
 봇:    🗂 PRISM 아카이브 ... 질문을 입력해주세요:
-       예: 하락장에서 분석된 반도체 종목 30일 수익률은?
+       예: 하락장에서 분석된 테크 종목 30일 수익률은?
        예: 손절 발동 후 회복한 종목 비율은?
 
-사용자: 셀트리온 장기투자 적합한가?
+사용자: AAPL 장기투자 적합한가?
 봇:    🧭 PRISM 장기 인사이트
        
-       셀트리온(068270)의 실제 수익률 데이터를 기준으로 ...
+       AAPL의 실제 수익률 데이터를 기준으로 ...
        ■ 30거래일 수익률: -0.97%
        ■ 90거래일 수익률: +0.74%
        ■ 365일 수익률: +34.4%
@@ -72,10 +72,10 @@ PRISM Archive를 사용하는 세 가지 인터페이스: **텔레그램 봇**, 
 semantic facts가 풀로 붙기 때문에 답변 품질이 가장 높습니다.
 
 ```
-삼성전자 장기투자 적합한가?
-005930 최근 6개월 분석 요약해줘
-AAPL 분석 이력 정리해줘
-SK하이닉스 30일 수익률은?
+NVDA 장기투자 적합한가?
+AAPL 최근 6개월 분석 요약해줘
+MSFT 분석 이력 정리해줘
+AMD 30일 수익률은?
 ```
 
 #### 2. 패턴·승자 분석 — 시스템 프롬프트가 최적화된 유형
@@ -127,7 +127,7 @@ MDD 10% 이하로 30% 이상 수익 낸 종목
 ```
 외국인 순매수 지속된 반도체 섹터 종목
 시장 국면별 가장 안정적인 섹터는?
-KR과 US 중 장기투자 성과 더 좋은 쪽은?
+나스닥·NYSE 상장 종목 중 장기 성과가 두드러진 섹터는?
 ```
 
 ### 피해야 할 패턴
@@ -169,7 +169,7 @@ curl http://127.0.0.1:8765/health
 
 ### `GET /stats`
 
-리포트 통계.
+리포트 통계. 응답의 `reports_by_market`에는 DB에 실제로 저장된 시장 값별 건수가 포함됩니다(과거에 적재된 `kr` 행이 있으면 표시될 수 있음). **인제스트·검색·쿼리 API는 US 전용**입니다.
 
 ```bash
 curl -H "Authorization: Bearer $KEY" http://127.0.0.1:8765/stats
@@ -181,7 +181,7 @@ FTS5 키워드 검색 (LLM 합성 없음).
 
 ```bash
 curl -H "Authorization: Bearer $KEY" \
-  "http://127.0.0.1:8765/search?keyword=반도체&market=kr&limit=10"
+  "http://127.0.0.1:8765/search?keyword=semiconductor&market=us&limit=10"
 ```
 
 ### `POST /query` (단순 자연어 질문)
@@ -191,7 +191,7 @@ curl -H "Authorization: Bearer $KEY" \
 ```bash
 curl -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
   http://127.0.0.1:8765/query \
-  -d '{"question":"하락장 반도체 30일 수익률은?","market":"kr"}'
+  -d '{"question":"하락장 반도체 30일 수익률은?","market":"us"}'
 ```
 
 ### `POST /insight_agent` ⭐ (메인 엔드포인트)
@@ -202,7 +202,7 @@ curl -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/json"
 curl -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
   http://127.0.0.1:8765/insight_agent \
   -d '{
-    "question": "셀트리온 장기투자 적합한가?",
+    "question": "NVDA 장기투자 적합한가?",
     "user_id": 12345,
     "chat_id": -100200300,
     "daily_limit": 20,
@@ -215,8 +215,8 @@ curl -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/json"
 {
   "answer": "...",
   "key_takeaways": ["...", "..."],
-  "tickers_mentioned": ["068270"],
-  "tools_used": ["kospi_kosdaq_get_stock_ohlcv"],
+  "tickers_mentioned": ["NVDA"],
+  "tools_used": ["yahoo_finance_get_quote"],
   "evidence_count": 3,
   "insight_id": 7,
   "remaining_quota": 19,
@@ -259,7 +259,6 @@ python archive_query.py --stats
 
 ```
 === PRISM 아카이브 통계 ===
-  KR    801건  2025-09-29 ~ 2026-04-21
   US    167건  2025-09-29 ~ 2026-03-31
   enriched:          968건
   cached insights:     0건
@@ -278,8 +277,7 @@ python archive_query.py --insight-stats
   주간 요약:       0
 
   도구 사용 분포:
-    kospi_kosdaq_get_stock_ohlcv  5회
-    kospi_kosdaq_get_stock_fundamental  3회
+    yahoo_finance_get_quote  5회
     archive_search_insights    1회
 
   최근 7일 비용:
@@ -289,19 +287,19 @@ python archive_query.py --insight-stats
 ### `--search "키워드"` — FTS5 검색
 
 ```bash
-python archive_query.py --search "반도체" --market kr --limit 10
+python archive_query.py --search "semiconductor" --market us --limit 10
 ```
 
 ### `--list` — 리포트 목록
 
 ```bash
-python archive_query.py --list --ticker 005930 --date-from 2026-01-01
+python archive_query.py --list --ticker AAPL --date-from 2026-01-01
 ```
 
 ### 자연어 질문 (LLM 합성)
 
 ```bash
-python archive_query.py "하락장에서 분석된 반도체 종목 30일 수익률은?" --market kr
+python archive_query.py "하락장에서 분석된 테크 종목 30일 수익률은?" --market us
 ```
 
 `--skip-cache`로 캐시 무시, `--model gpt-5.4-mini` 로 모델 지정 가능.
@@ -320,7 +318,7 @@ python archive_query.py --insight-stats --json
 
 ```bash
 # 일일 인사이트 (매일 새벽 2시 권장)
-python -m cores.archive.auto_insight --type daily --market both
+python -m cores.archive.auto_insight --type daily --market us
 
 # 주간 압축 + 시맨틱 fact 증류 (매주 월 새벽 3시 권장)
 python -m cores.archive.auto_insight --type all --narrative
@@ -338,10 +336,9 @@ python -m cores.archive.auto_insight --type distill --distill-window 30
 
 ```bash
 # dry-run으로 파싱 검증
-python -m cores.archive.ingest --dir reports/ --market kr --dry-run
+python -m cores.archive.ingest --dir reports/ --market us --dry-run
 
 # 실제 인제스트 (SEASON2_START=2025-09-29 이후만 통과)
-python -m cores.archive.ingest --dir reports/ --market kr
 python -m cores.archive.ingest --dir reports/ --market us
 ```
 
@@ -371,8 +368,8 @@ python update_current_prices.py --concurrency 2
 ### 종목 의사결정 보조
 
 ```
-/insight 삼성전자 장기투자 적합한가?
-/insight SK하이닉스 vs 마이크론, 어느 쪽 장기 베타가 낮나?
+/insight NVDA 장기투자 적합한가?
+/insight MU vs AMD, 어느 쪽 변동성이 낮았나?
 ```
 
 ### 메타 분석
@@ -398,7 +395,7 @@ python update_current_prices.py --concurrency 2
 ## 6. 한계 — 이 시스템이 잘 못 하는 것
 
 - ❌ **단기 예측** ("내일 오를까?") — 시스템 설계 영역 외
-- ❌ **실시간 호가** — yahoo_finance/kospi_kosdaq MCP는 종가/일봉 기준
+- ❌ **실시간 호가** — Yahoo Finance 등 MCP는 종가/일봉 기준
 - ❌ **개인화 메모리** — 모든 사용자가 공용 풀 공유 (의도된 설계, 추후 user_id 격리 옵션 검토)
 - ❌ **가짜 답변 무조건 차단** — Claude 환각 가능성 존재. **👎 피드백으로 점진적 학습** 필요
 - ❌ **outcome 검증 자동화 없음** — 인사이트의 사후 정확도는 사람이 평가해야 (`/insight 6개월 전 인사이트가 맞았는지` 같은 메타 질문은 가능)

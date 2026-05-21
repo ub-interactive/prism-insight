@@ -4,11 +4,11 @@ archive_query.py — CLI for the PRISM report archive insight engine.
 
 Usage examples:
   python archive_query.py "반도체 강세 시기 수익률 높은 종목은?"
-  python archive_query.py --market kr "최근 30일 기술주 트렌드"
+  python archive_query.py --market us "최근 30일 기술주 트렌드"
   python archive_query.py --ticker AAPL "언제 매수 신호 떴어?"
   python archive_query.py --date-from 2025-10-01 --market us "AI 관련주 흐름"
-  python archive_query.py --search "반도체" --market kr
-  python archive_query.py --list --market kr --limit 20
+  python archive_query.py --search "반도체" --market us
+  python archive_query.py --list --market us --limit 20
   python archive_query.py --stats
   python archive_query.py --skip-cache "오늘 기준 최신 인사이트는?"
 """
@@ -37,8 +37,13 @@ def _build_parser() -> argparse.ArgumentParser:
         nargs="?",
         help="자연어 질문 (예: '반도체 강세 시기 최고 수익 종목은?')",
     )
-    p.add_argument("--market", choices=["kr", "us"], help="시장 필터 (kr / us)")
-    p.add_argument("--ticker", help="종목 코드 (예: 005930, AAPL)")
+    p.add_argument(
+        "--market",
+        choices=["us"],
+        default="us",
+        help="시장 필터 (US 전용)",
+    )
+    p.add_argument("--ticker", help="티커 (예: AAPL)")
     p.add_argument("--date-from", dest="date_from", metavar="YYYY-MM-DD", help="시작일")
     p.add_argument("--date-to", dest="date_to", metavar="YYYY-MM-DD", help="종료일")
     _ALLOWED_MODELS = ["gpt-5.4-mini", "gpt-4.1-mini", "gpt-4.1", "gpt-4.1-nano"]

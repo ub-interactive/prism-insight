@@ -32,7 +32,7 @@ from analysis_manager import (
 )
 # Internal module imports
 from report_generator import (
-    generate_evaluation_response, get_cached_report, generate_follow_up_response,
+    generate_evaluation_response, get_cached_report,
     get_or_create_global_mcp_app, cleanup_global_mcp_app,
     generate_us_evaluation_response, generate_us_follow_up_response,
     get_cached_us_report, generate_journal_conversation_response,
@@ -309,7 +309,7 @@ class ConversationContext:
 
         context = f"""
 종목 정보: {self.ticker_name} ({self.ticker})
-시장: {"미국" if self.market_type == "us" else "한국"}
+시장: 미국 (US)
 평균 매수가: {price_str}
 보유 기간: {self.period}개월
 피드백 스타일: {self.tone}
@@ -474,13 +474,13 @@ class TelegramAIBot:
         commands = [
             BotCommand("evaluate",    "보유 종목 평가 시작"),
             BotCommand("us_evaluate", "미국 주식 보유 종목 평가"),
-            BotCommand("report",      "국내 종목 리포트"),
+            BotCommand("report",      "미국 종목 리포트 (/us_report와 동일)"),
             BotCommand("us_report",   "미국 종목 리포트"),
             BotCommand("history",     "분석 히스토리 조회"),
             BotCommand("triggers",    "오늘의 급등/급락 트리거"),
-            BotCommand("signal",      "국내 시장 시그널 분석"),
+            BotCommand("signal",      "미국 시장 시그널 (/us_signal과 동일)"),
             BotCommand("us_signal",   "미국 시장 시그널 분석"),
-            BotCommand("theme",       "국내 테마 진단"),
+            BotCommand("theme",       "미국 테마 진단 (/us_theme과 동일)"),
             BotCommand("us_theme",    "미국 테마 진단"),
             BotCommand("ask",         "자유 질문 (최신 정보 기반)"),
             BotCommand("insight",     "누적 인사이트 기반 장기 분석"),
@@ -695,16 +695,14 @@ class TelegramAIBot:
 
                 logger.info(f"Loaded {len(self.stock_map)} stock information entries")
             else:
-                logger.warning(f"Stock information file does not exist: {stock_map_file}")
-                # Provide default data (for testing)
-                self.stock_map = {"005930": "삼성전자", "013700": "까뮤이앤씨"}
-                self.stock_name_map = {"삼성전자": "005930", "까뮤이앤씨": "013700"}
+                logger.warning(f"Stock map file not found: {stock_map_file}")
+                self.stock_map = {}
+                self.stock_name_map = {}
 
         except Exception as e:
             logger.error(f"Failed to load stock information: {e}")
-            # Provide default data at least
-            self.stock_map = {"005930": "삼성전자", "013700": "까뮤이앤씨"}
-            self.stock_name_map = {"삼성전자": "005930", "까뮤이앤씨": "013700"}
+            self.stock_map = {}
+            self.stock_name_map = {}
 
     def setup_handlers(self):
         """
@@ -1031,30 +1029,18 @@ class TelegramAIBot:
         
         # Check context expiration
         if conv_context.is_expired():
-            # Different guidance message depending on market type
-            if conv_context.market_type == "us":
-                await update.message.reply_text(
-                    "이전 대화 세션이 만료되었습니다. 새로운 평가를 시작하려면 /us_evaluate 명령어를 사용해주세요."
-                )
-            else:
-                await update.message.reply_text(
-                    "이전 대화 세션이 만료되었습니다. 새로운 평가를 시작하려면 /evaluate 명령어를 사용해주세요."
-                )
+            await update.message.reply_text(
+                "이전 대화 세션이 만료되었습니다. 새로운 평가를 시작하려면 /us_evaluate 명령어를 사용해주세요."
+            )
             del self.conversation_contexts[replied_to_msg_id]
             return
 
         # Get user message
         user_question = update.message.text.strip()
 
-        # Waiting message (based on market type)
-        if conv_context.market_type == "us":
-            waiting_message = await update.message.reply_text(
-                "🇺🇸 추가 질문에 대해 분석 중입니다... 잠시만 기다려주세요. 💭"
-            )
-        else:
-            waiting_message = await update.message.reply_text(
-                "추가 질문에 대해 분석 중입니다... 잠시만 기다려주세요. 💭"
-            )
+        waiting_message = await update.message.reply_text(
+            "🇺🇸 추가 질문에 대해 분석 중입니다... 잠시만 기다려주세요. 💭"
+        )
 
         try:
             # Add user question to conversation history
@@ -1063,25 +1049,13 @@ class TelegramAIBot:
             # Create context to pass to LLM
             full_context = conv_context.get_context_for_llm()
 
-            # Use different response generator based on market type
-            if conv_context.market_type == "us":
-                # Generate response for US market
-                response = await generate_us_follow_up_response(
-                    conv_context.ticker,
-                    conv_context.ticker_name,
-                    full_context,
-                    user_question,
-                    conv_context.tone
-                )
-            else:
-                # Generate response for Korean market (existing)
-                response = await generate_follow_up_response(
-                    conv_context.ticker,
-                    conv_context.ticker_name,
-                    full_context,
-                    user_question,
-                    conv_context.tone
-                )
+            response = await generate_us_follow_up_response(
+                conv_context.ticker,
+                conv_context.ticker_name,
+                full_context,
+                user_question,
+                conv_context.tone
+            )
             
             # Delete waiting message
             await waiting_message.delete()
@@ -1117,7 +1091,7 @@ class TelegramAIBot:
         # Refund daily limit if the report failed due to a server-side error
         # (subprocess timeout, internal AI agent error, etc.) so the user can retry.
         if getattr(request, 'user_id', None) and self._is_server_error(request):
-            command = "us_report" if request.market_type == "us" else "report"
+            command = "us_report"
             self.refund_daily_limit(request.user_id, command)
 
         try:
@@ -1180,30 +1154,21 @@ class TelegramAIBot:
         user = update.effective_user
         await update.message.reply_text(
             f"안녕하세요, {user.first_name}님! 저는 프리즘 어드바이저 봇입니다.\n\n"
-            "저는 보유하신 종목에 대한 평가를 제공합니다.\n\n"
-            "🇰🇷 <b>한국 주식</b>\n"
-            "/evaluate - 보유 종목 평가 시작\n"
-            "/report - 상세 분석 보고서 요청\n"
-            "/history - 특정 종목의 분석 히스토리 확인\n\n"
-            "🇺🇸 <b>미국 주식</b>\n"
-            "/us_evaluate - 미국 주식 평가 시작\n"
-            "/us_report - 미국 주식 보고서 요청\n\n"
+            "미국 상장 종목 분석·평가를 지원합니다.\n\n"
+            "🇺🇸 <b>주요 명령어</b>\n"
+            "/us_evaluate 또는 /evaluate — 보유 종목 평가\n"
+            "/us_report 또는 /report — 상세 분석 보고서\n"
+            "/history — 분석 히스토리 (티커 기준)\n\n"
             "📝 <b>투자 일기</b>\n"
-            "/journal - 투자 일기 기록\n"
-            "/memories - 내 기억 저장소 확인\n\n"
+            "/journal — 투자 일기 기록\n"
+            "/memories — 내 기억 저장소\n\n"
             "📡 <b>트리거 신뢰도</b>\n"
-            "/triggers - 트리거 신뢰도 리포트 보기\n\n"
-            "🔥 <b>Firecrawl AI 리서치</b> (NEW!)\n"
-            "/signal 이란 휴전 - 이벤트가 한국 증시에 미치는 영향\n"
-            "/us_signal TSMC 실적 서프라이즈 - 미국 증시 영향\n"
-            "/theme 2차전지 - 테마가 아직 살아있는지 진단\n"
-            "/us_theme AI 반도체 - 미국 테마 건강도 체크\n"
-            "/ask 코스피 17년래 최강 상승인데 다음주도 오를까? - 자유 질문 (일 3회)\n\n"
-            "💡 평가 응답에 답장(Reply)하여 추가 질문을 할 수 있습니다!\n\n"
-            "이 봇은 '프리즘 인사이트' 채널 구독자만 사용할 수 있습니다.\n"
-            "채널에서는 장 시작과 마감 시 AI가 선별한 특징주 3개를 소개하고,\n"
-            "각 종목에 대한 AI에이전트가 작성한 고퀄리티의 상세 분석 보고서를 제공합니다.\n\n"
-            "다음 링크를 구독한 후 봇을 사용해주세요: https://t.me/stock_ai_agent",
+            "/triggers\n\n"
+            "🔥 <b>Firecrawl AI 리서치</b>\n"
+            "/us_signal 또는 /signal — 이벤트가 미국 증시에 미치는 영향\n"
+            "/us_theme 또는 /theme — 테마·섹터 건강도\n"
+            "/ask — 자유 질문 (일 3회)\n\n"
+            "구독: https://t.me/stock_ai_agent",
             parse_mode="HTML"
         )
 
@@ -1212,56 +1177,17 @@ class TelegramAIBot:
         """Handle help command"""
         await update.message.reply_text(
             "📊 <b>프리즘 어드바이저 봇 도움말</b> 📊\n\n"
-            "<b>기본 명령어:</b>\n"
-            "/start - 봇 시작\n"
-            "/help - 도움말 보기\n"
-            "/cancel - 현재 진행 중인 대화 취소\n\n"
-            "🇰🇷 <b>한국 주식 명령어:</b>\n"
-            "/evaluate - 보유 종목 평가 시작\n"
-            "/report - 상세 분석 보고서 요청\n"
-            "/history - 특정 종목의 분석 히스토리 확인\n\n"
-            "🇺🇸 <b>미국 주식 명령어:</b>\n"
-            "/us_evaluate - 미국 주식 평가 시작\n"
-            "/us_report - 미국 주식 보고서 요청\n\n"
-            "📝 <b>투자 일기:</b>\n"
-            "/journal - 투자 생각 기록\n"
-            "/memories - 내 기억 저장소 확인\n"
-            "  • 종목 코드/티커와 함께 입력 가능\n"
-            "  • 과거 평가 시 기억으로 활용됨\n\n"
-            "📡 <b>트리거 신뢰도:</b>\n"
-            "/triggers - KR & US 트리거 신뢰도 리포트 보기\n\n"
-            "🔥 <b>Firecrawl AI 리서치:</b>\n"
-            "/signal [이벤트] - 이벤트가 한국 증시에 미치는 영향 분석\n"
-            "  예: <code>/signal 이란 미국 휴전</code>\n"
-            "  예: <code>/signal 삼성전자 역대급 실적</code>\n"
-            "/us_signal [이벤트] - 이벤트가 미국 증시에 미치는 영향 분석\n"
-            "  예: <code>/us_signal TSMC 매출 35% 급증</code>\n"
-            "/theme [테마] - 한국 테마/섹터 건강도 진단\n"
-            "  예: <code>/theme 2차전지</code>\n"
-            "  예: <code>/theme 방산 조선</code>\n"
-            "/us_theme [테마] - 미국 테마/섹터 건강도 진단\n"
-            "  예: <code>/us_theme AI 데이터센터</code>\n"
-            "/ask [질문] - AI에게 투자 관련 자유 질문 (일 3회)\n"
-            "  예: <code>/ask 코스피 17년래 최강 상승 다음주도 오를까?</code>\n"
-            "  예: <code>/ask 워렌 버핏이 올해 뭘 샀어?</code>\n\n"
-            "<b>보유 종목 평가 방법 (한국/미국 동일):</b>\n"
-            "1. /evaluate 또는 /us_evaluate 명령어 입력\n"
-            "2. 종목 코드/티커 입력 (예: 005930 또는 AAPL)\n"
-            "3. 평균 매수가 입력 (원 또는 달러)\n"
-            "4. 보유 기간 입력\n"
-            "5. 원하는 피드백 스타일 입력\n"
-            "6. 매매 배경 입력 (선택사항)\n"
-            "7. 💡 AI 응답에 답장(Reply)하여 추가 질문 가능!\n\n"
-            "<b>✨ 추가 질문 기능:</b>\n"
-            "• AI의 평가 메시지에 답장하여 추가 질문\n"
-            "• 이전 대화 컨텍스트를 유지하여 연속적인 대화 가능\n"
-            "• 24시간 동안 대화 세션 유지\n\n"
-            "<b>상세 분석 보고서 요청:</b>\n"
-            "1. /report 명령어 입력\n"
-            "2. 종목 코드 또는 이름 입력\n"
-            "3. 5-10분 후 상세 보고서가 제공됩니다(요청이 많을 경우 더 길어짐)\n\n"
-            "<b>주의:</b>\n"
-            "이 봇은 채널 구독자만 사용할 수 있습니다.",
+            "<b>기본:</b> /start /help /cancel\n\n"
+            "🇺🇸 <b>미국 주식</b>\n"
+            "/us_evaluate, /evaluate — 평가\n"
+            "/us_report, /report — 상세 보고서\n"
+            "/history — 티커별 분석 히스토리\n\n"
+            "📝 /journal · /memories\n"
+            "📡 /triggers\n"
+            "🔥 /us_signal|/signal · /us_theme|/theme · /ask\n\n"
+            "<b>평가 절차:</b> 명령 입력 → 티커(AAPL) → 평균 매수가(USD) → 보유 기간 → 톤 → 배경(선택)\n"
+            "답장(Reply)으로 24시간 내 추가 질문 가능.\n\n"
+            "채널 구독 필요: https://t.me/stock_ai_agent",
             parse_mode="HTML"
         )
 
@@ -1387,8 +1313,8 @@ class TelegramAIBot:
         greeting = f"{user_name}님, " if is_group else ""
 
         await update.message.reply_text(
-            f"{greeting}분석 히스토리를 확인할 종목 코드나 이름을 입력해주세요.\n"
-            "예: 005930 또는 삼성전자"
+            f"{greeting}분석 히스토리를 확인할 미국 티커를 입력해주세요.\n"
+            "예: AAPL 또는 MSFT"
         )
 
         return HISTORY_CHOOSING_TICKER
@@ -1667,7 +1593,7 @@ class TelegramAIBot:
                     },
                     ticker=ticker,
                     ticker_name=ticker_name,
-                    market_type='kr',
+                    market_type='us',
                     command_source='/evaluate',
                     message_id=sent_message.message_id
                 )
@@ -1727,114 +1653,18 @@ class TelegramAIBot:
 
     async def get_stock_code(self, stock_input):
         """
-        Convert stock name or code input to stock code
-
-        Args:
-            stock_input (str): Stock code or name
+        Resolve user input to a US ticker (yfinance-backed).
 
         Returns:
-            tuple: (stock code, stock name, error message)
+            tuple: (ticker, company_name, error_message)
         """
-        # Input value defense code
         if not stock_input:
             logger.warning("Empty input value passed")
-            return None, None, "종목명이나 코드를 입력해주세요."
-
-        if not isinstance(stock_input, str):
-            logger.warning(f"Invalid input type: {type(stock_input)}")
-            stock_input = str(stock_input)
-
-        original_input = stock_input
-        stock_input = stock_input.strip()
-
-        logger.info(f"Stock search started - Input: '{original_input}' -> Cleaned input: '{stock_input}'")
-
-        # Check stock_name_map status
-        if not hasattr(self, 'stock_name_map') or self.stock_name_map is None:
-            logger.error("stock_name_map is not initialized")
-            return None, None, "시스템 오류: 주식 데이터가 로드되지 않았습니다."
-
-        if not isinstance(self.stock_name_map, dict):
-            logger.error(f"stock_name_map type error: {type(self.stock_name_map)}")
-            return None, None, "시스템 오류: 주식 데이터 형식이 잘못되었습니다."
-
-        logger.info(f"stock_name_map status - Size: {len(self.stock_name_map)}")
-
-        # Check stock_map status
-        if not hasattr(self, 'stock_map') or self.stock_map is None:
-            logger.warning("stock_map is not initialized")
-            self.stock_map = {}
-
-        # If already a stock code (6-digit number)
-        if re.match(r'^\d{6}$', stock_input):
-            logger.info(f"Recognized as 6-digit numeric code: {stock_input}")
-            stock_code = stock_input
-            stock_name = self.stock_map.get(stock_code)
-
-            if stock_name:
-                logger.info(f"Stock code match successful: {stock_code} -> {stock_name}")
-                return stock_code, stock_name, None
-            else:
-                logger.warning(f"No name information for stock code {stock_code}")
-                return stock_code, f"종목_{stock_code}", "해당 종목 코드에 대한 정보가 없습니다. 코드가 정확한지 확인해주세요."
-
-        # If entered as stock name - check for exact match
-        logger.info(f"Starting exact name match search: '{stock_input}'")
-
-        # Log key samples for debugging
-        sample_keys = list(self.stock_name_map.keys())[:5]
-        logger.debug(f"stock_name_map key samples: {sample_keys}")
-
-        # Exact match check
-        if stock_input in self.stock_name_map:
-            stock_code = self.stock_name_map[stock_input]
-            logger.info(f"Exact match successful: '{stock_input}' -> {stock_code}")
-            return stock_code, stock_input, None
-        else:
-            logger.info(f"Exact match failed: '{stock_input}'")
-
-            # Log input value details
-            logger.debug(f"Input details - Length: {len(stock_input)}, "
-                         f"Bytes: {stock_input.encode('utf-8')}, "
-                         f"Unicode: {[ord(c) for c in stock_input]}")
-
-        # Partial stock name match search
-        logger.info(f"Starting partial match search")
-        possible_matches = []
-
-        try:
-            for name, code in self.stock_name_map.items():
-                if not isinstance(name, str) or not isinstance(code, str):
-                    logger.warning(f"Invalid data type: name={type(name)}, code={type(code)}")
-                    continue
-
-                if stock_input.lower() in name.lower():
-                    possible_matches.append((name, code))
-                    logger.debug(f"Partial match found: '{name}' ({code})")
-
-        except Exception as e:
-            logger.error(f"Error during partial match search: {e}")
-            return None, None, "검색 중 오류가 발생했습니다."
-
-        logger.info(f"Partial match results: {len(possible_matches)} found")
-
-        if len(possible_matches) == 1:
-            # Use if single match found
-            stock_name, stock_code = possible_matches[0]
-            logger.info(f"Single partial match successful: '{stock_name}' ({stock_code})")
-            return stock_code, stock_name, None
-        elif len(possible_matches) > 1:
-            # Return error message if multiple matches
-            logger.info(f"Multiple matches: {[f'{name}({code})' for name, code in possible_matches]}")
-            match_info = "\n".join([f"{name} ({code})" for name, code in possible_matches[:5]])
-            if len(possible_matches) > 5:
-                match_info += f"\n... 외 {len(possible_matches)-5}개"
-
-            return None, None, f"'{stock_input}'에 해당하는 종목이 여러 개 있습니다. 정확한 종목명이나 코드를 입력해주세요:\n{match_info}"
-        else:
-            # Return error message if no matches
-            logger.warning(f"No matching stock: '{stock_input}'")
-            return None, None, f"'{stock_input}'에 해당하는 종목을 찾을 수 없습니다. 정확한 종목명이나 코드를 입력해주세요."
+            return None, None, "티커를 입력해주세요. (예: AAPL)"
+        stock_input = str(stock_input).strip().upper()
+        if not re.match(r"^[A-Z]{1,5}$", stock_input):
+            return None, None, "미국 티커만 지원합니다 (1–5자 영문, 예: AAPL, MSFT)."
+        return await self.validate_us_ticker(stock_input)
 
     # US ticker validation cache
     _us_ticker_cache: dict = {}
@@ -2325,7 +2155,7 @@ class TelegramAIBot:
         # Get ticker information (if available)
         ticker = journal_ctx.get('ticker')
         ticker_name = journal_ctx.get('ticker_name')
-        market_type = journal_ctx.get('market_type', 'kr')
+        market_type = journal_ctx.get('market_type', 'us')
         conversation_history = journal_ctx.get('conversation_history', [])
 
         # Waiting message
@@ -2396,59 +2226,26 @@ class TelegramAIBot:
             )
 
     def _extract_ticker_from_text(self, text: str) -> tuple:
-        """
-        Extract ticker/stock code from text
-
-        Args:
-            text: Input text
-
-        Returns:
-            tuple: (ticker, ticker_name, market_type)
-
-        Note:
-            Check Korean stocks first (Korean stocks are more common in Korean text)
-        """
-        # Korean stock code pattern (6-digit number)
-        kr_pattern = r'\b(\d{6})\b'
-        # US ticker pattern (1-5 uppercase letters, word boundary)
+        """Extract US ticker from text (1–5 letters, word boundary)."""
         us_pattern = r'\b([A-Z]{1,5})\b'
-
-        # 1. Check Korean stock code first (priority)
-        kr_matches = re.findall(kr_pattern, text)
-        for code in kr_matches:
-            if code in self.stock_map:
-                return code, self.stock_map[code], 'kr'
-
-        # 2. Find Korean stock name (search in stock_name_map)
-        for name, code in self.stock_name_map.items():
-            if name in text:
-                return code, name, 'kr'
-
-        # 3. Find US ticker (only when no Korean stock found)
-        # Exclude words: common English words + financial terms
         excluded_words = {
-            # Common English words
             'I', 'A', 'AN', 'THE', 'IN', 'ON', 'AT', 'TO', 'FOR', 'OF',
             'AND', 'OR', 'IS', 'IT', 'AI', 'AM', 'PM', 'VS', 'OK', 'NO',
             'IF', 'AS', 'BY', 'SO', 'UP', 'BE', 'WE', 'HE', 'ME', 'MY',
-            # Financial indicators/terms
             'PER', 'PBR', 'ROE', 'ROA', 'EPS', 'BPS', 'PSR', 'PCR',
             'EBITDA', 'EBIT', 'YOY', 'QOQ', 'MOM', 'YTD', 'TTM',
             'PE', 'PS', 'PB', 'EV', 'FCF', 'DCF', 'WACC', 'CAGR',
             'IPO', 'M', 'B', 'K', 'KRW', 'USD', 'EUR', 'JPY', 'CNY',
-            # Other abbreviations
             'CEO', 'CFO', 'CTO', 'COO', 'IR', 'PR', 'HR', 'IT', 'AI',
             'HBM', 'DRAM', 'NAND', 'SSD', 'GPU', 'CPU', 'AP', 'PC',
         }
 
-        us_matches = re.findall(us_pattern, text)
+        us_matches = re.findall(us_pattern, text.upper())
         for ticker in us_matches:
             if ticker in excluded_words:
                 continue
-            # Check cache
             if ticker in self._us_ticker_cache:
                 return ticker, self._us_ticker_cache[ticker]['name'], 'us'
-            # Validate with yfinance
             try:
                 import yfinance as yf
                 stock = yf.Ticker(ticker)
@@ -2460,7 +2257,7 @@ class TelegramAIBot:
             except Exception:
                 pass
 
-        return None, None, 'kr'
+        return None, None, 'us'
 
     # ==========================================================================
     # Firecrawl AI Research handlers
@@ -2588,7 +2385,7 @@ class TelegramAIBot:
             return False, None, None
 
     # ==========================================================================
-    # /signal — KR event impact
+    # /signal — alias for /us_signal
     # ==========================================================================
 
     async def handle_signal_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2647,7 +2444,7 @@ class TelegramAIBot:
         return ConversationHandler.END
 
     # ==========================================================================
-    # /theme — KR theme health check
+    # /theme — alias for /us_theme
     # ==========================================================================
 
     async def handle_theme_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):

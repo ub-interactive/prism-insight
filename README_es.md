@@ -209,7 +209,7 @@ docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mod
 
 ## ¿Que es PRISM-INSIGHT?
 
-PRISM-INSIGHT es un sistema de analisis bursatil impulsado por IA, **completamente de codigo abierto y gratuito**, para los mercados de **Corea del Sur (KOSPI/KOSDAQ)** y **Estados Unidos (NYSE/NASDAQ)**.
+PRISM-INSIGHT es un sistema de analisis bursatil impulsado por IA, **completamente de codigo abierto y gratuito**, enfocado en **acciones cotizadas en EE.UU. (NYSE/NASDAQ)**. Los informes y alertas pueden publicarse en coreano u otros idiomas.
 
 ### Capacidades Principales
 - **Deteccion de Movimientos Inusuales** — Deteccion automatica de acciones con volumen o movimientos de precio inusuales
@@ -276,24 +276,11 @@ Mas de 13 agentes especializados colaboran en equipos:
 
 ---
 
-## Rendimiento del Trading
-
-### Mercado KR — Temporada 2
+## Rendimiento del Trading (EE.UU.)
 
 | Metrica | Valor |
 |---------|-------|
-| Periodo | 2025.09.30 ~ 2026.03.24 |
-| Total de Operaciones | 86 |
-| Tasa de Exito | 45.35% |
-| Retorno Promedio por Operacion | +2.84% |
-| **Retorno Acumulado** | **+244.63%** |
-| Posiciones Actuales | 5 acciones |
-
-### Mercado de EE.UU. (Beta)
-
-| Metrica | Valor |
-|---------|-------|
-| Periodo | 2026.01.28 ~ 2026.03.21 |
+| Periodo | 2026.01.28 ~ 2026.03.21 (instantanea; consulta el dashboard) |
 | Total de Operaciones | 13 |
 | Posiciones Actuales | 6 acciones |
 
@@ -301,9 +288,7 @@ Mas de 13 agentes especializados colaboran en equipos:
 
 ---
 
-## Modulo de Mercado Bursatil de EE.UU.
-
-El mismo flujo de trabajo impulsado por IA para los mercados estadounidenses:
+## Ejecutar el pipeline de analisis de EE.UU.
 
 ```bash
 # Run US analysis
@@ -342,23 +327,19 @@ npm run dev
 # Visit http://localhost:3000
 ```
 
-**Caracteristicas**: Vista general del portafolio, historial de operaciones, metricas de rendimiento, selector de mercado (KR/US), comparacion de retornos vs KOSPI/KOSDAQ
+**Caracteristicas**: Vista general del portafolio, historial de operaciones, metricas de rendimiento, comparacion vs S&P 500 / Nasdaq (dashboard de ejemplo)
 
 **Guia de Configuracion del Dashboard**: [examples/dashboard/DASHBOARD_README.md](examples/dashboard/DASHBOARD_README.md)
 
 ---
 
-## Servidores MCP
+## Servidores MCP (EE.UU.)
 
-### Mercado Coreano
-- **[kospi_kosdaq](https://github.com/dragon1086/kospi-kosdaq-stock-server)** — Datos bursatiles de KRX
+- **[yahoo-finance-mcp](https://pypi.org/project/yahoo-finance-mcp/)** — OHLCV y datos financieros
+- **[sec-edgar-mcp](https://pypi.org/project/sec-edgar-mcp/)** — Documentos SEC e insiders
 - **[firecrawl](https://github.com/mendableai/firecrawl-mcp-server)** — Rastreo web
 - **[perplexity](https://github.com/perplexityai/modelcontextprotocol)** — Busqueda web
 - **[sqlite](https://github.com/modelcontextprotocol/servers-archived)** — Base de datos de simulacion de trading
-
-### Mercado Estadounidense
-- **[yahoo-finance-mcp](https://pypi.org/project/yahoo-finance-mcp/)** — OHLCV, datos financieros
-- **[sec-edgar-mcp](https://pypi.org/project/sec-edgar-mcp/)** — Presentaciones ante la SEC, operaciones de insiders
 
 ---
 

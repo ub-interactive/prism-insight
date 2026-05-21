@@ -5,9 +5,7 @@ PRISM-INSIGHT Trading Signal Subscriber (GCP Pub/Sub Auto-Trading Integration)
 Running this script will receive buy/sell signals published by PRISM-INSIGHT
 in real-time via GCP Pub/Sub and execute actual auto-trading.
 
-Supported Markets:
-    - KR (Korea): 09:00-15:30 KST, using domestic_stock_trading module
-    - US (USA): 09:30-16:00 EST, using us_stock_trading module
+Supported market: US (NYSE/NASDAQ) via ``trading.stock_trading.USStockTrading``.
 
 Usage:
     1. Install google-cloud-pubsub package
@@ -27,9 +25,7 @@ Options:
 
 Note:
     In demo mode, if signals arrive during off-market hours,
-    market orders will be automatically executed at the next trading day's market open:
-    - KR: Next trading day 09:05 KST
-    - US: Next trading day 09:35 EST (23:35 KST)
+    reserved orders run at the next US session open (09:35 US/Eastern, shown in KST in logs).
 """
 import os
 import sys
@@ -70,24 +66,9 @@ def get_trading_mode() -> str:
         return "real"
 
 
-def is_market_hours(market: str = "KR") -> bool:
-    """
-    Check if current time is during regular market hours
-
-    Args:
-        market: "KR" (Korea) or "US" (USA)
-
-    Returns:
-        bool: Whether market is open
-    """
-    if market == "US":
-        return is_us_market_hours()
-
-    # Korea: 09:00~15:30 KST
-    now = datetime.now().time()
-    market_open = time(9, 0)
-    market_close = time(15, 30)
-    return market_open <= now <= market_close
+def is_market_hours() -> bool:
+    """True during regular US equity hours (NYSE calendar + 09:30–16:00 US/Eastern)."""
+    return is_us_market_hours()
 
 
 def is_us_market_hours() -> bool:
@@ -120,62 +101,9 @@ def is_us_market_hours() -> bool:
             return now_time >= time(23, 30) or now_time <= time(6, 0)
 
 
-def is_market_day_check() -> bool:
-    """Check if it's a trading day (using check_market_day.py)"""
-    try:
-        from check_market_day import is_market_day
-        return is_market_day()
-    except ImportError:
-        # fallback: only check weekends
-        return datetime.now().weekday() < 5
-
-
-def get_next_market_open(market: str = "KR") -> datetime:
-    """
-    Calculate next trading day's market open time
-
-    Args:
-        market: "KR" (Korea) or "US" (USA)
-
-    Returns:
-        datetime: Next trading day's market open time
-    """
-    if market == "US":
-        return get_next_us_market_open()
-
-    # Korea: Next trading day 09:05 KST
-    now = datetime.now()
-    next_day = now + timedelta(days=1)
-
-    # Find next trading day (search up to 7 days)
-    for _ in range(7):
-        # Skip weekends
-        if next_day.weekday() >= 5:
-            next_day += timedelta(days=1)
-            continue
-
-        # Check holidays (using is_market_day_check)
-        try:
-            from check_market_day import is_market_day
-            from holidays.countries import KR
-
-            # Check if the date is a trading day
-            kr_holidays = KR()
-            if next_day.date() in kr_holidays:
-                next_day += timedelta(days=1)
-                continue
-            # Check Labor Day
-            if next_day.month == 5 and next_day.day == 1:
-                next_day += timedelta(days=1)
-                continue
-        except ImportError:
-            pass
-
-        # Found trading day
-        break
-
-    # Set to 09:05 (stabilization time after market open)
-    return next_day.replace(hour=9, minute=5, second=0, microsecond=0)
+def get_next_market_open() -> datetime:
+    """Next US regular session execution time (see :func:`get_next_us_market_open`)."""
+    return get_next_us_market_open()
 
 
 def get_next_us_market_open() -> datetime:
@@ -278,22 +206,23 @@ class ScheduledOrderManager:
         except Exception as e:
             self.logger.error(f"Failed to save scheduled orders: {e}")
 
-    def add_order(self, signal: Dict[str, Any], signal_type: str = "BUY", market: str = "KR") -> bool:
+    def add_order(self, signal: Dict[str, Any], signal_type: str = "BUY", market: str = "US") -> bool:
         """
-        Add scheduled order
+        Add scheduled order (US market only).
 
         Args:
             signal: Signal data dictionary
-            signal_type: "BUY" or "SELL" (default: "BUY" - backward compatibility)
-            market: "KR" or "US" (default: "KR" - backward compatibility)
+            signal_type: "BUY" or "SELL"
+            market: Ignored; retained for backward compatibility with saved JSON (always US execution).
         """
+        _ = market
         with self._lock:
             order = {
                 "signal": signal,
                 "signal_type": signal_type,
-                "market": market,
+                "market": "US",
                 "scheduled_at": datetime.now().isoformat(),
-                "execute_after": get_next_market_open(market).isoformat(),
+                "execute_after": get_next_market_open().isoformat(),
                 "status": "pending"
             }
             self.orders.append(order)
@@ -301,11 +230,12 @@ class ScheduledOrderManager:
 
             ticker = signal.get("ticker", "")
             company_name = signal.get("company_name", "")
-            execute_time = get_next_market_open(market).strftime("%Y-%m-%d %H:%M")
+            execute_time = get_next_market_open().strftime("%Y-%m-%d %H:%M")
 
             action_type = "BUY" if signal_type == "BUY" else "SELL"
-            market_label = "🇺🇸 US" if market == "US" else "🇰🇷 KR"
-            self.logger.info(f"⏰ Scheduled order registered: [{market_label}] {company_name}({ticker}) [{action_type}] -> scheduled for {execute_time}")
+            self.logger.info(
+                f"⏰ Scheduled order registered: [🇺🇸 US] {company_name}({ticker}) [{action_type}] -> scheduled for {execute_time}"
+            )
             return True
 
     def get_pending_orders(self) -> List[Dict[str, Any]]:
@@ -346,7 +276,7 @@ class ScheduledOrderManager:
     def start_scheduler(self, execute_callback):
         """Start background scheduler"""
         def scheduler_loop():
-            self.logger.info("🕐 Scheduled order scheduler started (KR/US markets supported)")
+            self.logger.info("🕐 Scheduled order scheduler started (US market)")
             while not self._stop_event.is_set():
                 try:
                     # Check every minute
@@ -358,17 +288,15 @@ class ScheduledOrderManager:
                     for order in pending_orders:
                         signal = order["signal"]
                         signal_type = order.get("signal_type", "BUY")
-                        market = order.get("market", "KR")
+                        market = order.get("market", "US")
                         ticker = signal.get("ticker", "")
                         company_name = signal.get("company_name", "")
 
-                        # Check if market is open for this market
-                        if not is_market_hours(market):
+                        if not is_market_hours():
                             continue
 
                         action_type = "BUY" if signal_type == "BUY" else "SELL"
-                        market_label = "🇺🇸 US" if market == "US" else "🇰🇷 KR"
-                        self.logger.info(f"🚀 Executing scheduled order: [{market_label}] {company_name}({ticker}) [{action_type}]")
+                        self.logger.info(f"🚀 Executing scheduled order: [🇺🇸 US] {company_name}({ticker}) [{action_type}]")
 
                         try:
                             result = execute_callback(order)
@@ -377,9 +305,9 @@ class ScheduledOrderManager:
                             self.mark_executed(order, success, message)
 
                             if success:
-                                self.logger.info(f"✅ Scheduled order succeeded: [{market_label}] {company_name}({ticker})")
+                                self.logger.info(f"✅ Scheduled order succeeded: [🇺🇸 US] {company_name}({ticker})")
                             else:
-                                self.logger.error(f"❌ Scheduled order failed: [{market_label}] {company_name}({ticker}) - {message}")
+                                self.logger.error(f"❌ Scheduled order failed: [🇺🇸 US] {company_name}({ticker}) - {message}")
                         except Exception as e:
                             self.mark_executed(order, False, str(e))
                             self.logger.error(f"❌ Scheduled order execution error: {e}")
@@ -437,80 +365,6 @@ def setup_logging(log_file: str = None) -> logging.Logger:
     logger.info(f"Log file: {log_path}")
 
     return logger
-
-
-async def execute_buy_trade(ticker: str, company_name: str, logger: logging.Logger, limit_price: Optional[int] = None) -> Dict[str, Any]:
-    """Execute actual buy order (async)
-
-    Args:
-        ticker: Stock code
-        company_name: Company name for logging
-        logger: Logger instance
-        limit_price: Limit price for reserved orders (required for off-hours trading)
-    """
-    try:
-        from trading.domestic_stock_trading import AsyncTradingContext
-
-        async with AsyncTradingContext() as trading:
-            # Get current price for limit_price if not provided (needed for reserved orders)
-            effective_limit_price = limit_price
-            if not effective_limit_price:
-                price_info = trading.get_current_price(ticker)
-                if price_info:
-                    effective_limit_price = int(price_info['current_price'])
-
-            trade_result = await trading.async_buy_stock(stock_code=ticker, limit_price=effective_limit_price)
-
-        if trade_result['success']:
-            logger.info(f"✅ Actual buy successful: {company_name}({ticker}) - {trade_result['message']}")
-        else:
-            logger.error(f"❌ Actual buy failed: {company_name}({ticker}) - {trade_result['message']}")
-
-        return trade_result
-
-    except ImportError as e:
-        logger.error(f"Trading module import failed: {e}")
-        return {"success": False, "message": f"Import error: {e}"}
-    except Exception as e:
-        logger.error(f"Error during buy execution: {e}", exc_info=True)
-        return {"success": False, "message": str(e)}
-
-
-async def execute_sell_trade(ticker: str, company_name: str, logger: logging.Logger, limit_price: Optional[int] = None) -> Dict[str, Any]:
-    """Execute actual sell order (async)
-
-    Args:
-        ticker: Stock code
-        company_name: Company name for logging
-        logger: Logger instance
-        limit_price: Limit price for reserved orders (required for off-hours trading)
-    """
-    try:
-        from trading.domestic_stock_trading import AsyncTradingContext
-
-        async with AsyncTradingContext() as trading:
-            # Get current price for limit_price if not provided (needed for reserved orders)
-            effective_limit_price = limit_price
-            if not effective_limit_price:
-                price_info = trading.get_current_price(ticker)
-                if price_info:
-                    effective_limit_price = int(price_info['current_price'])
-
-            trade_result = await trading.async_sell_stock(stock_code=ticker, limit_price=effective_limit_price)
-
-        if trade_result['success']:
-            logger.info(f"✅ Actual sell successful: {company_name}({ticker}) - {trade_result['message']}")
-        else:
-            logger.error(f"❌ Actual sell failed: {company_name}({ticker}) - {trade_result['message']}")
-
-        return trade_result
-
-    except ImportError as e:
-        logger.error(f"Trading module import failed: {e}")
-        return {"success": False, "message": f"Import error: {e}"}
-    except Exception as e:
-        logger.error(f"Error during sell execution: {e}", exc_info=True)
-        return {"success": False, "message": str(e)}
 
 
 async def execute_us_buy_trade(ticker: str, company_name: str, logger: logging.Logger, limit_price: Optional[float] = None) -> Dict[str, Any]:
@@ -636,29 +490,16 @@ def main():
 
         # Define scheduler callback function
         def execute_scheduled_order(order: dict) -> dict:
-            """Execute scheduled order (sync wrapper)"""
+            """Execute scheduled order (sync wrapper, US only)."""
             signal = order.get("signal", {})
             signal_type = order.get("signal_type", "BUY")
-            market = order.get("market", "KR")
             ticker = signal.get("ticker", "")
             company_name = signal.get("company_name", "")
-            # Get price from signal for limit orders (signal may contain price info)
             price = signal.get("price", 0)
-
-            # Call different trading functions based on market
-            # Pass price as limit_price for reserved orders
-            if market == "US":
-                limit_price = float(price) if price else None
-                if signal_type == "SELL":
-                    return asyncio.run(execute_us_sell_trade(ticker, company_name, logger, limit_price=limit_price))
-                else:  # BUY
-                    return asyncio.run(execute_us_buy_trade(ticker, company_name, logger, limit_price=limit_price))
-            else:  # KR (default)
-                limit_price = int(price) if price else None
-                if signal_type == "SELL":
-                    return asyncio.run(execute_sell_trade(ticker, company_name, logger, limit_price=limit_price))
-                else:  # BUY
-                    return asyncio.run(execute_buy_trade(ticker, company_name, logger, limit_price=limit_price))
+            limit_price = float(price) if price else None
+            if signal_type == "SELL":
+                return asyncio.run(execute_us_sell_trade(ticker, company_name, logger, limit_price=limit_price))
+            return asyncio.run(execute_us_buy_trade(ticker, company_name, logger, limit_price=limit_price))
 
         # Start background scheduler
         scheduled_order_manager.start_scheduler(execute_scheduled_order)
@@ -704,7 +545,9 @@ def main():
         ticker = signal.get("ticker", "")
         company_name = signal.get("company_name", "")
         price = signal.get("price", 0)
-        market = signal.get("market", "KR")  # KR (Korea) or US (USA)
+        market_raw = signal.get("market", "US")
+        if str(market_raw).strip().upper() not in ("US", "USA", ""):
+            logger.warning(f"Ignoring non-US market tag in signal ({market_raw!r}); executing as US.")
 
         # Emoji by signal type
         emoji = {
@@ -713,9 +556,8 @@ def main():
             "EVENT": "🔔"
         }.get(signal_type, "📌")
 
-        # Market label
-        market_label = "🇺🇸" if market == "US" else "🇰🇷"
-        currency = "USD" if market == "US" else "KRW"
+        market_label = "🇺🇸"
+        currency = "USD"
 
         # Log basic signal info
         logger.info(f"{emoji} {market_label} [{signal_type}] {company_name}({ticker}) @ {price:,.2f} {currency}")
@@ -743,22 +585,19 @@ def main():
             # Execute actual buy
             if not args.dry_run:
                 trading_mode = get_trading_mode()
-                in_market_hours = is_market_hours(market)
+                in_market_hours = is_market_hours()
 
                 # Demo mode + off-market hours: schedule for next trading day
                 if trading_mode == "demo" and not in_market_hours:
                     logger.info(f"⏰ [DEMO mode off-hours] Scheduling for next trading day: {market_label} {company_name}({ticker}) [BUY]")
                     if scheduled_order_manager:
-                        scheduled_order_manager.add_order(signal, signal_type="BUY", market=market)
+                        scheduled_order_manager.add_order(signal, signal_type="BUY")
                     else:
                         logger.warning("Scheduler not initialized - skipping order")
                 else:
                     # Live trading or market hours: execute immediately
                     logger.info(f"🚀 Executing buy order: {market_label} {company_name}({ticker})")
-                    if market == "US":
-                        asyncio.run(execute_us_buy_trade(ticker, company_name, logger, limit_price=float(price) if price else None))
-                    else:
-                        asyncio.run(execute_buy_trade(ticker, company_name, logger, limit_price=int(price) if price else None))
+                    asyncio.run(execute_us_buy_trade(ticker, company_name, logger, limit_price=float(price) if price else None))
             else:
                 logger.info(f"🔸 [DRY-RUN] Buy skipped: {market_label} {company_name}({ticker})")
 
@@ -782,22 +621,19 @@ def main():
             # Execute actual sell
             if not args.dry_run:
                 trading_mode = get_trading_mode()
-                in_market_hours = is_market_hours(market)
+                in_market_hours = is_market_hours()
 
                 # Demo mode + off-market hours: schedule for next trading day (same logic as BUY)
                 if trading_mode == "demo" and not in_market_hours:
                     logger.info(f"⏰ [DEMO mode off-hours] Scheduling for next trading day: {market_label} {company_name}({ticker}) [SELL]")
                     if scheduled_order_manager:
-                        scheduled_order_manager.add_order(signal, signal_type="SELL", market=market)
+                        scheduled_order_manager.add_order(signal, signal_type="SELL")
                     else:
                         logger.warning("Scheduler not initialized - skipping sell order")
                 else:
                     # Live trading or market hours: execute immediately
                     logger.info(f"🚀 Executing sell order: {market_label} {company_name}({ticker})")
-                    if market == "US":
-                        asyncio.run(execute_us_sell_trade(ticker, company_name, logger, limit_price=float(price) if price else None))
-                    else:
-                        asyncio.run(execute_sell_trade(ticker, company_name, logger, limit_price=int(price) if price else None))
+                    asyncio.run(execute_us_sell_trade(ticker, company_name, logger, limit_price=float(price) if price else None))
             else:
                 logger.info(f"🔸 [DRY-RUN] Sell skipped: {market_label} {company_name}({ticker})")
 

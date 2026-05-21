@@ -39,7 +39,7 @@ def create_trading_journal_agent(language: str = "ko"):
 
     ### Step 1: Situation Analysis
     Compare the situation at buy-time vs sell-time:
-    - Market condition changes (KOSPI/KOSDAQ trend, foreign/institutional flow)
+    - Market condition changes (S&P 500 / Nasdaq trend, rates, breadth)
     - Stock-specific changes (price, volume, technical position)
     - Sector/theme changes
     - Catalyst/news changes

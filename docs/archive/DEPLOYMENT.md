@@ -140,10 +140,7 @@ sqlite3 archive.db ".tables" | tr ' ' '\n' | grep -iE 'insight|weekly|quota'
 ### Step 4. 데이터 시드 (리포트 있으면)
 
 ```bash
-# 기존 분석 리포트 인제스트
-python -m cores.archive.ingest --dir reports/ --market kr --dry-run
-python -m cores.archive.ingest --dir reports/ --market kr
-
+# 기존 분석 리포트 인제스트 (US 전용)
 python -m cores.archive.ingest --dir reports/ --market us --dry-run
 python -m cores.archive.ingest --dir reports/ --market us
 

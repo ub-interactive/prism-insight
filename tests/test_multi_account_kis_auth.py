@@ -63,12 +63,6 @@ def _patch_cfg(monkeypatch, cfg):
     )
     monkeypatch.setattr(
         ka,
-        "DEFAULT_BUY_AMOUNT_KRW",
-        int(cfg.get("default_unit_amount", 0) or 0),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        ka,
         "DEFAULT_BUY_AMOUNT_USD",
         float(cfg.get("default_unit_amount_usd", 0) or 0),
         raising=False,
@@ -88,12 +82,12 @@ def test_get_configured_accounts_normalizes_filters_and_preserves_overrides(monk
     cfg = _base_cfg()
     cfg["accounts"] = [
         {
-            "name": "kr-demo",
+            "name": "us-demo-alt",
             "mode": "demo",
             "account": "11112222",
             "product": "01",
-            "market": "kr",
-            "buy_amount_krw": 77777,
+            "market": "us",
+            "buy_amount_usd": 99.0,
         },
         {
             "name": "us-demo-primary",
@@ -116,18 +110,18 @@ def test_get_configured_accounts_normalizes_filters_and_preserves_overrides(monk
 
     us_demo_accounts = ka.get_configured_accounts(svr="demo", market="us")
 
-    assert [account["name"] for account in us_demo_accounts] == ["us-demo-primary"]
-    assert us_demo_accounts[0]["svr"] == "vps"
-    assert us_demo_accounts[0]["account_key"] == "vps:33334444:01"
-    assert us_demo_accounts[0]["primary"] is True
-    assert us_demo_accounts[0]["buy_amount_usd"] == 123.45
+    assert [account["name"] for account in us_demo_accounts] == ["us-demo-alt", "us-demo-primary"]
+    assert us_demo_accounts[1]["svr"] == "vps"
+    assert us_demo_accounts[1]["account_key"] == "vps:33334444:01"
+    assert us_demo_accounts[1]["primary"] is True
+    assert us_demo_accounts[1]["buy_amount_usd"] == 123.45
 
 
-def test_get_configured_accounts_does_not_cross_market_fallback(monkeypatch):
+def test_get_configured_accounts_rejects_korean_market(monkeypatch):
     cfg = _base_cfg()
     cfg["accounts"] = [
         {
-            "name": "kr-demo",
+            "name": "invalid-kr",
             "mode": "demo",
             "account": "11112222",
             "product": "01",
@@ -136,7 +130,8 @@ def test_get_configured_accounts_does_not_cross_market_fallback(monkeypatch):
     ]
     _patch_cfg(monkeypatch, cfg)
 
-    assert ka.get_configured_accounts(svr="demo", market="us") == []
+    with pytest.raises(ValueError, match="Korean domestic market"):
+        ka.get_configured_accounts(svr="demo", market="us")
 
 
 def test_get_configured_accounts_supports_legacy_fallback(monkeypatch):
@@ -157,9 +152,8 @@ def test_get_configured_accounts_supports_legacy_fallback(monkeypatch):
         "legacy-real-stock",
         "legacy-demo-stock",
     ]
-    assert accounts[0]["market"] == "all"
+    assert accounts[0]["market"] == "us"
     assert accounts[0]["primary"] is True
-    assert accounts[0]["buy_amount_krw"] == 100000
     assert accounts[0]["buy_amount_usd"] == 250.0
     assert accounts[1]["account_key"] == "vps:12345678:01"
 
@@ -203,14 +197,14 @@ def test_resolve_account_supports_account_key(monkeypatch):
             "mode": "demo",
             "account": "11110000",
             "product": "01",
-            "market": "kr",
+            "market": "us",
         },
         {
             "name": "acct-b",
             "mode": "demo",
             "account": "22220000",
             "product": "01",
-            "market": "kr",
+            "market": "us",
         },
     ]
     _patch_cfg(monkeypatch, cfg)
@@ -219,7 +213,7 @@ def test_resolve_account_supports_account_key(monkeypatch):
         svr="vps",
         product="01",
         account_key="vps:22220000:01",
-        market="kr",
+        market="us",
     )
 
     assert resolved["name"] == "acct-b"
@@ -241,7 +235,7 @@ def test_get_configured_accounts_rejects_too_many_accounts(monkeypatch):
             "mode": "demo",
             "account": f"{10000000 + index}",
             "product": "01",
-            "market": "kr",
+            "market": "us",
         }
         for index in range(11)
     ]

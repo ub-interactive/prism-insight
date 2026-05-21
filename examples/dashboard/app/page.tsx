@@ -21,8 +21,8 @@ import type { DashboardData, Holding, Market } from "@/types/dashboard"
 type TabType = "dashboard" | "ai-decisions" | "trading" | "watchlist" | "insights"
 const VALID_TABS: TabType[] = ["dashboard", "ai-decisions", "trading", "watchlist", "insights"]
 
-// Get data file path based on market and language
-function getDataFilePath(market: Market, language: string): string {
+// Get localized US dashboard fixture path (US-only product)
+function getDataFilePath(_market: Market, language: string): string {
   return language === "en" ? "/us_dashboard_data_en.json" : "/us_dashboard_data.json"
 }
 
@@ -78,11 +78,10 @@ function DashboardContent() {
         const response = await fetch(dataFile)
 
         if (!response.ok) {
-          // US data file might not exist yet
-          if (market === "US" && response.status === 404) {
+          if (response.status === 404) {
             setDataError(language === "ko"
-              ? "미국 시장 데이터가 아직 없습니다. 곧 추가될 예정입니다."
-              : "US market data is not available yet. Coming soon."
+              ? "대시보드 데이터 파일을 찾을 수 없습니다."
+              : "Dashboard data file not found."
             )
             setData(null)
             return
@@ -94,12 +93,10 @@ function DashboardContent() {
         setData(jsonData)
       } catch (error) {
         console.error("[v0] Failed to fetch dashboard data:", error)
-        if (market === "US") {
-          setDataError(language === "ko"
-            ? "미국 시장 데이터를 불러올 수 없습니다."
-            : "Failed to load US market data."
-          )
-        }
+        setDataError(language === "ko"
+          ? "대시보드 데이터를 불러올 수 없습니다."
+          : "Failed to load dashboard data."
+        )
       }
     }
 
@@ -125,12 +122,12 @@ function DashboardContent() {
         />
         <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
           <div className="text-center p-8 rounded-lg border border-border/50 bg-card max-w-md">
-            <div className="text-4xl mb-4">{market === "US" ? "🇺🇸" : "🇰🇷"}</div>
+            <div className="text-4xl mb-4">🇺🇸</div>
             <p className="text-muted-foreground">{dataError}</p>
             <p className="text-sm text-muted-foreground/70 mt-2">
               {language === "ko"
-                ? "다른 시장을 선택하거나 나중에 다시 시도해 주세요."
-                : "Please select another market or try again later."
+                ? "설정 또는 네트워크를 확인한 뒤 다시 시도해 주세요."
+                : "Please check your setup or network and try again."
               }
             </p>
           </div>

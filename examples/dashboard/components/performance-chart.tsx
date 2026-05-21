@@ -14,9 +14,8 @@ interface PerformanceChartProps {
   market?: Market
 }
 
-export function PerformanceChart({ data, prismPerformance = [], holdings = [], summary, market = "KR" }: PerformanceChartProps) {
+export function PerformanceChart({ data, prismPerformance = [], holdings = [], summary, market = "US" }: PerformanceChartProps) {
   const { t, language } = useLanguage()
-  const isUSMarket = market === "US"
   const seasonInfo = getSeasonInfo(market)
 
   const formatNumber = (value: number) => {
@@ -60,19 +59,14 @@ export function PerformanceChart({ data, prismPerformance = [], holdings = [], s
     )
   }
 
-  // 시작 시점의 지수 값 - US or KR
-  const startIndex1 = isUSMarket
-    ? (filteredData[0]?.spx_index || 0)
-    : (filteredData[0]?.kospi_index || 0)
-  const startIndex2 = isUSMarket
-    ? (filteredData[0]?.nasdaq_index || 0)
-    : (filteredData[0]?.kosdaq_index || 0)
+  // 시작 시점의 지수 값 — S&P 500 / NASDAQ (US)
+  const startIndex1 = filteredData[0]?.spx_index || 0
+  const startIndex2 = filteredData[0]?.nasdaq_index || 0
 
-  // Index names based on market
-  const index1Name = isUSMarket ? "S&P 500" : "KOSPI"
-  const index2Name = isUSMarket ? "NASDAQ" : "KOSDAQ"
-  const index1Color = isUSMarket ? "#8b5cf6" : "#3b82f6"  // purple for S&P, blue for KOSPI
-  const index2Color = isUSMarket ? "#06b6d4" : "#10b981"  // cyan for NASDAQ, emerald for KOSDAQ
+  const index1Name = "S&P 500"
+  const index2Name = "NASDAQ"
+  const index1Color = "#8b5cf6"
+  const index2Color = "#06b6d4"
 
   // 프리즘 퍼포먼스 데이터를 날짜 기준으로 맵핑
   const prismPerformanceMap = new Map<string, PrismPerformance>()
@@ -111,9 +105,9 @@ export function PerformanceChart({ data, prismPerformance = [], holdings = [], s
 
   const prismMDD = calculateMDD(prismPerformance)
 
-  // Index1 기준 차트 데이터 (KOSPI or S&P 500)
+  // Index1: S&P 500 기준 차트 데이터
   const index1ChartData = filteredData.map((item) => {
-    const currentIndex = isUSMarket ? (item.spx_index || 0) : (item.kospi_index || 0)
+    const currentIndex = item.spx_index || 0
     const indexReturn = startIndex1 > 0 ? ((currentIndex - startIndex1) / startIndex1) * 100 : 0
 
     // 해당 날짜의 프리즘 퍼포먼스 찾기
@@ -127,9 +121,9 @@ export function PerformanceChart({ data, prismPerformance = [], holdings = [], s
     }
   })
 
-  // Index2 기준 차트 데이터 (KOSDAQ or NASDAQ)
+  // Index2: NASDAQ 기준 차트 데이터
   const index2ChartData = filteredData.map((item) => {
-    const currentIndex = isUSMarket ? (item.nasdaq_index || 0) : (item.kosdaq_index || 0)
+    const currentIndex = item.nasdaq_index || 0
     const indexReturn = startIndex2 > 0 ? ((currentIndex - startIndex2) / startIndex2) * 100 : 0
 
     // 해당 날짜의 프리즘 퍼포먼스 찾기
@@ -283,13 +277,14 @@ export function PerformanceChart({ data, prismPerformance = [], holdings = [], s
     )
   }
 
-  // Chart titles based on market
-  const index1Title = isUSMarket
-    ? (language === "ko" ? `S&P 500 대비 수익률 (${seasonInfo.seasonName})` : `Return vs S&P 500 (${seasonInfo.seasonName})`)
-    : t("chart.returnComparisonKospi")
-  const index2Title = isUSMarket
-    ? (language === "ko" ? `NASDAQ 대비 수익률 (${seasonInfo.seasonName})` : `Return vs NASDAQ (${seasonInfo.seasonName})`)
-    : t("chart.returnComparisonKosdaq")
+  const index1Title =
+    language === "ko"
+      ? `S&P 500 대비 수익률 (${seasonInfo.seasonName})`
+      : `Return vs S&P 500 (${seasonInfo.seasonName})`
+  const index2Title =
+    language === "ko"
+      ? `NASDAQ 대비 수익률 (${seasonInfo.seasonName})`
+      : `Return vs NASDAQ (${seasonInfo.seasonName})`
 
   return (
     <div className="space-y-4">
@@ -321,10 +316,9 @@ export function PerformanceChart({ data, prismPerformance = [], holdings = [], s
   )
 }
 
-// 기존 KOSPI/KOSDAQ 지수 차트를 별도 컴포넌트로 분리
-function IndexCharts({ data, market = "KR" }: { data: MarketCondition[], market?: Market }) {
+// 지수(S&P 500 / NASDAQ) 일별 추이 카드
+function IndexCharts({ data, market = "US" }: { data: MarketCondition[], market?: Market }) {
   const { t, language } = useLanguage()
-  const isUSMarket = market === "US"
 
   const formatNumber = (value: number) => {
     return new Intl.NumberFormat("ko-KR", {
@@ -343,13 +337,8 @@ function IndexCharts({ data, market = "KR" }: { data: MarketCondition[], market?
     return [Math.floor(min - padding), Math.ceil(max + padding)]
   }
 
-  // Get index values based on market
-  const index1Values = isUSMarket
-    ? data.map(d => d.spx_index || 0).filter(v => v > 0)
-    : data.map(d => d.kospi_index).filter(v => v > 0)
-  const index2Values = isUSMarket
-    ? data.map(d => d.nasdaq_index || 0).filter(v => v > 0)
-    : data.map(d => d.kosdaq_index).filter(v => v > 0)
+  const index1Values = data.map(d => d.spx_index || 0).filter(v => v > 0)
+  const index2Values = data.map(d => d.nasdaq_index || 0).filter(v => v > 0)
 
   const [index1Min, index1Max] = getYAxisDomain(index1Values)
   const [index2Min, index2Max] = getYAxisDomain(index2Values)
@@ -367,13 +356,12 @@ function IndexCharts({ data, market = "KR" }: { data: MarketCondition[], market?
   const index1Stats = getLatestChange(index1Values)
   const index2Stats = getLatestChange(index2Values)
 
-  // Index names and colors based on market
-  const index1Name = isUSMarket ? "S&P 500" : "KOSPI"
-  const index2Name = isUSMarket ? "NASDAQ" : "KOSDAQ"
-  const index1Color = isUSMarket ? "#8b5cf6" : "#3b82f6"  // purple for S&P, blue for KOSPI
-  const index2Color = isUSMarket ? "#06b6d4" : "#10b981"  // cyan for NASDAQ, emerald for KOSDAQ
-  const index1DataKey = isUSMarket ? "spx_index" : "kospi_index"
-  const index2DataKey = isUSMarket ? "nasdaq_index" : "kosdaq_index"
+  const index1Name = "S&P 500"
+  const index2Name = "NASDAQ"
+  const index1Color = "#8b5cf6"
+  const index2Color = "#06b6d4"
+  const index1DataKey = "spx_index" as const
+  const index2DataKey = "nasdaq_index" as const
 
   const IndexCard = ({
     title,
@@ -384,7 +372,7 @@ function IndexCharts({ data, market = "KR" }: { data: MarketCondition[], market?
     stats
   }: {
     title: string
-    dataKey: "kospi_index" | "kosdaq_index" | "spx_index" | "nasdaq_index"
+    dataKey: "spx_index" | "nasdaq_index"
     color: string
     yMin: number
     yMax: number
@@ -453,7 +441,7 @@ function IndexCharts({ data, market = "KR" }: { data: MarketCondition[], market?
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <IndexCard
         title={index1Name}
-        dataKey={index1DataKey as "kospi_index" | "kosdaq_index" | "spx_index" | "nasdaq_index"}
+        dataKey={index1DataKey}
         color={index1Color}
         yMin={index1Min}
         yMax={index1Max}
@@ -461,7 +449,7 @@ function IndexCharts({ data, market = "KR" }: { data: MarketCondition[], market?
       />
       <IndexCard
         title={index2Name}
-        dataKey={index2DataKey as "kospi_index" | "kosdaq_index" | "spx_index" | "nasdaq_index"}
+        dataKey={index2DataKey}
         color={index2Color}
         yMin={index2Min}
         yMax={index2Max}

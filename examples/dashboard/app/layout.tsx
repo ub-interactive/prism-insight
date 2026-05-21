@@ -10,7 +10,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Prism Insight Dashboard",
-  description: "AI Agent-based Korean Stock Analysis & Trading System",
+  description: "AI Agent-based US Stock Analysis & Trading System",
   generator: "v0.app",
 }
 

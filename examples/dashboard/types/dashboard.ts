@@ -158,10 +158,9 @@ export interface WatchlistStock {
 
 export interface MarketCondition {
   date: string
-  // Korean market indices
+  /** @deprecated Legacy rows may still include Korean index fields */
   kospi_index?: number
   kosdaq_index?: number
-  // US market indices
   spx_index?: number
   nasdaq_index?: number
   condition: number
@@ -195,7 +194,7 @@ export interface OperatingCosts {
 export interface DashboardData {
   generated_at: string
   trading_mode: string
-  market?: Market  // Market identifier (KR or US)
+  market?: Market  // Always US for active deployments; KR retained for legacy data files only
   currency?: string  // Currency (KRW or USD)
   summary: Summary
   holdings: Holding[]
@@ -323,7 +322,7 @@ export interface TradingJournal {
   lessons: TradingLesson[]
   pattern_tags: string[]
   compression_layer: number
-  market?: Market  // KR or US
+  market?: Market  // US (legacy snapshots may still carry KR)
 }
 
 export interface TradingPrinciple {
@@ -339,7 +338,7 @@ export interface TradingPrinciple {
   is_active: boolean
   created_at: string
   last_validated_at: string | null
-  market?: Market  // KR or US
+  market?: Market  // US (legacy snapshots may still carry KR)
 }
 
 export interface TradingIntuition {
@@ -352,7 +351,7 @@ export interface TradingIntuition {
   supporting_trades: number
   is_active: boolean
   subcategory?: string
-  market?: Market  // KR or US
+  market?: Market  // US (legacy snapshots may still carry KR)
 }
 
 export interface InsightsSummary {

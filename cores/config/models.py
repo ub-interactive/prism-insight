@@ -9,16 +9,16 @@ Firecrawl Spark agent model: ``firecrawl.spark_agent_model`` (optional).
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from functools import lru_cache
-from pathlib import Path
-from typing import Dict, List, Mapping
 
 import yaml
 
+from repo_paths import REPO_ROOT
+
 logger = logging.getLogger(__name__)
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-_CONFIG_PATH = _PROJECT_ROOT / "mcp_agent.config.yaml"
+_CONFIG_PATH = REPO_ROOT / "mcp_agent.config.yaml"
 
 _DEFAULT_ARCHIVE_QUERY_MODELS = [
     "gpt-5.4-mini",
@@ -27,7 +27,7 @@ _DEFAULT_ARCHIVE_QUERY_MODELS = [
     "gpt-4.1-nano",
 ]
 
-_DEFAULT_CHATGPT_PROXY_MAP: Dict[str, str] = {
+_DEFAULT_CHATGPT_PROXY_MAP: dict[str, str] = {
     "gpt-4o": "gpt-5.4-mini",
     "gpt-4o-mini": "gpt-5.4-mini",
     "gpt-4o-2024-08-06": "gpt-5.4-mini",
@@ -40,10 +40,10 @@ _DEFAULT_CHATGPT_PROXY_MAP: Dict[str, str] = {
 
 
 @lru_cache(maxsize=1)
-def _read_config() -> Dict:
+def _read_config() -> dict:
     """Load mcp_agent.config.yaml once and cache result."""
     try:
-        with open(_CONFIG_PATH, "r", encoding="utf-8") as f:
+        with open(_CONFIG_PATH, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     except FileNotFoundError:
         logger.debug("mcp_agent.config.yaml not found at %s", _CONFIG_PATH)
@@ -93,7 +93,7 @@ def get_configured_anthropic_model(model_key: str, default_model: str) -> str:
     return default_model
 
 
-def get_archive_query_allowed_models() -> List[str]:
+def get_archive_query_allowed_models() -> list[str]:
     """Models permitted for archive CLI/API when ``openai.archive_query_allowed_models`` is set."""
     openai_cfg = _read_config().get("openai", {})
     if not isinstance(openai_cfg, Mapping):
@@ -107,7 +107,7 @@ def get_archive_query_allowed_models() -> List[str]:
     return list(_DEFAULT_ARCHIVE_QUERY_MODELS)
 
 
-def get_chatgpt_proxy_codex_model_map() -> Dict[str, str]:
+def get_chatgpt_proxy_codex_model_map() -> dict[str, str]:
     """
     Maps legacy ChatGPT client model IDs to Codex/Responses gateway models.
 
@@ -118,7 +118,7 @@ def get_chatgpt_proxy_codex_model_map() -> Dict[str, str]:
     if not isinstance(openai_cfg, Mapping):
         return dict(_DEFAULT_CHATGPT_PROXY_MAP)
 
-    merged: Dict[str, str] = dict(_DEFAULT_CHATGPT_PROXY_MAP)
+    merged: dict[str, str] = dict(_DEFAULT_CHATGPT_PROXY_MAP)
     global_fb = openai_cfg.get("chatgpt_proxy_fallback_model")
     if isinstance(global_fb, str) and global_fb.strip():
         fb = global_fb.strip()
@@ -161,7 +161,7 @@ def get_configured_firecrawl_spark_model(default_model: str = "spark-1-mini") ->
 def get_optional_reasoning_effort(
     model_name: str,
     preferred_effort: str = "none",
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Return reasoning_effort only for model families that reliably support it.
 

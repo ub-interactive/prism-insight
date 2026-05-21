@@ -1,0 +1,59 @@
+[project]
+name = "prism-insight"
+version = "2.9.0"
+description = "AI-powered US stock analysis & automated trading system"
+requires-python = ">=3.10"
+readme = "README.md"
+license = {text = "MIT"}
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+src = ["cores", "scripts", "integrations", "reporting", "trading", "tracking", "messaging", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific
+]
+ignore = [
+    "E501",    # line too long — handled by formatter
+    "F403",    # wildcard imports — used by backward-compat shims
+    "F405",    # undefined names from wildcard — same reason
+    "E402",    # module-level import not at top — sys.path usage in scripts
+    "RUF012",  # mutable class attributes — not enforced in this codebase
+    "B008",    # function call in default argument — used in FastAPI
+    "SIM108",  # ternary operator — readability preference
+    "UP007",   # use X | Y for union types — keep Optional for 3.10 compat
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["cores", "scripts", "integrations", "reporting", "trading", "tracking", "messaging", "repo_paths"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B", "SIM"]
+"examples/*" = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+"scripts/*" = ["E402"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "asyncio: mark test as async",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:mcp_agent.*",
+    "ignore::pytest.PytestReturnNotNoneWarning",
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

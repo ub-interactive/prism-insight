@@ -50,7 +50,7 @@ stock_tracking_agent.py  (runs independently, cron)
 
 ## AI Agents
 
-Specialized agents are organized across `cores/agents/` and orchestrated sequentially by `cores/analysis.py`. Full historical notes → [`docs/CLAUDE_AGENTS.md`](docs/CLAUDE_AGENTS.md) (legacy Telegram-era rows may appear there).
+Specialized agents are organized across `cores/agents/` and orchestrated sequentially by `cores/analysis.py`. Narrative notes → [`docs/CLAUDE_AGENTS.md`](docs/CLAUDE_AGENTS.md).
 
 | # | Agent | File | Purpose |
 |---|-------|------|---------|
@@ -107,7 +107,7 @@ Specialized agents are organized across `cores/agents/` and orchestrated sequent
 ```yaml
 # trading/config/kis_devlp.yaml
 accounts:
-  - id: primary       # Telegram reports use this account
+  - id: primary       # Logical default account label for tooling and migrations
     app_key: ...
     app_secret: ...
     account_no: XXXXXXXX-XX
@@ -218,9 +218,6 @@ result = await trading.async_sell_stock(ticker=ticker, limit_price=current_price
 | Korean fonts missing | `sudo dnf install google-nanum-fonts && fc-cache -fv` |
 | KIS auth fails | Check `trading/config/kis_devlp.yaml` |
 | import path error | Ensure root modules are imported directly (no legacy namespace shim) |
-| Telegram message in English | v2.2.0 restored Korean templates - pull latest |
-| Broadcast translation empty | gpt-5-mini fallback added in v2.2.0 |
-| `/report` 오류 후 재사용 불가 | v2.5.0 수정 - 서버 오류 시 자동 환급됨, 재시도 가능 |
 | US 예약주문 시간외 실패 | v2.7.1 - 10시 이전 주문은 자동 큐잉 → 10:05 KST 배치 실행 |
 | ChatGPT OAuth 404 | Codex 엔드포인트 미지원 모델 → `_MODEL_MAP` 자동 매핑 (v2.7.0) |
 | ChatGPT OAuth proxy 무반응 | `python -m cores.chatgpt_proxy.oauth_login`으로 토큰 갱신 |
@@ -228,8 +225,7 @@ result = await trading.async_sell_stock(ticker=ticker, limit_price=current_price
 ## i18n Strategy (v2.2.0)
 
 - **Code comments/logs**: English
-- **Telegram messages**: US pipeline notifications (default channel is `TELEGRAM_CHANNEL_ID`)
-- **Broadcast channels**: Translation agent converts to target language (`--broadcast-languages en,ja,zh,es`)
+- **User-visible strings**: Driven by pipelines that deliver to dashboards, Firebase/FCM, or saved reports — keep wording consistent with the target surface
 
 ## Branch & Commit Convention
 
@@ -253,13 +249,13 @@ test: Tests
 
 | Ver | Date | Changes |
 |-----|------|---------|
-| 2.9.0 | 2026-03-31 | **외부 기여 3종 + 매매 안정성 수정** - 다중 계좌 지원 (tkgo11, #228): 주·부계좌 병렬 팬아웃 + DB 마이그레이션, US 소셜 센티먼트 (alexander-schneider, #229): Adanos API 통합, US 모듈 네임스페이스 충돌 수정 (lifrary, #227): `importlib.util` 기반 임포트, KIS API 오류 3종 (APTR0057·APBK1234) + Telegram JSON sanitize + 손절 방어 강화 (#239), US 매도 ORD_DVSN 누락 수정 (#238), Telegram 타임아웃 지수 백오프 재시도 (#237), OpenAI 400 디버그 로깅 (#232) |
+| 2.9.0 | 2026-03-31 | **외부 기여 3종 + 매매 안정성 수정** - 다중 계좌 지원 (tkgo11, #228): 주·부계좌 병렬 팬아웃 + DB 마이그레이션, US 소셜 센티먼트 (alexander-schneider, #229): Adanos API 통합, US 모듈 네임스페이스 충돌 수정 (lifrary, #227): `importlib.util` 기반 임포트, KIS API 오류 3종 (APTR0057·APBK1234) + 푸시 JSON sanitize + 손절 방어 강화 (#239), US 매도 ORD_DVSN 누락 수정 (#238), 알림 전송 타임아웃 지수 백오프 재시도 (#237), OpenAI 400 디버그 로깅 (#232) |
 | 2.7.0 | 2026-03-24 | **ChatGPT OAuth Proxy + README 전면 업데이트** - ChatGPT Plus/Pro 구독으로 API 키 없이 분석 실행 가능 (`cores/chatgpt_proxy/`), Codex 엔드포인트 모델 매핑·SSE 파싱·response_format 변환 (#224), README 5개 언어 전면 개편 (모바일 앱·홍보영상·매매실적·Macro Intelligence 반영), 대시보드 스크린샷 교체 |
-| 2.6.0 | 2026-03-12 | **거시경제 인텔리전스 + 하이브리드 종목선정 + 텔레그램 얼럿 강화** - Macro Intelligence 에이전트 도입 (시장 체제 판단, 주도/낙후 섹터 식별), 탑다운+바텀업 하이브리드 종목 선정 (#202), US score-decision override 버그 수정 (#203), US trigger results 파일 경로 통일 (#204), 텔레그램 시그널 얼럿에 시장국면·선정채널·점수/R·R/손절 정보 추가 + PDF 커버 날짜 regex 수정 (#205) |
-| 2.5.2 | 2026-03-04 | **FCM NOT_FOUND 토큰 삭제 + Telegram Evaluator 다중 JSON 파싱 수정** - `firebase_bridge.py` `_INVALID_TOKEN_CODES`에 `NOT_FOUND` 추가 (만료 토큰 0/8 실패 반복 해결, #196), `telegram_summary_agent.py` GPT-5.x reasoning 모델 다중 JSON 응답 파싱 실패 → `_RobustEvaluatorLLM` 래퍼 + `generate_str()` fallback 추가 (#197) |
+| 2.6.0 | 2026-03-12 | **거시경제 인텔리전스 + 하이브리드 종목선정 + 시그널 알림 강화** - Macro Intelligence 에이전트 도입 (시장 체제 판단, 주도/낙후 섹터 식별), 탑다운+바텀업 하이브리드 종목 선정 (#202), US score-decision override 버그 수정 (#203), US trigger results 파일 경로 통일 (#204), 시그널 알림 카피에 시장국면·선정 채널·점수/R·R/손절 정보 추가 + PDF 커버 날짜 regex 수정 (#205) |
+| 2.5.2 | 2026-03-04 | **FCM NOT_FOUND 토큰 삭제 + 요약 품질 검사 다중 JSON 파싱 수정** - `firebase_bridge.py` `_INVALID_TOKEN_CODES`에 `NOT_FOUND` 추가 (만료 토큰 0/8 실패 반복 해결, #196), 헬퍼 요약 플로우 GPT-5.x reasoning 모델 다중 JSON 응답 파싱 실패 → `_RobustEvaluatorLLM` 래퍼 + `generate_str()` fallback 추가 (#197) |
 | 2.5.1 | 2026-02-22 | **Claude Sonnet 4.6 업그레이드** - `report_generator.py` 내 모델 `claude-sonnet-4-5-20250929` → `claude-sonnet-4-6` (5곳), knowledge cutoff Jan 2025 → Aug 2025 |
-| 2.5.0 | 2026-02-22 | **Telegram /report 일일 횟수 환급 + 한국어 메시지 복원** - 서버 오류(서브프로세스 타임아웃, 내부 AI 에이전트 오류) 시 `/report` 일일 사용 횟수 자동 환급 (`refund_daily_limit`, `_is_server_error` 추가, `send_report_result` 내 환급 처리), `AnalysisRequest`에 `user_id` 필드 추가, Telegram 봇 사용자 대면 메시지 한국어 템플릿 복원 |
-| 2.4.9 | 2026-02-21 | **US 분석 버그 5종 수정** - `data_prefetch._df_to_markdown` tabulate 의존성 제거 (직접 마크다운 테이블 생성), `us_telegram_summary_agent` evaluator 프롬프트에 `needs_improvement` JSON 형식 명세 추가 + 평가 등급 0-3으로 정정 (Pydantic validation 오류 해결), `create_us_sell_decision_agent` US holding 매도 판단에 연결 (규칙 기반→AI 기반, fallback 유지), `redis_signal_publisher` 로그 KRW 하드코딩→`market` 필드 기반 USD/KRW 동적 출력, GCP Pub/Sub credentials 경로 로그 추가 + `GCP_CREDENTIALS_PATH` 미설정 경고 (401 진단 개선) |
+| 2.5.0 | 2026-02-22 | **일일 진단 쿼터 환급 + 한국어 메시지 복원** - 서버 오류(서브프로세스 타임아웃, 내부 AI 에이전트 오류) 시 `/report` 유사 진단 플로우 일일 횟수 자동 환급 (`refund_daily_limit`, `_is_server_error` 추가, `send_report_result` 내 환급 처리), `AnalysisRequest`에 `user_id` 필드 추가, 채널 사용자 대면 메시지 한국어 템플릿 복원 |
+| 2.4.9 | 2026-02-21 | **US 분석 버그 5종 수정** - `data_prefetch._df_to_markdown` tabulate 의존성 제거 (직접 마크다운 테이블 생성), 미국 알림 요약 evaluator 프롬프트에 `needs_improvement` JSON 형식 명세 추가 + 평가 등급 0-3으로 정정 (Pydantic validation 오류 해결), `create_us_sell_decision_agent` US holding 매도 판단에 연결 (규칙 기반→AI 기반, fallback 유지), `redis_signal_publisher` 로그 KRW 하드코딩→`market` 필드 기반 USD/KRW 동적 출력, GCP Pub/Sub credentials 경로 로그 추가 + `GCP_CREDENTIALS_PATH` 미설정 경고 (401 진단 개선) |
 | 2.4.8 | 2026-02-19 | **US 매수 가격 수정 + GCP 인증 + Firebase Bridge 타입 감지 버그 3종 수정** - `get_current_price()` KIS `last` 빈 문자열 시 `base`(전일종가) fallback 추가, `async_buy_stock()` KIS 가격 조회 실패 시 `limit_price` fallback (예약주문 보장), GCP Pub/Sub 401 → 명시적 `service_account.Credentials` 인증으로 전환, `detect_type()` 포트폴리오 키워드 구체화 (`포트폴리오 관점` 오탐 방지), `detect_type()` 트리거 키워드(`트리거/급등/급락/surge`) analysis 이전에 체크 (매수신호 포함 트리거 알림 정상 분류), `extract_title()` 파일경로 체크를 markdown 정리 이전으로 이동 (PDF 파일명 언더바 보존) |
 | 2.4.7 | 2026-02-16 | **주간 리포트 확장 + 압축 후행평가** - 주간 매매 요약, 매도 후 평가, AI 장기 학습 인사이트, L1→L2 압축 후행 교훈, 다국어 broadcast 지원 |
 

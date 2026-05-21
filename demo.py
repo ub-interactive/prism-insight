@@ -3,7 +3,7 @@
 PRISM-INSIGHT Demo Script
 
 Generate a single AI-powered stock analysis report (PDF).
-No Telegram, no trading - just the analysis.
+No brokerage integration in this script—only the analysis and PDF export.
 
 Usage:
     python demo.py                    # Analyze Apple (AAPL)

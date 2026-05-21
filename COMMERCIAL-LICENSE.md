@@ -119,8 +119,7 @@ To obtain a Commercial License:
 - Email: dragon1086@naver.com
 - GitHub: https://github.com/dragon1086/prism-insight
 - Dashboard: https://analysis.stocksimulation.kr
-- Telegram: https://t.me/stock_ai_agent
-
+- Community: https://github.com/dragon1086/prism-insight/discussions
 **Business Hours:**
 - Korea Standard Time (KST)
 - Response within 48 hours for commercial inquiries

@@ -46,28 +46,14 @@ python3 -c "import matplotlib.font_manager as fm; fm.fontManager.rebuild()"
 
 ---
 
-### Issue 3: Telegram Bot Not Responding
+### Issue 3: Optional Firebase Bridge Not Sending Pushes
 
-**Symptoms**: Bot doesn't reply to messages
+**Symptoms**: `firebase_bridge.notify` exits early or mobile QA devices never receive FCM traffic.
 
 **Checklist**:
-1. Verify `.env` configuration:
-   ```bash
-   cat .env | grep TELEGRAM
-   ```
-2. Check bot token validity
-3. Verify bot has access to channel
-4. Check logs:
-   ```bash
-   tail -f log_*.log
-   ```
-5. Test configuration:
-   ```python
-   from telegram_config import TelegramConfig
-   config = TelegramConfig()
-   config.validate_or_raise()
-   config.log_status()
-   ```
+1. Confirm `.env`: `FIREBASE_BRIDGE_ENABLED=true` and `GOOGLE_APPLICATION_CREDENTIALS` resolves inside the runtime (absolute paths work best under Docker binds).
+2. Validate the Firebase project + service-account JSON scopes in GCP/Firebase console.
+3. Tail application logs—the bridge absorbs most exceptions but still logs warnings once logging is WARNING+.
 
 ---
 
@@ -175,57 +161,21 @@ cleaned_text = clean_markdown(raw_output)
 
 ---
 
-### Issue 8: prism-us Module Import Collision
+### Issue 8: prism-us Namespace / Shadowed `cores` Imports
 
-> **Update**: The legacy `prism-us/` mirror directory is no longer part of this repository; the US pipeline runs from the project root (`stock_analysis_orchestrator.py`, `cores/`, `tracking/`, etc.). The following still applies if you maintain an old local tree that prepends `prism-us` to `sys.path`.
+> **Background**: Some older developer trees duplicated the US pipeline inside a `prism-us/` subdirectory and prepended it to `PYTHONPATH`.
 
-**Symptoms**:
-```
-ModuleNotFoundError: No module named 'cores.agents.telegram_translator_agent'
-```
-or
-```
-ImportError: cannot import name 'translate_telegram_message' from 'cores.agents.telegram_translator_agent'
-```
+**Symptoms**: `ImportError` / `ModuleNotFoundError` referencing `cores.*` even though the modules exist next to `stock_analysis_orchestrator.py`.
 
-**Cause**: `prism-us/cores/` directory shadows the main project's `cores/` directory in `sys.path`. When Python searches for `cores.agents.telegram_translator_agent`, it finds `prism-us/cores/agents/` first (which doesn't have the file) instead of the main project's `cores/agents/`.
+**Cause**: Another `cores/` package resolves earlier on `sys.path`, shadowing this repository.
 
-**Solution**: Use `importlib` direct loading pattern (already implemented in v2.1.0):
-
-```python
-# Helper function to import from main project
-def _import_from_main_cores(module_name: str, relative_path: str):
-    import importlib.util
-    file_path = PROJECT_ROOT / relative_path
-    spec = importlib.util.spec_from_file_location(module_name, file_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-# Usage
-_translator_module = _import_from_main_cores(
-    "telegram_translator_agent",
-    "cores/agents/telegram_translator_agent.py"
-)
-translate_telegram_message = _translator_module.translate_telegram_message
-```
-
-**Affected Files** (fixed in v2.1.0):
-- `prism-us/us_stock_analysis_orchestrator.py`
-- `prism-us/us_stock_tracking_agent.py`
-- `prism-us/tracking/journal.py`
+**Fix**:
+1. Run tooling from this repository root only (avoid inserting `prism-us/` prefixes into `PYTHONPATH`).
+2. If legacy folders remain, reorder `PYTHONPATH` so the canonical project root wins.
 
 **Verification**:
 ```bash
-python -c "
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path('.').resolve()))
-sys.path.insert(0, str(Path('./prism-us').resolve()))
-
-from us_stock_analysis_orchestrator import translate_telegram_message
-print('Import successful:', translate_telegram_message is not None)
-"
+python -c "import cores, pathlib; print(pathlib.Path(cores.__file__).resolve())"
 ```
 
 ---
@@ -240,8 +190,7 @@ print('Import successful:', translate_telegram_message is not None)
 # Modify stock_analysis_orchestrator.py
 MAX_CONCURRENT_ANALYSES = 3  # Reduce from 5
 
-# 2. Use --no-telegram to skip summary generation
-python stock_analysis_orchestrator.py --mode morning --no-telegram
+# 2. Lower concurrency knobs in orchestrator / tracking agents if tuned locally
 
 # 3. Increase system memory or swap
 
@@ -276,8 +225,7 @@ logging.basicConfig(
 
 1. **Check logs**: `tail -f log_*.log`
 2. **GitHub Issues**: [Report issues](https://github.com/dragon1086/prism-insight/issues)
-3. **Telegram**: @stock_ai_ko
-4. **Documentation**:
+3. **Documentation**:
    - [README.md](../README.md)
    - [CONTRIBUTING.md](../CONTRIBUTING.md)
    - [utils/CRONTAB_SETUP.md](../utils/CRONTAB_SETUP.md)

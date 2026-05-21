@@ -97,7 +97,7 @@ def format_buy_message(
     rank_change_msg: str = ""
 ) -> str:
     """
-    Format buy message for Telegram.
+    Format buy-trade notification plain text for logs/digests/Firebase-style hooks.
 
     Args:
         company_name: Company name
@@ -214,7 +214,7 @@ def format_sell_message(
     sell_reason: str
 ) -> str:
     """
-    Format sell message for Telegram.
+    Format sell-trade notification plain text for logs/digests/Firebase-style hooks.
 
     Args:
         company_name: Company name

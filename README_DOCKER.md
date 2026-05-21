@@ -26,7 +26,7 @@ Run Ubuntu 24.04-based AI stock analysis system easily with Docker.
 - **Node.js**: 22.x LTS
 - **UV**: Python package manager
 - **Playwright**: Chromium-based PDF generation (modern HTML to PDF converter)
-- **Korean Fonts**: Nanum font family (Korean Telegram/report text)
+- **Korean Fonts**: Nanum font family (localized PDF/report text)
 - **Cron**: Scheduled task automation (US stock analysis pipelines)
 
 #### Python Packages
@@ -74,10 +74,6 @@ If you don't have Docker:
 - Anthropic API Key (https://console.anthropic.com/settings/keys)
 - Perplexity API Key (https://www.perplexity.ai/settings/api)
 - Firecrawl API Key (https://www.firecrawl.dev/)
-- Telegram Bot Token (issued by [@BotFather](https://t.me/BotFather))
-- Telegram Channel ID
-
----
 
 ## 🚀 Installation and Execution
 
@@ -172,9 +168,11 @@ docker exec -it prism-insight-container /bin/bash
 
 #### 1. `.env` File
 ```bash
-TELEGRAM_BOT_TOKEN=your_bot_token_here
-TELEGRAM_AI_BOT_TOKEN=your_ai_bot_token_here
-TELEGRAM_CHANNEL_ID=@your_channel_id_here
+# Optional Firebase / PRISM-Mobile bridge (defaults off)
+# FIREBASE_BRIDGE_ENABLED=false
+# GOOGLE_APPLICATION_CREDENTIALS=/path/to/firebase-admin.json
+
+# Typical LLM/API keys instead live under mcp_agent.secrets.yaml
 ```
 
 #### 2. `mcp_agent.config.yaml` File
@@ -634,7 +632,6 @@ sudo chown -R $USER:$USER data reports pdf_reports
 ## 📞 Support
 
 - **Project**: https://github.com/dragon1086/prism-insight
-- **Telegram**: https://t.me/stock_ai_agent
 - **Issues**: https://github.com/dragon1086/prism-insight/issues
 
 ---

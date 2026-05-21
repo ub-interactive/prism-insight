@@ -4,7 +4,9 @@
 >
 ---
 
-## The 13+ Specialized Agents
+## Specialized Agents
+
+Orchestration order and filenames are authoritative in [`CLAUDE.md`](../CLAUDE.md). Sections below supplement that with narrative detail.
 
 ### Analysis Team (6 Agents) - GPT-5 Based
 
@@ -81,40 +83,11 @@
 
 <br clear="both"/>
 
-### Communication Team (3 Agents)
+### Auxiliary messaging workflows (retired)
 
-<img src="images/aiagent/summary_specialist.jpeg" alt="Summary Optimizer" width="150" align="right"/>
-
-**8-1. Summary Optimizer** (`telegram_summary_optimizer_agent`)
-- **File**: `cores/agents/telegram_summary_optimizer_agent.py`
-- **Model**: GPT-5
-- **Purpose**: Convert detailed reports to Telegram-optimized summaries
-- **Constraints**: 400 characters max, key points extraction
-- **Output**: Concise Telegram message
-
-<br clear="both"/>
-
-<img src="images/aiagent/quality_inspector.jpeg" alt="Quality Evaluator" width="150" align="right"/>
-
-**8-2. Quality Evaluator** (`telegram_summary_evaluator_agent`)
-- **File**: `cores/agents/telegram_summary_evaluator_agent.py`
-- **Model**: GPT-5
-- **Purpose**: Evaluate summary quality and suggest improvements
-- **Checks**: Accuracy, clarity, format compliance, hallucination detection
-- **Process**: Iterative improvement loop until EXCELLENT rating
-
-<br clear="both"/>
-
-<img src="images/aiagent/translator_specialist.png" alt="Translation Specialist" width="150" align="right"/>
-
-**8-3. Translation Specialist** (`translate_telegram_message`)
-- **File**: `cores/agents/telegram_translator_agent.py`
-- **Model**: GPT-5
-- **Purpose**: Multi-language translation
-- **Languages**: en, ja, zh, es, fr, de
-- **Preserves**: Technical terms, market context, formatting
-
-<br clear="both"/>
+Optional assistants that rewrote summaries for auxiliary distribution rails are not bundled in this repo.
+Use your own notifier or the optional Firebase Bridge; FCM payloads use ``report_link`` / ``pdf_report_link``
+for any deep/asset links supplied by callers.
 
 ### Trading Simulation Team (3 Agents) - GPT-5 Based
 
@@ -144,7 +117,7 @@
 <br clear="both"/>
 
 **9-3. Trading Journal Agent** (Optional)
-- **File**: `stock_tracking_agent.py`
+- **File**: `cores/agents/trading_journal_agent.py` (invoked from `stock_tracking_agent.py` when enabled)
 - **Purpose**: Retrospective trade analysis and long-term memory accumulation
 - **Features**:
   - Buy/sell context comparison and lesson extraction
@@ -152,27 +125,6 @@
   - Buy score adjustment based on past experience
 - **Activation**: Set `ENABLE_TRADING_JOURNAL=true` in `.env`
 - **Details**: [TRADING_JOURNAL.md](TRADING_JOURNAL.md)
-
-<br clear="both"/>
-
-### User Consultation Team (2 Agents) - Claude Sonnet 4.5
-
-<img src="images/aiagent/portfolio_consultant.jpeg" alt="Portfolio Consultant" width="150" align="right"/>
-
-**10-1. Portfolio Consultant**
-- **File**: `telegram_ai_bot.py`
-- **Purpose**: User portfolio evaluation and advice
-- **Features**: Custom advice based on user's positions, market data, latest news
-- **Adapts**: Response style to user preferences
-
-<br clear="both"/>
-
-<img src="images/aiagent/dialogue_manager.jpeg" alt="Dialogue Manager" width="150" align="right"/>
-
-**10-2. Dialogue Manager**
-- **File**: `telegram_ai_bot.py`
-- **Purpose**: Maintain conversation context
-- **Features**: Context memory, follow-up handling, data lookup
 
 <br clear="both"/>
 

@@ -1,3 +1,8 @@
+> **Operational note:** Mentions of external chat distribution describe retired infrastructure.
+> Use `archive_api.py` endpoints (`/health`, `/query`, `/insight_agent`) from your own HTTPS clients.
+
+---
+
 # PRISM-INSIGHT v2.12.0 — 시장 국면별 유연 대응 (Regime-Aware Trading)
 
 > **Release Date**: 2026-04-30
@@ -65,7 +70,7 @@ parabolic 행이 활성화될 때:
 
 → 위험 노출 자동 제어 (Druckenmiller 권고).
 
-### 5. Regime 한국어 번역 — 텔레그램 메시지 일관성
+### 5. Regime 한국어 번역 — 운영 메시지 일관성
 
 KR 매수 보류 메시지에서 영문 regime 라벨이 그대로 출력되던 문제 해결.
 
@@ -78,7 +83,7 @@ strong_bear   → 강한 약세장
 parabolic     → 폭주 강세장  ← NEW
 ```
 
-KR/US 양쪽 텔레그램 메시지 + 분석 보고서에서 일관 적용.
+KR/US 양쪽 운영 경로 및 분석 보고서 텍스트에 일관 적용.
 
 ### 6. JSON 스키마 + 거시경제 분석 가이드 동기화
 
@@ -135,59 +140,9 @@ git pull origin main
 3. **US시장 검증 부족**: US 시뮬레이터(N=465, 4개월) 기간이 횡보-약세장이라 parabolic 행이 실제 활성화된 적 없음. 향후 US 강세장 진입 시 모니터링 필요.
 4. **Position size 가이드 한계**: 현재 시스템은 1슬롯=100% 매매 구조이므로 position size 축소는 max_portfolio_size 축소로 우회 구현. 진정한 partial position은 별도 작업 대상.
 
-## 텔레그램 공지
+## 외부 배포 공지 (아카이브)
 
-### 한국어
-
-```
-🚀 PRISM-INSIGHT v2.12.0 — 시장 국면별 유연 대응
-
-📈 강한 강세장을 넘어선 "폭주 강세장(parabolic)" regime을 신설했습니다.
-폭주장에서는 R/R 기준을 0.7로 완화하고, 손절은 -5%로 타이트하게,
-포지션은 1~2 슬롯 줄여서 진입합니다.
-
-🎯 핵심 변경 3가지:
-1. 폭주 강세장 regime 신설 (시장지수 90일 +30% AND 30일 +10% 충족 시)
-2. 모멘텀 트리거(일중 상승률·마감 강도·갭 상승)에만 적용
-   거래량 급증·시총 자금 유입은 distribution 의심 → 적용 제외
-3. 보고서 컨센서스 목표가가 현재가보다 낮으면 차트 기반 저항선으로 fallback
-   (모멘텀 종목 R/R 음수 함정 해소)
-
-🛡️ 위험 관리 동시 강화:
-- Distribution Day Kill Switch: 4주 내 분포일 4건 → 자동 1단계 보수화
-- 폭주장 포지션 50% 축소 (max_portfolio_size -1~2)
-
-🌐 KR/US 양쪽 동시 적용. 매수 보류 메시지의 영문 regime 라벨도 한국어로 번역됩니다.
-
-📊 5명의 투자 페르소나(O'Neil·Minervini·Druckenmiller·Buffett·Quant) 검토 후 합의 영역만 반영했습니다.
-```
-
-### English
-
-```
-🚀 PRISM-INSIGHT v2.12.0 — Regime-Aware Trading
-
-📈 New "parabolic" regime for markets that go beyond strong_bull.
-In parabolic regimes, the R/R floor is relaxed to 0.7, max stop tightened
-to -5%, and position size reduced by 1-2 slots.
-
-🎯 3 core changes:
-1. New parabolic regime (activated when market index 90d ≥ +30% AND 30d ≥ +10%)
-2. Applied ONLY to momentum-leader triggers (Daily Rise / Closing Strength / Gap Up)
-   Volume Surge & Capital Inflow excluded (distribution-suspect → keep strong_bull row)
-3. target_price fallback: when consensus target < current_price × 1.05,
-   fall back to chart-based 80% of next resistance
-   (resolves the negative-R/R trap that systematically blocked momentum stocks)
-
-🛡️ Simultaneous risk controls:
-- Distribution Day Kill Switch: ≥4 distribution days in 4 weeks → auto demote 1 step
-- Parabolic position sizing: max_portfolio_size reduced by 1-2 slots
-
-🌐 Applied to both KR and US markets. Korean translations of regime labels
-now appear in skip-message Telegram alerts (parabolic = 폭주 강세장).
-
-📊 Reviewed by 5 investing personas (O'Neil · Minervini · Druckenmiller · Buffett · Quant Risk Manager); only consensus areas adopted.
-```
+v2.12.0 당시 별도 구독자용 브리핑 카피는 제거되었습니다. regime 요약본은 상단 변경 요약 및 PR 본문을 참고합니다.
 
 ---
 

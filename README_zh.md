@@ -77,7 +77,7 @@ PRISM_OPENAI_AUTH_MODE=chatgpt_oauth python stock_analysis_orchestrator.py --mod
 
 </div>
 
-- **智能筛选** — 只接收您关心的 Telegram 提醒
+- **智能筛选** — 在 PRISM-Mobile 中选择要接收的分析类型
 - **PDF 报告** — 移动端优化的 AI 分析报告
 - **限时优惠（截止 2026 年 4 月 23 日）** — 立即安装，获得 **20 积分免费赠送**（平时仅赠 10 积分）
 
@@ -95,13 +95,10 @@ PRISM_OPENAI_AUTH_MODE=chatgpt_oauth python stock_analysis_orchestrator.py --mod
 实时查看 AI 交易绩效：
 **[analysis.stocksimulation.kr](https://analysis.stocksimulation.kr/)**
 
-### 2. Telegram 频道
-每日获取异动股票提醒和 AI 分析报告：
-- **[英语频道](https://t.me/prism_insight_global_en)**
-- **[韩语频道](https://t.me/stock_ai_agent)**
-- **[日语频道](https://t.me/prism_insight_ja)**
-- **[中文频道](https://t.me/prism_insight_zh)**
-- **[西班牙语频道](https://t.me/prism_insight_es)**
+### 2. 社区与项目动态
+
+- **公开可视化**：[analysis.stocksimulation.kr](https://analysis.stocksimulation.kr/)（以及页面上的 GitHub Sponsors）
+- **[GitHub 讨论](https://github.com/dragon1086/prism-insight/discussions)**
 
 ### 3. 示例报告
 观看 AI 生成的 Apple Inc. 分析报告：
@@ -182,8 +179,8 @@ cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
 # Edit mcp_agent.secrets.yaml with your OpenAI API key
 # Edit mcp_agent.config.yaml with KRX credentials (Kakao account)
 
-# 5. Run analysis (no Telegram required!)
-python stock_analysis_orchestrator.py --mode morning --no-telegram
+# 5. Run analysis
+python stock_analysis_orchestrator.py --mode morning
 ```
 
 ### 方式 B：Docker（推荐用于生产环境）
@@ -200,7 +197,7 @@ cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
 docker compose up -d
 
 # 3. Run analysis manually (optional)
-docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mode morning --no-telegram
+docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mode morning
 ```
 
 **完整安装指南**：[docs/SETUP.md](docs/SETUP.md)
@@ -216,7 +213,7 @@ PRISM-INSIGHT 是一个**完全开源、免费**的 AI 驱动**美股分析**系
 - **AI 分析报告** — 由 13 个专业 AI 代理生成的专业分析师级别报告
 - **交易模拟** — AI 驱动的买卖决策与投资组合管理
 - **自动交易** — 通过韩国投资证券 API 实际执行交易
-- **Telegram 集成** — 实时提醒与多语言播报
+- **推送（可选）** — `firebase_bridge` + 轻量 FCM 载荷给客户端 App
 - **宏观智能** — 市场状态识别、板块轮动分析、风险事件监测
 
 ### AI 模型
@@ -235,9 +232,7 @@ PRISM-INSIGHT 是一个**完全开源、免费**的 AI 驱动**美股分析**系
 | **宏观** | 1 个代理 | 市场状态判断、板块轮动、风险事件 |
 | **分析** | 6 个代理 | 技术分析、财务分析、行业分析、新闻分析、市场分析 |
 | **策略** | 1 个代理 | 投资策略综合 |
-| **通信** | 3 个代理 | 摘要生成、质量评估、翻译 |
 | **交易** | 3 个代理 | 买卖决策、交易日志 |
-| **咨询** | 2 个代理 | 通过 Telegram 进行用户交互 |
 
 <details>
 <summary>查看代理工作流程图</summary>
@@ -255,7 +250,7 @@ PRISM-INSIGHT 是一个**完全开源、免费**的 AI 驱动**美股分析**系
 |------|------|
 | **AI 分析** | 通过 GPT-5 多代理系统进行专家级股票分析 |
 | **异动检测** | 通过早盘/午盘市场趋势分析自动生成观察列表 |
-| **Telegram** | 实时分析报告分发至频道 |
+| **推送（可选）** | 通过 `firebase_bridge` 发送 FCM |
 | **交易模拟** | AI 驱动的投资策略模拟 |
 | **自动交易** | 通过韩国投资证券 API 执行交易 |
 | **仪表盘** | 透明的投资组合、交易记录和绩效追踪 |
@@ -292,7 +287,7 @@ PRISM-INSIGHT 是一个**完全开源、免费**的 AI 驱动**美股分析**系
 
 ```bash
 # Run US analysis
-python stock_analysis_orchestrator.py --mode morning --no-telegram
+python stock_analysis_orchestrator.py --mode morning
 
 # With English reports
 python stock_analysis_orchestrator.py --mode morning --language en
@@ -406,4 +401,4 @@ SaaS 公司需要单独的商业许可证。
 
 **如果本项目对您有帮助，请给我们一个 Star！**
 
-**联系方式**：[GitHub Issues](https://github.com/dragon1086/prism-insight/issues) | [Telegram](https://t.me/stock_ai_agent) | [Discussions](https://github.com/dragon1086/prism-insight/discussions)
+**联系方式**：[GitHub Issues](https://github.com/dragon1086/prism-insight/issues) | [Discussions](https://github.com/dragon1086/prism-insight/discussions)

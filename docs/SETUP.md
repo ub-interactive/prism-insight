@@ -32,7 +32,7 @@
 | Service | Purpose | Get Key |
 |---------|---------|---------|
 | OpenAI | GPT-5 for analysis & trading | [platform.openai.com](https://platform.openai.com/api-keys) |
-| Anthropic | Claude for Telegram bot | [console.anthropic.com](https://console.anthropic.com/) |
+| Anthropic | Claude for PDF/report generation | [console.anthropic.com](https://console.anthropic.com/) |
 | Firecrawl | Web crawling MCP | [firecrawl.dev](https://www.firecrawl.dev/) |
 | Perplexity | Web search MCP | [perplexity.ai](https://www.perplexity.ai/) |
 
@@ -40,7 +40,7 @@
 
 | Service | Purpose | Get Key |
 |---------|---------|---------|
-| Telegram Bot | Channel messaging | [BotFather](https://t.me/botfather) |
+| GCP / Firebase Admin | Push metadata for PRISM-Mobile (optional bridge) | [Firebase Console](https://console.firebase.google.com/) |
 | Korea Investment & Securities | Automated trading | [KIS Developers](https://apiportal.koreainvestment.com/) |
 
 ---
@@ -84,10 +84,6 @@ docker-compose logs -f
 ### Step 4: Run Analysis
 
 ```bash
-# Run morning analysis manually
-docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mode morning --no-telegram
-
-# Run with Telegram (if configured)
 docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mode morning
 ```
 
@@ -137,7 +133,7 @@ Copy example files to create your configuration:
 cp mcp_agent.config.yaml.example mcp_agent.config.yaml
 cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
 
-# Environment variables (optional - for Telegram)
+# Environment variables (optional tuning & Firebase bridge)
 cp .env.example .env
 
 # Streamlit dashboard (optional)
@@ -227,24 +223,21 @@ Required for Korean text in charts. See [Platform-Specific Setup](#platform-spec
 | `mcp_agent.config.yaml` | MCP server configuration |
 | `mcp_agent.secrets.yaml` | API keys and secrets |
 
-### Telegram Settings (Optional)
+### Companion app / Firebase (Optional)
+
+PRISM-Mobile can subscribe to mirrored notifications via the optional Firebase bridge.
 
 | File | Purpose |
 |------|---------|
-| `.env` | Telegram channel ID, bot token |
+| `.env` | Toggle `FIREBASE_BRIDGE_ENABLED` and `GOOGLE_APPLICATION_CREDENTIALS` |
 
 ```bash
-# .env file
-TELEGRAM_CHANNEL_ID="-1001234567890"
-TELEGRAM_BOT_TOKEN="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-
-# Multi-language broadcasting (optional)
-TELEGRAM_CHANNEL_ID_EN="-1001234567891"
-TELEGRAM_CHANNEL_ID_JA="-1001234567892"
-TELEGRAM_CHANNEL_ID_ZH="-1001234567893"
+# .env (enable only when coordinating with companion mobile apps)
+FIREBASE_BRIDGE_ENABLED=false
+GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/firebase-admin.json
 ```
 
-> **Tip**: Use `--no-telegram` option to run without Telegram configuration!
+> **Tip**: Keep the bridge disabled until you deliberately wire mobile onboarding.
 
 ### Trading Settings (Optional)
 
@@ -363,7 +356,7 @@ Run analysis from the canonical root entry point:
 
 ```bash
 # Run analysis
-python stock_analysis_orchestrator.py --mode morning --no-telegram
+python stock_analysis_orchestrator.py --mode morning
 ```
 
 ### Event-Driven Trading Signals
@@ -385,11 +378,10 @@ GCP_CREDENTIALS_PATH="/path/to/service-account.json"
 
 ## Verification
 
-### Quick Test (No Telegram)
+### Quick Test
 
 ```bash
-# Run morning analysis without Telegram
-python stock_analysis_orchestrator.py --mode morning --no-telegram
+python stock_analysis_orchestrator.py --mode morning
 ```
 
 ### Test Individual Components
@@ -434,7 +426,7 @@ Enable verbose logging:
 ```bash
 # Set log level in code or environment
 export LOG_LEVEL=DEBUG
-python stock_analysis_orchestrator.py --mode morning --no-telegram
+python stock_analysis_orchestrator.py --mode morning
 ```
 
 ### Log Files
@@ -453,7 +445,6 @@ tail -f stock_analysis_*.log
 
 - **Documentation**: [docs/](../docs/)
 - **GitHub Issues**: [Report bugs](https://github.com/dragon1086/prism-insight/issues)
-- **Telegram**: [@stock_ai_agent](https://t.me/stock_ai_agent)
 - **Discussions**: [GitHub Discussions](https://github.com/dragon1086/prism-insight/discussions)
 
 ---
@@ -462,9 +453,9 @@ tail -f stock_analysis_*.log
 
 After successful setup:
 
-1. **Try the Quick Start**: Run `python stock_analysis_orchestrator.py --mode morning --no-telegram`
+1. **Try the Quick Start**: Run `python stock_analysis_orchestrator.py --mode morning`
 2. **Explore the Dashboard**: Visit [analysis.stocksimulation.kr](https://analysis.stocksimulation.kr/)
-3. **Join the Community**: Subscribe to [Telegram Channel](https://t.me/prism_insight_global_en)
+3. **Discuss on GitHub**: Open a thread in [Discussions](https://github.com/dragon1086/prism-insight/discussions)
 4. **Customize**: Modify agents in `cores/agents/` directory
 
 ---

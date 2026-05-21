@@ -1,3 +1,8 @@
+> **Operational note:** Mentions of external chat distribution describe retired infrastructure.
+> Use `archive_api.py` endpoints (`/health`, `/query`, `/insight_agent`) from your own HTTPS clients.
+
+---
+
 # Persistent Insight Agent — 설계 문서
 
 - **문서 ID**: `2026-04-21-persistent-insight-agent-design`
@@ -50,15 +55,14 @@
 | Q1 | 저장 위치 | `archive.db` + 신규 테이블 | 리포트와 한 DB, FTS 인프라 재활용, evidence JOIN 자연스러움. `stock_tracking_db.sqlite`는 거래 기록용으로 성격 불일치. |
 | Q2 | 저장 granularity | 하이브리드 (Q&A 원문 + key_takeaways) | 원본 보존 + 검색 효율 모두 확보. 추가 토큰 비용 무시 가능. |
 | Q3 | 검색 전략 | FTS5 → OpenAI embedding 재랭킹 + 주간 요약 티어 | 의미 유사도 필요 + 정확 매칭(종목명) 안전망 + 컨텍스트 팽창 압축. |
-| Q4 | 커맨드 UX | 단일 `/insight` + mcp-agent function calling | 사용자 편의성 극대, 질문 유형 경계 없음, 기존 MCP 패턴 재사용. |
+| Q4 | HTTP UX | 단일 `POST /insight_agent` + mcp-agent function calling | 사용자 편의성 극대, 질문 유형 경계 없음, 기존 MCP 패턴 재사용. |
 | Q5 | 외부 도구 비용 가드레일 | 프롬프트 가드레일 (D) + 일일 쿼터 (B) | 관찰 우선 원칙. 실데이터 기반으로 정책 조정. |
-| Q6 | 프라이버시 모델 | 공용 풀 (user_id만 기록) | 토론방 컨셉과 일치. 그룹 채팅은 이미 공개. |
+| Q6 | 프라이버시 모델 | 공용 풀 (user_id만 기록) | 멀티 유저 저장소 책임 분리 — 공개/비공개는 클라이언트 레이어에서 처리. |
 
 ### 2.3 사용자 명시 제약
 
 - **Firecrawl**: 사용 빈도 엄격 제한. `scrape` 사용 시 `formats=["markdown"]`, `onlyMainContent=true`. `search`는 정말 필수적인 경우만.
-- **BotFather 명령어 메뉴**: 봇 기동 시 `set_my_commands` API로 동기화 필수.
-- **커맨드 UX**: `/insight <query>` 인라인 방식 금지. 기존 `/evaluate` 패턴처럼 명령어 먼저 → 응답 유도 → Reply로 후속 대화.
+- **HTTP UX**: `POST /insight_agent` 본문에 질문을 넣습니다. 추가 턴은 동일 엔드포인트에 `previous_insight_id`를 실어 재호출합니다.
 - **Foreign Key**: 쓰기 성능 저하 우려로 FK constraint 제거, 정합성은 애플리케이션 레이어 담당.
 
 ---
@@ -66,19 +70,15 @@
 ## 3. 아키텍처 개요
 
 ```
-┌─────────── 텔레그램 그룹 ────────────┐
-│ 사용자: /insight                     │
-│ 봇:    "질문을 입력해주세요"         │
-│ 사용자: 삼성전자 장기투자 어때?      │
-└──────────┬──────────────────────────┘
+┌──────────── HTTPS 클라이언트 ────────────┐
+│ 초기 요청 → POST /insight_agent           │
+│ 후속 요청 → previous_insight_id 체인       │
+└──────────┬──────────────────────────────┘
            ▼
-┌─ app-server (prism) ────────────────┐
-│ telegram_ai_bot.py                  │
-│   ConversationHandler /insight      │
-│   ↓                                 │
-│ HTTP POST /insight_agent            │
-│   (SSH tunnel → db-server)          │
-└──────────┬──────────────────────────┘
+┌─ app-server (선택: 경량 프록시) ─────────┐
+│ (SSH tunnel → db-server)                 │
+│ HTTP POST /insight_agent 재전달          │
+└──────────┬──────────────────────────────┘
            ▼
 ┌─ db-server (root) ──────────────────────────────────────┐
 │ archive_api.py                                          │
@@ -126,14 +126,14 @@ CREATE TABLE IF NOT EXISTS persistent_insights (
     chat_id             INTEGER,
     question            TEXT NOT NULL,
     answer              TEXT NOT NULL,
-    key_takeaways       TEXT NOT NULL,               -- JSON array of strings
-    tools_used          TEXT,                        -- JSON array
-    tickers_mentioned   TEXT,                        -- JSON array
-    evidence_report_ids TEXT,                        -- JSON array (report_archive.id)
-    embedding           BLOB,                        -- float32 × 1536
+    key_takeaways       TEXT NOT NULL,              -- JSON array of strings
+    tools_used          TEXT,                       -- JSON array
+    tickers_mentioned   TEXT,                       -- JSON array
+    evidence_report_ids TEXT,                       -- JSON array (report_archive.id)
+    embedding           BLOB,                       -- float32 × 1536
     model_used          TEXT,
-    previous_insight_id INTEGER,                     -- 멀티턴 체인
-    superseded_by       INTEGER,                     -- weekly_insight_summary.id
+    previous_insight_id INTEGER,                    -- 멀티턴 체인
+    superseded_by       INTEGER,                    -- weekly_insight_summary.id
     created_at          TEXT DEFAULT (datetime('now'))
 );
 
@@ -153,9 +153,9 @@ CREATE TABLE IF NOT EXISTS weekly_insight_summary (
     week_start         TEXT NOT NULL UNIQUE,
     week_end           TEXT NOT NULL,
     summary_text       TEXT NOT NULL,
-    source_insight_ids TEXT,                         -- JSON array
+    source_insight_ids TEXT,                        -- JSON array
     insight_count      INTEGER,
-    top_tickers        TEXT,                         -- JSON array
+    top_tickers        TEXT,                        -- JSON array
     created_at         TEXT DEFAULT (datetime('now'))
 );
 
@@ -173,13 +173,13 @@ CREATE INDEX IF NOT EXISTS idx_itu_insight ON insight_tool_usage(insight_id);
 
 CREATE TABLE IF NOT EXISTS user_insight_quota (
     user_id INTEGER NOT NULL,
-    date    TEXT NOT NULL,                           -- YYYY-MM-DD KST
+    date    TEXT NOT NULL,                          -- YYYY-MM-DD KST
     count   INTEGER DEFAULT 0,
     PRIMARY KEY (user_id, date)
 );
 
 CREATE TABLE IF NOT EXISTS insight_cost_daily (
-    date             TEXT PRIMARY KEY,               -- YYYY-MM-DD KST
+    date             TEXT PRIMARY KEY,              -- YYYY-MM-DD KST
     input_tokens     INTEGER DEFAULT 0,
     output_tokens    INTEGER DEFAULT 0,
     embedding_tokens INTEGER DEFAULT 0,
@@ -213,38 +213,36 @@ FK 없이 다음 애플리케이션 레이어 원칙 유지:
 
 ## 5. 데이터 플로우
 
-### 5.1 `/insight` 쿼리 처리
+### 5.1 `/insight_agent` 쿼리 처리
 
 ```
-[1] /insight 명령어 수신 (ConversationHandler)
-[2] "질문을 입력해주세요" 안내
-[3] 사용자 질문 입력 (INSIGHT_ENTERING_QUERY 상태)
-[4] 질문 길이 검사 (2000자 초과 거부)
-[5] 일일 쿼터 체크 (user_insight_quota) — 초과 시 거부
-[6] (배경) 질문 임베딩 생성
-[7] Retrieval 3-tier 병렬:
+[1] POST /insight_agent JSON 바디 파싱 (question, user_id, …)
+[2] (선택) previous_insight_id로 멀티턴 컨텍스트 조회
+[3] 입력 길이 검사 (2000자 초과 거부)
+[4] 일일 쿼터 체크 (user_insight_quota) — 초과 시 거부
+[5] (배경) 질문 임베딩 생성
+[6] Retrieval 3-tier 병렬:
      (a) persistent_insights FTS top-50 → 임베딩 재랭킹 top-5
          (superseded 제외)
      (b) weekly_insight_summary 최근 4주
      (c) report_archive FTS top-5 (종목 언급 시)
-[8] InsightAgent (mcp-agent) 실행
+[7] InsightAgent (mcp-agent) 실행
      - 시스템 프롬프트: 가드레일 + retrieval 결과
      - 함수 호출로 외부 도구 선택
      - structured output (Pydantic)
-[9] key_takeaways 임베딩 생성
-[10] persistent_insights INSERT (fire-and-forget)
-[11] Telegram 답변 전송 (message_id → insight_contexts 매핑)
+[8] key_takeaways 임베딩 생성
+[9] persistent_insights INSERT (fire-and-forget)
+[10] JSON 응답 반환 (`insight_id`, `remaining_quota`, …); 클라이언트가 `previous_insight_id`로 재요청
 ```
 
-### 5.2 Reply 기반 멀티턴
+### 5.2 `previous_insight_id` 멀티턴
 
 ```
-사용자 → /insight → 봇 "질문 입력"
-사용자 → 질문
-  봇 → 답변 (msg_id=X) [insight_contexts[X] 저장, TTL 30분]
-사용자 → (X에 Reply) 후속 질문
-  봇 → _handle_insight_reply → 컨텍스트 복원 + 재실행 + 새 answer 저장
-       (previous_insight_id=이전_id로 체인 기록)
+클라이언트 → POST /insight_agent { question }
+서버 → { answer, insight_id, … }
+
+클라이언트 → POST /insight_agent { question: 후속질문, previous_insight_id }
+서버 → InsightAgent 가 이전 행 컨텍스트를 포함해 재실행, 새 행 저장
 ```
 
 ### 5.3 주간 요약 (`auto_insight --mode weekly` 확장)
@@ -281,8 +279,7 @@ FK 없이 다음 애플리케이션 레이어 원칙 유지:
 |---|---|
 | `cores/archive/archive_db.py` | `init_db()`에 신규 테이블 + 트리거 추가 |
 | `cores/archive/auto_insight.py` | `weekly_summary()` 확장 (persistent_insights 분기) |
-| `archive_api.py` | `POST /insight_agent` 엔드포인트 추가 |
-| `telegram_ai_bot.py` | `/insight` 핸들러 교체 + `InsightConversationContext` + Reply 핸들러 + `set_my_commands` |
+| `archive_api.py` | `POST /insight_agent`, Bearer 보호 |
 | `archive_query.py` | `--insight-stats` CLI 옵션 |
 | `docs/archive/ARCHIVE_DEPLOY_GUIDE.md` | 신규 테이블 마이그레이션 + env 추가 |
 | `docs/archive/ARCHIVE_API_SETUP.md` | `/insight_agent` 엔드포인트 문서화 |
@@ -350,9 +347,9 @@ class InsightAgent:
 - evidence_report_ids: archive 리포트 id JSON array
 ```
 
-### 6.5 BotFather 명령어 메뉴 동기화
+### 6.5 OpenAPI / 운영 문서
 
-봇 기동 `post_init` 훅에서 `Application.bot.set_my_commands()` 1회 호출. 기존 명령어 + `insight` 신규 1개.
+`/insight_agent` 요청·응답 스키마와 인증 헤더는 `docs/archive/ARCHIVE_API_SETUP.md` 및 FastAPI 라우트 정의를 기준으로 유지합니다.
 
 ---
 
@@ -369,7 +366,7 @@ class InsightAgent:
 | 5 | persistent_insights INSERT 실패 | Error 로그만, 사용자 영향 없음 |
 | 6 | HTTP API 호출 실패 (two-server) | 5s/30s 타임아웃 → 명확한 재시도 메시지 |
 | 7 | 쿼터 초과 | KST 리셋 시간 안내 |
-| 8 | Reply TTL 만료 | "새로 /insight로 시작해주세요" |
+| 8 | 세션 체인 끊김 | 새 `previous_insight_id` 없이 재시작 또는 최신 행부터 다시 호출 안내 |
 | 9 | 2000자 초과 입력 | 조기 거부 |
 | 10 | key_takeaways JSON 파싱 실패 | 답변 일부를 takeaway로 저장, warning 로그 |
 
@@ -427,7 +424,7 @@ class InsightAgent:
 - 검증 항목:
   - [x] FTS 후보가 임베딩 재랭킹되어 반환
   - [x] 답변 저장 후 persistent_insights + FTS + 쿼터 일관
-  - [x] Reply 멀티턴 → previous_insight_id 체인 정상
+  - [x] 재요청 멀티턴 → `previous_insight_id` 체인 정상
   - [x] 쿼터 초과 거부
   - [x] 주간 요약 후 superseded_by 일괄 갱신
 
@@ -436,12 +433,11 @@ class InsightAgent:
 ```
 □ archive.db 신규 테이블 5종 + FTS + 트리거 생성 확인
 □ `python -m cores.archive.persistent_insights --self-check` 스모크 테스트
-□ /insight → 질문 → 답변 동작
-□ 답변 Reply → 후속 답변 (멀티턴)
-□ 30분 초과 Reply → 만료 메시지
+□ POST /insight_agent → 초기 질문 → JSON 답변
+□ 동일 세션 재요청 + `previous_insight_id` → 후속 답변
 □ 일일 쿼터 초과 거부 + 리셋 시간 표시
 □ archive_query.py --insight-stats 집계 정상
-□ BotFather 메뉴에 /insight 노출
+□ Bearer 헤더 누락 시 401
 □ insight_tool_usage 로그 기록
 □ 주간 요약 drill (수동 실행) 성공
 ```
@@ -461,14 +457,14 @@ class InsightAgent:
 |---|---|
 | 저장 위치 | `archive.db` + 신규 5 테이블 |
 | 저장 대상 | Q&A 원문 + key_takeaways + 임베딩 BLOB |
-| 저장 트리거 | 모든 `/insight` 자동 (fire-and-forget) |
+| 저장 트리거 | 모든 `/insight_agent` 호출 자동 (fire-and-forget) |
 | 검색 전략 | FTS5 top-50 → 임베딩 재랭킹 top-5 + 주간 요약 티어 |
-| UX | 단일 `/insight` + ConversationHandler + Reply 멀티턴 (30분 TTL) |
+| UX | 단일 HTTP 엔드포인트 + `previous_insight_id` 재요청 |
 | LLM | `gpt-5.4-mini` via mcp-agent function calling |
 | 외부 도구 | yahoo_finance / kospi_kosdaq (무료), perplexity / firecrawl (엄격 가이드) |
 | 비용 관리 | 프롬프트 가드레일 + 일일 쿼터, 관찰 로그로 향후 조정 |
 | 프라이버시 | 공용 풀 (user_id만 기록) |
-| BotFather | 봇 기동 시 `set_my_commands` 호출로 `/insight` 메뉴 등록 |
+| 게이트웨이 | Bearer 토큰 + 선택적 양 서버 SSH 터널 문서 참고 (`docs/archive/DEPLOYMENT.md`) |
 | 테스트 포커스 | 안정성 (단위/통합/수동 QA). 성능 시험은 실시간 서비스 아니므로 제외 |
 
 ---

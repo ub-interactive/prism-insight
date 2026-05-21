@@ -31,8 +31,8 @@ class AnalysisRequest:
         self.id = str(uuid.uuid4())
         self.stock_code = stock_code  # US: ticker symbol (AAPL, MSFT, etc.)
         self.company_name = company_name
-        self.chat_id = chat_id  # Telegram chat ID
-        self.user_id = user_id  # Telegram user ID (for daily limit refund on server error)
+        self.chat_id = chat_id  # Optional originating channel / session identifier
+        self.user_id = user_id  # Optional end-user id (e.g. quota or audit trails)
         self.avg_price = avg_price
         self.period = period
         self.tone = tone

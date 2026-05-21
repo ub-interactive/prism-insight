@@ -93,8 +93,7 @@ RUN mkdir -p /app/prism-insight/reports \
              /app/prism-insight/pdf_reports \
              /app/prism-insight/html_reports \
              /app/prism-insight/charts \
-             /app/prism-insight/logs \
-             /app/prism-insight/telegram_messages/sent
+             /app/prism-insight/logs
 
 # Docker 설정 디렉토리 생성 및 파일 복사
 RUN mkdir -p /app/prism-insight/docker

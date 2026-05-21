@@ -80,27 +80,16 @@ def detect_surge_stocks(mode="morning"):
 
 ## Task 3: Adding Multi-Language Support
 
-```python
-# 1. Add language to cores/language_config.py
-class LanguageConfig:
-    SUPPORTED_LANGUAGES = ["ko", "en", "ja", "zh", "es", "fr", "de", "your_lang"]
+1. Extend templates in `cores/language_config.py` (or whichever localized template helper your section uses).
 
-    TEMPLATES = {
-        "your_lang": {
-            "report_title": "Your Language Title",
-            "sections": {
-                "technical_analysis": "Technical Analysis",
-                # ... add all sections
-            }
-        }
-    }
+2. Run the orchestrator with an explicit `--language` flag:
 
-# 2. Add Telegram channel to .env
-TELEGRAM_CHANNEL_ID_YOUR_LANG="-1001234567899"
-
-# 3. Use in broadcasting
-python stock_analysis_orchestrator.py --broadcast-languages ko,en,your_lang
+```bash
+python stock_analysis_orchestrator.py --mode morning --language en
 ```
+
+3. If you localize weekly digests, adapt your notifier / Firebase bridge payloads instead of coupling to a proprietary chat SDK.
+
 
 ---
 

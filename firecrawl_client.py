@@ -92,8 +92,9 @@ def _extract_agent_text(result) -> Optional[str]:
     if hasattr(result, 'data') and result.data:
         data = result.data
         if isinstance(data, dict):
-            # Try known keys in priority order
-            for key in ['telegram_message', 'result', 'text', 'answer', 'report', 'report_content', 'content']:
+            # Try known keys in priority order (older MCP builds may expose extra vendor keys —
+            # those are swept by the recursive string walk below).
+            for key in ['result', 'text', 'answer', 'report', 'report_content', 'content']:
                 val = data.get(key)
                 if val and isinstance(val, str) and len(val) > 50:
                     return val
@@ -116,7 +117,7 @@ def _extract_agent_text(result) -> Optional[str]:
 
     # Try result as dict directly
     if isinstance(result, dict):
-        for key in ['data', 'result', 'telegram_message', 'text']:
+        for key in ['data', 'result', 'text']:
             val = result.get(key)
             if val and isinstance(val, str) and len(val) > 50:
                 return val

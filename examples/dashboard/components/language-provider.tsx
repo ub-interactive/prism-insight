@@ -28,7 +28,7 @@ const translations: Record<Language, Record<string, string>> = {
     "header.watchlist": "관심 종목",
     "header.insights": "인사이트",
     "header.tooltip.github": "GitHub 저장소",
-    "header.tooltip.telegram": "텔레그램 채널",
+    "header.tooltip.community": "커뮤니티 (GitHub Discussions)",
     "header.tooltip.theme": "테마 전환",
 
     // Loading
@@ -495,7 +495,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.feature4": "실시간 성과 대시보드",
     "footer.links": "바로가기",
     "footer.sourceCode": "소스코드 & 이슈 관리",
-    "footer.telegramDesc": "급등주 & 분석 리포트",
+    "footer.communityDesc": "급등주 & 분석 리포트",
     "footer.stars": "10주 만에 250+ Stars 달성",
     "footer.disclaimer": "⚠️ 본 시스템에서 제공하는 분석 정보는 투자 참고용이며, 투자 권유를 목적으로 하지 않습니다. 모든 투자 결정과 그에 따른 손익은 투자자 본인의 책임입니다.",
   },
@@ -513,7 +513,7 @@ const translations: Record<Language, Record<string, string>> = {
     "header.watchlist": "Watchlist",
     "header.insights": "Insights",
     "header.tooltip.github": "GitHub Repository",
-    "header.tooltip.telegram": "Telegram Channel",
+    "header.tooltip.community": "GitHub Discussions",
     "header.tooltip.theme": "Toggle Theme",
 
     // Loading
@@ -980,7 +980,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.feature4": "Real-time Performance Dashboard",
     "footer.links": "Quick Links",
     "footer.sourceCode": "Source Code & Issues",
-    "footer.telegramDesc": "Surge Stocks & Analysis Reports",
+    "footer.communityDesc": "Surge Stocks & Analysis Reports",
     "footer.stars": "250+ Stars in 10 weeks",
     "footer.disclaimer": "⚠️ The analysis information provided by this system is for reference only and is not intended as investment advice. All investment decisions and resulting profits/losses are the sole responsibility of the investor.",
   },

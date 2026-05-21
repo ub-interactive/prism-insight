@@ -2281,14 +2281,13 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
             logger.error(traceback.format_exc())
             return 0, 0
 
-    async def _notify_firebase(self, message: str, message_id: int = None, msg_type=None):
+    async def _notify_firebase(self, message: str, msg_type=None):
         """Best-effort Firebase Bridge notification for Prism Mobile (optional; see FIREBASE_BRIDGE_ENABLED)."""
         try:
             from firebase_bridge import notify
             await notify(
                 message=message,
                 market="us",
-                telegram_message_id=message_id,
                 channel_id=None,
                 msg_type=msg_type,
             )
@@ -2313,7 +2312,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                     preview,
                 )
                 firebase_tasks.append(
-                    asyncio.create_task(self._notify_firebase(message, message_id=None, msg_type=msg_type))
+                    asyncio.create_task(self._notify_firebase(message, msg_type=msg_type))
                 )
 
             if firebase_tasks:

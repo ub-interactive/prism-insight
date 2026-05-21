@@ -152,7 +152,7 @@ PYTHONPATH=/path/to/prism-insight
 sudo semanage fcontext -a -t bin_t "/path/to/prism-insight/.*\.py"
 sudo restorecon -Rv /path/to/prism-insight/
 
-# Firewall settings (when using Telegram bot)
+# Firewall settings for HTTPS reverse proxies / dashboards (adjust to your ingress)
 sudo firewall-cmd --permanent --add-service=https
 sudo firewall-cmd --reload
 ```
@@ -416,7 +416,7 @@ fi
 If you encounter problems or need assistance:
 
 1. Inquire on [GitHub Issues](https://github.com/yourusername/prism-insight/issues)
-2. Get community support on [Telegram channel](https://t.me/stock_ai_agent)
+2. Discuss in [GitHub Discussions](https://github.com/dragon1086/prism-insight/discussions)
 3. Check log files (`logs/` directory)
 4. Refer to the troubleshooting section in this document
 

@@ -36,7 +36,6 @@ logs/
 pdf_reports/
 reports/
 charts/
-telegram_messages/
 quickstart-output/
 quickstart-config/
 tasks/

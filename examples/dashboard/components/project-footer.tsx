@@ -91,9 +91,9 @@ export function ProjectFooter() {
                     </div>
                   </a>
 
-                  {/* Telegram */}
+                  {/* Community */}
                   <a
-                    href="https://t.me/stock_ai_agent"
+                    href="https://github.com/dragon1086/prism-insight/discussions"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group flex items-center gap-3 p-3 rounded-lg bg-background/60 hover:bg-background/80 border border-border/50 hover:border-border transition-all duration-200 hover:shadow-md"
@@ -103,10 +103,10 @@ export function ProjectFooter() {
                     </div>
                     <div className="flex-1">
                       <div className="text-sm font-medium text-foreground group-hover:text-blue-500 transition-colors">
-                        Telegram Channel
+                        GitHub Discussions
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {t("footer.telegramDesc")}
+                        {t("footer.communityDesc")}
                       </div>
                     </div>
                   </a>

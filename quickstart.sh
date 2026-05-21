@@ -7,7 +7,7 @@
 # This script will:
 #   1. Install Python dependencies
 #   2. Configure your API key
-#   3. Run US stock analysis (no Telegram required)
+#   3. Run US stock analysis demo (single-stock PDF workflow)
 #
 # Reports will be saved to pdf_reports/
 
@@ -92,8 +92,8 @@ python3 demo.py AAPL
 echo ""
 echo "Next steps:"
 echo "  • Try analyzing other stocks: python3 demo.py MSFT"
-echo "  • Run full pipeline: python3 stock_analysis_orchestrator.py --mode morning --no-telegram"
-echo "  • Set up Telegram for real-time alerts (see docs/SETUP.md)"
+echo "  • Run full US morning pipeline: python3 stock_analysis_orchestrator.py --mode morning"
+echo "  • See docs/SETUP.md for cron, Firebase (optional), and production notes"
 echo ""
 echo -e "⭐ ${YELLOW}If this helped you, please star us on GitHub!${NC}"
 echo "   https://github.com/dragon1086/prism-insight"

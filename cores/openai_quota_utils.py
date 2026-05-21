@@ -1,4 +1,4 @@
-"""OpenAI quota / billing error helpers (no Telegram side effects)."""
+"""OpenAI quota / billing error helpers (pure classification; no side effects)."""
 
 
 def is_openai_quota_error(error: Exception) -> bool:

@@ -1,12 +1,17 @@
+> **Operational note:** Mentions of external chat distribution describe retired infrastructure.
+> Use `archive_api.py` endpoints (`/health`, `/query`, `/insight_agent`) from your own HTTPS clients.
+
+---
+
 # Persistent Insight Agent — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 모든 `/insight` Q&A를 영구 저장하고, 누적 인사이트 + 외부 MCP 도구를 조합해 종목 장기투자 적합성을 판단하는 에이전트를 구축하여 PR #262에 포함한다.
 
-**Architecture:** archive.db 5 신규 테이블 + mcp-agent function calling + FTS5→embedding 재랭킹 + 주간 요약 티어. 단일서버/양서버 모드 모두 유지. Telegram `/insight`는 ConversationHandler + Reply 기반 멀티턴 (30분 TTL).
+**Architecture:** archive.db 5 신규 테이블 + mcp-agent function calling + FTS5→embedding 재랭킹 + 주간 요약 티어. 단일서버/양서버 모드 모두 유지. `/insight_agent`는 HTTPS로 호출하고 `previous_insight_id`로 멀티턴을 이어갑니다.
 
-**Tech Stack:** Python 3.10+, SQLite FTS5, aiosqlite, OpenAI API (gpt-5.4-mini + text-embedding-3-small), mcp-agent, python-telegram-bot, FastAPI, numpy.
+**Tech Stack:** Python 3.10+, SQLite FTS5, aiosqlite, OpenAI API (gpt-5.4-mini + text-embedding-3-small), mcp-agent, FastAPI, numpy.
 
 **Spec:** `docs/superpowers/specs/2026-04-21-persistent-insight-agent-design.md`
 
@@ -232,7 +237,7 @@ async def embed_text(text: str, api_key: str) -> Optional[bytes]:
         client = _get_openai_client(api_key)
         resp = await client.embeddings.create(
             model=EMBEDDING_MODEL,
-            input=text[:8000],   # 모델 input cap
+            input=text[:8000],  # 모델 input cap
         )
         vec = np.array(resp.data[0].embedding, dtype=np.float32)
         if vec.shape != (EMBEDDING_DIM,):
@@ -1106,338 +1111,16 @@ python -m py_compile archive_api.py && echo OK
 
 ```bash
 git add archive_api.py
-git commit -m "feat(archive): add /insight_agent endpoint for telegram insight command"
+git commit -m "feat(archive): add /insight_agent endpoint for archive insight command"
 ```
 
 ---
 
-## Phase 3 — Telegram 통합
+## Phase 3 — `/insight_agent` HTTP 표면
 
-### Task 7: InsightConversationContext + Reply 핸들러
+InsightAgent 사용자 표면은 `archive_api.py`의 `POST /insight_agent`입니다. 같은 사용자의 다음 턴은 요청 JSON에 `previous_insight_id`를 넣어 체결합니다 — 별도의 메신저 클라이언트나 Reply 라우팅은 이 저장소 범위에 포함되지 않습니다.
 
-**Files:**
-- Modify: `telegram_ai_bot.py`
-
-- [ ] **Step 1: `FirecrawlConversationContext` 클래스 정의 위치 확인**
-
-```bash
-grep -n "class FirecrawlConversationContext" telegram_ai_bot.py
-```
-이 클래스 정의 바로 아래에 `InsightConversationContext` 추가.
-
-- [ ] **Step 2: `InsightConversationContext` 추가**
-
-```python
-class InsightConversationContext:
-    """/insight 멀티턴용 컨텍스트. Firecrawl 패턴 미러링."""
-
-    def __init__(self, original_question: str, user_id: int, chat_id: int):
-        self.original_question = original_question
-        self.user_id = user_id
-        self.chat_id = chat_id
-        self.last_insight_id: Optional[int] = None
-        self.conversation_history: list = []
-        self.created_at = datetime.now()
-
-    def is_expired(self, ttl_minutes: int = 30) -> bool:
-        return (datetime.now() - self.created_at).total_seconds() > ttl_minutes * 60
-
-    def add_turn(self, user_q: str, bot_a: str, insight_id: Optional[int]):
-        self.conversation_history.append({"q": user_q, "a": bot_a, "iid": insight_id})
-        if insight_id is not None:
-            self.last_insight_id = insight_id
-```
-
-- [ ] **Step 3: 봇 __init__에 딕셔너리 등록**
-
-`FirecrawlConversationContext` 딕셔너리 초기화 라인 바로 아래:
-
-```python
-self.insight_contexts: Dict[int, InsightConversationContext] = {}  # key: bot message_id
-```
-
-- [ ] **Step 4: Reply 핸들러 추가**
-
-`_handle_firecrawl_reply` 함수 바로 아래에 `_handle_insight_reply` 추가:
-
-```python
-async def _handle_insight_reply(self, update: Update, ic: InsightConversationContext):
-    """/insight 답변에 Reply로 후속 질문. /evaluate/Firecrawl 패턴 미러링."""
-    user_question = update.message.text.strip()
-    if len(user_question) > 2000:
-        await update.message.reply_text("질문은 2000자 이내로 입력해주세요.")
-        return
-    chat_id = update.effective_chat.id
-    waiting = await update.message.reply_text("🧭 누적 인사이트 + 시장 데이터 결합 중…")
-    try:
-        payload = await self._call_insight_agent(
-            question=user_question,
-            user_id=update.effective_user.id,
-            chat_id=chat_id,
-            previous_insight_id=ic.last_insight_id,
-        )
-        try:
-            await waiting.delete()
-        except Exception:
-            pass
-        if not payload:
-            await update.message.reply_text(
-                "⚠️ 인사이트 조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
-            )
-            return
-        sent = await update.message.reply_text(payload.answer)
-        ic.add_turn(user_question, payload.answer, payload.insight_id)
-        # 새 message_id도 동일 컨텍스트로 매핑 (계속 reply 가능)
-        self.insight_contexts[sent.message_id] = ic
-    except Exception as e:
-        logger.error(f"_handle_insight_reply error: {e}", exc_info=True)
-        try:
-            await waiting.delete()
-        except Exception:
-            pass
-        await update.message.reply_text(f"⚠️ 오류: {type(e).__name__}")
-```
-
-- [ ] **Step 5: 메시지 핸들러 라우터에 등록**
-
-기존 reply 라우터 (`firecrawl_contexts` 검사 위치):
-
-```python
-# 기존:
-if replied_to_msg_id in self.firecrawl_contexts:
-    fc_ctx = self.firecrawl_contexts[replied_to_msg_id]
-    ...
-
-# 이어서 추가:
-elif replied_to_msg_id in self.insight_contexts:
-    ic = self.insight_contexts[replied_to_msg_id]
-    if ic.is_expired():
-        await update.message.reply_text(
-            "이전 /insight 세션이 만료되었습니다. /insight로 새로 시작해주세요."
-        )
-        del self.insight_contexts[replied_to_msg_id]
-        return
-    await self._handle_insight_reply(update, ic)
-    return
-```
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add telegram_ai_bot.py
-git commit -m "feat(telegram): add InsightConversationContext + reply-based multiturn"
-```
-
----
-
-### Task 8: `/insight` 핸들러 교체 + `_call_insight_agent`
-
-**Files:**
-- Modify: `telegram_ai_bot.py`
-
-- [ ] **Step 1: `_call_insight_agent` 메서드 추가**
-
-기존 `_call_archive_query` 바로 아래:
-
-```python
-@dataclass
-class InsightPayload:
-    answer: str
-    insight_id: Optional[int]
-    remaining_quota: int
-    tickers_mentioned: list
-    tools_used: list
-
-
-async def _call_insight_agent(
-    self, question: str, user_id: int, chat_id: int,
-    previous_insight_id: Optional[int] = None,
-) -> Optional[InsightPayload]:
-    api_url = os.getenv("ARCHIVE_API_URL", "").rstrip("/")
-    api_key = os.getenv("ARCHIVE_API_KEY", "")
-    daily_limit = int(os.getenv("INSIGHT_DAILY_LIMIT", "20"))
-
-    if api_url:
-        import aiohttp
-        payload = {
-            "question": question, "user_id": user_id, "chat_id": chat_id,
-            "daily_limit": daily_limit, "previous_insight_id": previous_insight_id,
-        }
-        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-        try:
-            async with aiohttp.ClientSession() as s:
-                async with s.post(
-                    f"{api_url}/insight_agent",
-                    json=payload, headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=60),
-                ) as resp:
-                    if resp.status != 200:
-                        logger.error(f"/insight_agent {resp.status}: {await resp.text()}")
-                        return None
-                    data = await resp.json()
-                    return InsightPayload(
-                        answer=data["answer"],
-                        insight_id=data.get("insight_id"),
-                        remaining_quota=data.get("remaining_quota", -1),
-                        tickers_mentioned=data.get("tickers_mentioned", []),
-                        tools_used=data.get("tools_used", []),
-                    )
-        except Exception as e:
-            logger.error(f"_call_insight_agent HTTP error: {e}", exc_info=True)
-            return None
-    else:
-        try:
-            from cores.archive.insight_agent import InsightAgent
-            agent = InsightAgent()
-            r = await agent.run(
-                question=question, user_id=user_id, chat_id=chat_id,
-                daily_limit=daily_limit,
-                previous_insight_id=previous_insight_id,
-            )
-            return InsightPayload(
-                answer=r.answer, insight_id=r.insight_id,
-                remaining_quota=r.remaining_quota,
-                tickers_mentioned=r.tickers_mentioned,
-                tools_used=r.tools_used,
-            )
-        except Exception as e:
-            logger.error(f"Local insight agent failed: {e}", exc_info=True)
-            return None
-```
-
-`InsightPayload` dataclass는 파일 상단 import 블록 근처에 추가 (기존 dataclass들 옆).
-
-- [ ] **Step 2: 기존 `handle_insight_query` 교체**
-
-`handle_insight_query` 함수 본문을 아래로 대체:
-
-```python
-async def handle_insight_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-    question = update.message.text.strip()
-    if len(question) > 2000:
-        await update.message.reply_text("질문은 2000자 이내로 입력해주세요.")
-        return ConversationHandler.END
-    logger.info(f"/insight - user={update.effective_user.id}, q='{question[:60]}'")
-    chat_id = update.effective_chat.id
-    waiting = await update.message.reply_text(
-        "🧭 누적 인사이트 + 시장 데이터로 답변 생성 중…"
-    )
-    try:
-        payload = await self._call_insight_agent(
-            question=question,
-            user_id=update.effective_user.id,
-            chat_id=chat_id,
-        )
-        try:
-            await waiting.delete()
-        except Exception:
-            pass
-        if not payload:
-            await self.application.bot.send_message(
-                chat_id=chat_id,
-                text="⚠️ 인사이트 조회에 실패했습니다. 잠시 후 다시 시도해주세요."
-            )
-            return ConversationHandler.END
-
-        sent = await self.application.bot.send_message(
-            chat_id=chat_id, text=payload.answer
-        )
-        # 멀티턴 컨텍스트 등록
-        ic = InsightConversationContext(
-            original_question=question,
-            user_id=update.effective_user.id, chat_id=chat_id,
-        )
-        ic.add_turn(question, payload.answer, payload.insight_id)
-        self.insight_contexts[sent.message_id] = ic
-    except Exception as e:
-        logger.error(f"/insight error: {e}", exc_info=True)
-        try:
-            await waiting.delete()
-        except Exception:
-            pass
-        await self.application.bot.send_message(
-            chat_id=chat_id, text=f"⚠️ 오류: {type(e).__name__}"
-        )
-    return ConversationHandler.END
-```
-
-- [ ] **Step 3: py_compile**
-
-```bash
-python -m py_compile telegram_ai_bot.py && echo OK
-```
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add telegram_ai_bot.py
-git commit -m "feat(telegram): route /insight through InsightAgent with multiturn support"
-```
-
----
-
-### Task 9: BotFather 명령어 메뉴 동기화
-
-**Files:**
-- Modify: `telegram_ai_bot.py`
-
-- [ ] **Step 1: `_register_bot_commands` 메서드 추가**
-
-`TelegramAIBot` 클래스 안, 기존 큰 핸들러 메서드들 아래:
-
-```python
-async def _register_bot_commands(self):
-    """봇 기동 시 BotFather 명령어 메뉴 동기화."""
-    from telegram import BotCommand
-    commands = [
-        BotCommand("evaluate",     "보유 종목 평가 시작"),
-        BotCommand("us_evaluate",  "미국 주식 보유 종목 평가"),
-        BotCommand("report",       "국내 종목 리포트"),
-        BotCommand("us_report",    "미국 종목 리포트"),
-        BotCommand("history",      "분석 히스토리 조회"),
-        BotCommand("signal",       "국내 시장 시그널 분석"),
-        BotCommand("us_signal",    "미국 시장 시그널 분석"),
-        BotCommand("theme",        "국내 테마 진단"),
-        BotCommand("us_theme",     "미국 테마 진단"),
-        BotCommand("ask",          "자유 질문"),
-        BotCommand("insight",      "PRISM 아카이브 기반 장기 인사이트"),
-        BotCommand("help",         "도움말"),
-    ]
-    try:
-        await self.application.bot.set_my_commands(commands)
-        logger.info(f"Registered {len(commands)} bot commands via BotFather API")
-    except Exception as e:
-        logger.warning(f"set_my_commands failed: {e}")
-```
-
-- [ ] **Step 2: Application.post_init 훅 연결**
-
-봇 애플리케이션 빌드 후 단계에 추가:
-
-```bash
-grep -n "Application.builder\|ApplicationBuilder\|build()" telegram_ai_bot.py | head
-```
-
-찾은 위치 근처에 연결:
-```python
-self.application.post_init = lambda app: self._register_bot_commands()
-```
-
-- [ ] **Step 3: 실제 명령어 목록 검증**
-
-현재 봇에 등록된 CommandHandler 기준으로 위 목록이 실제와 일치하는지 확인:
-```bash
-grep -n "CommandHandler(\"" telegram_ai_bot.py | head -30
-```
-
-목록에 없는 명령어는 추가, 더 이상 안 쓰는 건 제거.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add telegram_ai_bot.py
-git commit -m "feat(telegram): sync command menu with BotFather on bot startup"
-```
+**근거 코드:** `archive_api.py`, `cores/archive/insight_agent.py`, `docs/archive/ARCHIVE_API_SETUP.md`
 
 ---
 
@@ -1689,14 +1372,14 @@ sqlite3 archive.db ".tables"
 ```
 ```
 
-- [ ] **Step 2: Step 9 봇 재시작 주의사항 업데이트**
+- [ ] **Step 2: Step 9 서비스 재시작 주의사항 업데이트**
 
 ```markdown
-## Step 9. 텔레그램 봇 재시작
+## Step 9. archive_api 재시작
 
-봇 프로세스 재시작. 기동 시:
-- `set_my_commands` 자동 호출 → BotFather 메뉴에 `/insight` 노출
-- `ARCHIVE_API_URL` 설정 시 양서버 모드, 미설정 시 단일서버 모드
+`archive_api.py` 프로세스를 재시작합니다. 기동 시:
+- FastAPI가 `ARCHIVE_API_HOST` / `ARCHIVE_API_PORT`에 바인딩
+- `ARCHIVE_API_URL`이 클라이언트 측에 설정되면 양 서버 모드(터널 경유), 미설정이면 단일 서버 직접 호출
 ```
 
 - [ ] **Step 3: `ARCHIVE_API_SETUP.md` 엔드포인트 목록에 `/insight_agent` 추가**
@@ -1852,35 +1535,33 @@ grep -q ARCHIVE_API_URL .env || echo "ARCHIVE_API_URL=http://127.0.0.1:8765" >> 
 # ARCHIVE_API_KEY 는 db-server와 동일 값
 ```
 
-- [ ] **Step 5: 봇 프로세스 재시작**
+- [ ] **Step 5: 터널 경유 헬스 체크 (app-server)**
 
 ```bash
-pgrep -af telegram_ai_bot | head
-pkill -f telegram_ai_bot
-sleep 2
-nohup python telegram_ai_bot.py >> logs/telegram_ai_bot.log 2>&1 &
-disown
+curl -s http://127.0.0.1:8765/health
 ```
 
-- [ ] **Step 6: BotFather 명령어 메뉴 검증**
+예상: `{"status":"ok",...}` (로컬 `127.0.0.1:8765`는 SSH 포워드 끝단).
 
-텔레그램에서 봇 대화창 → `/` 입력 → `/insight` 항목 노출 확인.
+- [ ] **Step 6: 내부 클라이언트 스모크 (선택)**
+
+Bearer를 실은 `curl` 또는 사내 게이트웨이에서 `POST /insight_agent`가 JSON을 반환하는지 확인합니다. app-server에서는 `archive_api`를 띄우지 않습니다(프로세스는 db-server).
 
 ---
 
 ### Task 16: 스모크 QA
 
-- [ ] **Step 1: `/insight` 명령어**
+- [ ] **Step 1: 세션 시작**
 
-텔레그램에서 봇에게 `/insight` → "질문을 입력해주세요" 응답 확인.
+HTTP `POST /insight_agent`로 초기 페이로드를 보냅니다 (`previous_insight_id` 없음).
 
-- [ ] **Step 2: 질문 입력**
+- [ ] **Step 2: 질문 본문**
 
-"삼성전자 장기투자 적합한가?" → answer + key_takeaways 응답 확인.
+"삼성전자 장기투자 적합한가?" → `answer` + `key_takeaways` 존재 확인.
 
-- [ ] **Step 3: Reply 후속 질문**
+- [ ] **Step 3: 멀티턴 체인**
 
-봇 답변에 Reply → "공매도 리스크는 어떤가?" → 컨텍스트 유지된 후속 답변 확인.
+이전 응답의 `insight_id`를 `previous_insight_id`에 넣고 "공매도 리스크는 어떤가?" 재요청 → 컨텍스트가 유지되는지 확인.
 
 - [ ] **Step 4: DB 확인 (db-server)**
 
@@ -1904,7 +1585,7 @@ python archive_query.py --insight-stats
 
 ## Self-Review Checklist
 
-- [x] 스펙의 모든 요구사항 구현 태스크 존재 (5 테이블, 에이전트, UX, 주간 요약, 도구 가드레일, BotFather 동기화, 배포)
+- [x] 스펙의 모든 요구사항 구현 태스크 존재 (5 테이블, 에이전트, UX, 주간 요약, 도구 가드레일, 배포)
 - [x] TDD 대신 smoke/integration 테스트 중심 (안정성 요구 사항 반영)
 - [x] 각 Task 끝마다 commit step
 - [x] 실제 코드 + 실제 커맨드 포함 (플레이스홀더 없음)
@@ -1922,6 +1603,6 @@ python archive_query.py --insight-stats
 ## 참고 자료
 
 - 스펙: `docs/superpowers/specs/2026-04-21-persistent-insight-agent-design.md`
-- 기존 패턴: `cores/report_generation.py` (mcp-agent + gpt-5.4-mini), `telegram_ai_bot.py::_handle_firecrawl_reply` (Reply 멀티턴)
+- 기존 패턴: `cores/report_generation.py` (mcp-agent + gpt-5.4-mini), `archive_api.py` 멀티턴은 `previous_insight_id`
 - OpenAI: `text-embedding-3-small` 1536-dim, $0.02/1M tokens
 - MCP 서버: yahoo_finance/perplexity/kospi_kosdaq/firecrawl은 `mcp_agent.config.yaml` 기등록

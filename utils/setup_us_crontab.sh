@@ -260,7 +260,7 @@ $US_MEMORY_COMPRESSION_TIME * * 0 cd $PROJECT_DIR && $PYTHON_PATH compress_tradi
 # Optional: Uncomment to enable additional features
 # =============================================================================
 
-# (Legacy Telegram portfolio cron removed — ingest logs from stock_tracking_agent instead.)
+# Portfolio digests ship from stock_tracking_agent logs/scheduling only.
 
 EOF
 }

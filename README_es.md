@@ -77,7 +77,7 @@ Sin costos de API. El mismo analisis potente. Tu suscripcion existente hace el t
 
 </div>
 
-- **Filtrado Inteligente** — Recibe solo las alertas de Telegram que te interesan
+- **Filtrado Inteligente** — Elige qué señales aparecen en PRISM-Mobile
 - **Informes PDF** — Informes de analisis con IA optimizados para moviles
 - **Promo de Lanzamiento (hasta el 23 de abr de 2026)** — Instalala ahora y obtén **20 creditos gratuitos** (normalmente 10)
 
@@ -95,13 +95,10 @@ Sin costos de API. El mismo analisis potente. Tu suscripcion existente hace el t
 Observa el rendimiento del trading con IA en tiempo real:
 **[analysis.stocksimulation.kr](https://analysis.stocksimulation.kr/)**
 
-### 2. Canales de Telegram
-Recibe alertas diarias de acciones con movimientos inusuales e informes de analisis con IA:
-- **[Canal en Ingles](https://t.me/prism_insight_global_en)**
-- **[Canal en Coreano](https://t.me/stock_ai_agent)**
-- **[Canal en Japones](https://t.me/prism_insight_ja)**
-- **[Canal en Chino](https://t.me/prism_insight_zh)**
-- **[Canal en Español](https://t.me/prism_insight_es)**
+### 2. Comunidad y actualizaciones del proyecto
+
+- **Entornos públicos**: [analysis.stocksimulation.kr](https://analysis.stocksimulation.kr/) y Sponsors en GitHub
+- **[GitHub Discussions](https://github.com/dragon1086/prism-insight/discussions)**
 
 ### 3. Informe de Ejemplo
 Mira un informe de analisis de Apple Inc. generado por IA:
@@ -182,8 +179,8 @@ cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
 # Edit mcp_agent.secrets.yaml with your OpenAI API key
 # Edit mcp_agent.config.yaml with KRX credentials (Kakao account)
 
-# 5. Run analysis (no Telegram required!)
-python stock_analysis_orchestrator.py --mode morning --no-telegram
+# 5. Run analysis
+python stock_analysis_orchestrator.py --mode morning
 ```
 
 ### Opcion B: Docker (Recomendado para Produccion)
@@ -200,7 +197,7 @@ cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
 docker compose up -d
 
 # 3. Run analysis manually (optional)
-docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mode morning --no-telegram
+docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mode morning
 ```
 
 **Guia de Instalacion Completa**: [docs/SETUP.md](docs/SETUP.md)
@@ -216,7 +213,7 @@ PRISM-INSIGHT es un sistema de analisis bursatil impulsado por IA, **completamen
 - **Informes de Analisis con IA** — Informes de nivel profesional generados por 13 agentes de IA especializados
 - **Simulacion de Trading** — Decisiones de compra/venta impulsadas por IA con gestion de portafolio
 - **Trading Automatizado** — Ejecucion real a traves de la API de Korea Investment & Securities
-- **Integracion con Telegram** — Alertas en tiempo real y difusion en multiples idiomas
+- **Notificaciones (opcional)** — Puente `firebase_bridge` + FCM liviano para aplicaciones cliente
 - **Inteligencia Macro** — Deteccion del regimen de mercado, analisis de rotacion sectorial y monitoreo de eventos de riesgo
 
 ### Modelos de IA
@@ -235,9 +232,7 @@ Mas de 13 agentes especializados colaboran en equipos:
 | **Macro** | 1 agente | Regimen de mercado, rotacion sectorial, eventos de riesgo |
 | **Analisis** | 6 agentes | Analisis tecnico, financiero, sectorial, de noticias y de mercado |
 | **Estrategia** | 1 agente | Sintesis de estrategia de inversion |
-| **Comunicacion** | 3 agentes | Resumen, evaluacion de calidad, traduccion |
 | **Trading** | 3 agentes | Decisiones de compra/venta, bitacora |
-| **Consulta** | 2 agentes | Interaccion con usuarios via Telegram |
 
 <details>
 <summary>Ver Diagrama de Flujo de Agentes</summary>
@@ -255,7 +250,7 @@ Mas de 13 agentes especializados colaboran en equipos:
 |----------------|-------------|
 | **Analisis con IA** | Analisis bursatil de nivel experto mediante el sistema multi-agente de GPT-5 |
 | **Deteccion de Movimientos** | Lista de seguimiento automatica a traves del analisis de tendencias del mercado matutino/vespertino |
-| **Telegram** | Distribucion de analisis en tiempo real a canales |
+| **Push (opcional)** | FCM mediante `firebase_bridge` |
 | **Simulacion de Trading** | Simulacion de estrategia de inversion impulsada por IA |
 | **Trading Automatizado** | Ejecucion a traves de la API de Korea Investment & Securities |
 | **Dashboard** | Seguimiento transparente de portafolio, operaciones y rendimiento |
@@ -292,7 +287,7 @@ Mas de 13 agentes especializados colaboran en equipos:
 
 ```bash
 # Run US analysis
-python stock_analysis_orchestrator.py --mode morning --no-telegram
+python stock_analysis_orchestrator.py --mode morning
 
 # With English reports
 python stock_analysis_orchestrator.py --mode morning --language en
@@ -404,4 +399,4 @@ Actualmente sirviendo a mas de 450 usuarios de forma gratuita.
 
 **Si este proyecto te fue util, por favor regalanos una estrella!**
 
-**Contacto**: [GitHub Issues](https://github.com/dragon1086/prism-insight/issues) | [Telegram](https://t.me/stock_ai_agent) | [Discussions](https://github.com/dragon1086/prism-insight/discussions)
+**Contacto**: [GitHub Issues](https://github.com/dragon1086/prism-insight/issues) | [Discussions](https://github.com/dragon1086/prism-insight/discussions)

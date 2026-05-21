@@ -1,4 +1,4 @@
-"""Regression tests for gh #263 — duplicate investing warning on /us_theme etc.
+"""Regression tests for gh #263 — duplicate investing warning Firecrawl-style handlers historically appended a canonical disclaimer block; stripping must remain deterministic.
 
 Firecrawl-style handlers historically appended a canonical disclaimer block; stripping must remain deterministic.
 English disclaimer. The LLM frequently appends its own investment-warning line

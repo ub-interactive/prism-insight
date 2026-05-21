@@ -1,7 +1,7 @@
 # PRISM-INSIGHT Quick Start Docker Compose
 #
 # Minimal setup for trying PRISM-INSIGHT with US stocks.
-# Only requires an OpenAI API key - no Telegram, no KRX login needed.
+# Only requires an OpenAI API key — no brokerage login required for the demo image.
 #
 # Usage:
 #   1. Set your OpenAI API key:

@@ -152,17 +152,17 @@ export function DashboardHeader({ activeTab, onTabChange, lastUpdated, market = 
                     className="rounded-full"
                   >
                     <a
-                      href="https://t.me/stock_ai_agent"
+                      href="https://github.com/dragon1086/prism-insight/discussions"
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label="Telegram Channel"
+                      aria-label="GitHub Community"
                     >
                       <Send className="h-5 w-5" />
                     </a>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">{t("header.tooltip.telegram")}</p>
+                  <p className="text-xs">{t("header.tooltip.community")}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

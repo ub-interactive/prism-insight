@@ -16,7 +16,7 @@ fi
 find "$PROJECT_ROOT" -maxdepth 1 -name "*.log*" -type f -mtime +$DAYS_TO_KEEP_LOGS -delete
 find "$PROJECT_ROOT" -maxdepth 1 -name "trigger_results_*.json" -type f -mtime +$DAYS_TO_KEEP_LOGS -delete
 
-for dir in "$PROJECT_ROOT/reports" "$PROJECT_ROOT/pdf_reports" "$PROJECT_ROOT/telegram_messages"; do
+for dir in "$PROJECT_ROOT/reports" "$PROJECT_ROOT/pdf_reports"; do
   if [ -d "$dir" ]; then
     find "$dir" -type f -mtime +$DAYS_TO_KEEP_REPORTS -delete
   fi

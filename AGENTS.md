@@ -9,7 +9,6 @@ PRISM-INSIGHT is an AI-powered US stock analysis and automated trading system bu
 - Python 3.10+
 - GPT-5 / Claude based analysis agents
 - SQLite storage
-- Telegram delivery
 - KIS trading APIs
 - US market flows
 
@@ -39,7 +38,6 @@ python3 -m playwright install chromium
 ### Local analysis runs
 
 ```bash
-python stock_analysis_orchestrator.py --mode morning --no-telegram
 python stock_analysis_orchestrator.py --mode morning
 python demo.py AAPL
 python weekly_insight_report.py --dry-run
@@ -49,7 +47,6 @@ python weekly_insight_report.py --dry-run
 
 ```bash
 pytest tests/test_trading_journal.py
-pytest tests/test_portfolio_reporter.py
 pytest tests/test_multi_account_us.py
 ```
 
@@ -57,7 +54,7 @@ Avoid broad production-like runs unless the task requires them.
 
 ## Change Rules
 
-- Default to safe paths: prefer `--no-telegram`, `--dry-run`, demo mode, or isolated tests.
+- Default to safe paths: prefer `--dry-run`, demo mode, or isolated tests.
 - Do not change or commit real credentials, tokens, or secrets in `.env`, `mcp_agent.secrets.yaml`, or `trading/config/kis_devlp.yaml`.
 - Treat generated logs, PDFs, JSON outputs, and SQLite databases as user data unless the task explicitly targets them.
 - Keep changes narrow and consistent with existing patterns; this repo has substantial behavior encoded in prompts and orchestration order.
@@ -92,7 +89,6 @@ Avoid broad production-like runs unless the task requires them.
 - `cores/analysis.py`: sequential orchestration and section integration
 - `cores/agents/*.py`: prompt logic and agent responsibilities
 - `stock_tracking_agent.py`: trading loop, sell decisions, optional journal flow
-- `telegram_ai_bot.py`: **stubbed** (legacy interactive Telegram UX removed in this codebase variant)
 
 ## Before Finishing
 

@@ -1,14 +1,8 @@
 """
-User Memory Manager for Telegram Bot
+User memory persistence (per-user journaling, evaluations, conversations).
 
-Persistent memory system for storing user-specific trading journals and conversation history.
-
-Features:
-- Record trading journals via /journal command
-- Separate short-term memory (1 week) / long-term memory (beyond)
-- Utilize memory in /evaluate and /report commands
-- Support conversation threading via replies
-- User-isolated storage (user_id based)
+SQLite-backed store keyed by ``user_id``. Designed for ancillary UX surfaces
+(APIs, dashboards, or custom clients) rather than being tied to a specific chat vendor.
 """
 
 import json
@@ -137,7 +131,7 @@ class UserMemoryManager:
             market_type: Market type (us)
             importance_score: Importance score (0.0 ~ 1.0)
             command_source: Command source
-            message_id: Telegram message ID
+            message_id: Optional upstream message/thread correlation id
             tags: Tag list
 
         Returns:
@@ -437,7 +431,7 @@ class UserMemoryManager:
             ticker: Stock code/ticker
             ticker_name: Stock name
             market_type: Market type
-            message_id: Telegram message ID
+            message_id: Optional upstream message/thread correlation id
 
         Returns:
             int: Created memory ID

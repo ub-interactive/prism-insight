@@ -4,6 +4,8 @@ Firebase Bridge for PRISM-Mobile
 Saves message metadata to Firestore and sends FCM push notifications when
 configured. Failures are logged and ignored so core batch jobs keep running.
 
+FCM payloads and mirrored Firestore documents use ``report_link`` / ``pdf_report_link``.
+
 IMPORTANT: This module is opt-in and disabled by default.
 Set FIREBASE_BRIDGE_ENABLED=true in .env to activate.
 This is a PRISM-Mobile specific feature, not required for core prism-insight usage.
@@ -204,10 +206,10 @@ async def notify(
     message: str,
     market: Optional[str] = None,
     msg_type: Optional[str] = None,
-    telegram_message_id: Optional[int] = None,
     channel_id: Optional[str] = None,
     has_pdf: bool = False,
-    pdf_telegram_link: Optional[str] = None,
+    report_link: str = "",
+    pdf_report_link: Optional[str] = None,
 ):
     """
     Save message metadata to Firestore and send FCM push.
@@ -218,16 +220,14 @@ async def notify(
         message: Human-readable plaintext that originated the notification
         market: Market identifier (`us` only). Auto-detected if None.
         msg_type: Message type. Auto-detected if None.
-        telegram_message_id: Legacy positional argument (ignored; deep links unused)
-        channel_id: Legacy routing hint (stored when provided)
+        channel_id: Routing hint stored when provided
         has_pdf: Whether this message references an associated PDF asset
-        pdf_telegram_link: Legacy positional argument for deep links (usually empty)
+        report_link: Optional URL or deep link to the originating asset (often empty).
+        pdf_report_link: Optional direct link to PDF when ``has_pdf`` is true (often empty).
     """
     try:
         if not _initialize():
             return
-
-        _ = telegram_message_id
 
         # Auto-detect if not provided
         if not market:
@@ -240,8 +240,8 @@ async def notify(
         stock_code, stock_name = extract_stock_info(message)
 
         lang = _notification_lang()
-        telegram_link = ''
-        pdf_link = pdf_telegram_link or ''
+        link = report_link or ""
+        pdf_link = pdf_report_link or ""
 
         # Save to Firestore
         from google.cloud.firestore import SERVER_TIMESTAMP
@@ -252,12 +252,12 @@ async def notify(
             'lang': lang,
             'title': title,
             'preview': preview,
-            'telegram_link': telegram_link,
+            'report_link': link,
             'channel_id': channel_id,
             'stock_code': stock_code,
             'stock_name': stock_name,
             'has_pdf': has_pdf,
-            'pdf_telegram_link': pdf_link,
+            'pdf_report_link': pdf_link,
             'created_at': SERVER_TIMESTAMP,
         }
 
@@ -265,13 +265,21 @@ async def notify(
         logger.info(f"Firebase: Saved {msg_type}/{market} message to Firestore")
 
         # Send FCM push notification
-        await _send_push(title, preview, msg_type, market, lang, telegram_link, pdf_link)
+        await _send_push(title, preview, msg_type, market, lang, link, pdf_link)
 
     except Exception as e:
         logger.warning(f"Firebase Bridge notify failed (ignored): {e}")
 
 
-async def _send_push(title: str, body: str, msg_type: str, market: str, lang: str = 'ko', telegram_link: str = '', pdf_telegram_link: str = ''):
+async def _send_push(
+    title: str,
+    body: str,
+    msg_type: str,
+    market: str,
+    lang: str = "ko",
+    report_link: str = "",
+    pdf_report_link: str = "",
+):
     """Send FCM push notification to subscribed devices."""
     try:
         if not _messaging:
@@ -330,8 +338,8 @@ async def _send_push(title: str, body: str, msg_type: str, market: str, lang: st
                     'type': msg_type,
                     'market': market,
                     'lang': lang,
-                    'telegram_link': telegram_link,
-                    'pdf_telegram_link': pdf_telegram_link,
+                    'report_link': report_link,
+                    'pdf_report_link': pdf_report_link,
                 },
                 tokens=batch_tokens,
             )

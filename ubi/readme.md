@@ -8,7 +8,7 @@ Please answer these:
 2. **What do you want to run initially?**  
    - Analysis only (no real orders)  
 
-3. **Telegram now or later?**  
+3. **Optional mobile push hooks** (`FIREBASE_BRIDGE_ENABLED`) — enable only after wiring PRISM-Mobile?  
    - Skip for now
 
 4. **LLM auth mode** (`PRISM_OPENAI_AUTH_MODE`)  
@@ -30,8 +30,9 @@ Please answer these:
    - `python3`  
 
 9. **Do you want me to optimize for “quick local test” first?**  
-   - Yes (fastest, no Telegram)  
+   - Yes (fastest local validation path)
 
 
 ## LLM
+
 deepseek api key: [REDACTED - rotate this key before use]

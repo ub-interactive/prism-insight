@@ -53,13 +53,6 @@ echo "  - Python: $(python3 --version)"
 echo "  - Node.js: $(node --version)"
 echo "  - Working Dir: $(pwd)"
 
-# Check if .env has been configured
-if grep -q "your_telegram_bot_token" /app/prism-insight/.env 2>/dev/null; then
-    echo ""
-    echo "[WARN] .env file contains example values!"
-    echo "[WARN] Please configure your API keys in .env"
-fi
-
 # -----------------------------------------------------------------------------
 # Database Initialization
 # -----------------------------------------------------------------------------

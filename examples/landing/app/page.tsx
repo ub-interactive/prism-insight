@@ -162,7 +162,7 @@ const AGENTS = [
   { name: 'Information Analyst', role: 'News & Catalysts', image: '/agents/information_analyst.jpeg', delay: 0.2 },
   { name: 'Market Analyst', role: 'Macro Environment', image: '/agents/market_analyst.jpeg', delay: 0.25 },
   { name: 'Investment Strategist', role: 'Strategy Synthesis', image: '/agents/investment_strategist.jpeg', delay: 0.3 },
-  { name: 'Summary Optimizer', role: 'Telegram Messages', image: '/agents/summary_specialist.jpeg', delay: 0.35 },
+  { name: 'Summary Optimizer', role: 'Push-ready digests', image: '/agents/summary_specialist.jpeg', delay: 0.35 },
   { name: 'Quality Evaluator', role: 'Output Validation', image: '/agents/quality_inspector.jpeg', delay: 0.4 },
   { name: 'Buy Specialist', role: 'Entry Decisions', image: '/agents/buy_specialist.jpeg', delay: 0.45 },
   { name: 'Sell Specialist', role: 'Exit Timing', image: '/agents/sell_specialist.jpeg', delay: 0.5 },
@@ -236,7 +236,7 @@ python demo.py AAPL`
           {/* Description */}
           <p className="text-lg text-zinc-500 max-w-2xl mx-auto mb-12 leading-relaxed">
             13 specialized AI agents analyze markets in real-time, generate trading signals,
-            and execute trades automatically via Telegram alerts.
+            and execute trades automatically when your execution channel fires.
           </p>
 
           {/* CTA Buttons */}
@@ -430,7 +430,7 @@ python demo.py AAPL`
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 mb-6">
                 <Bell className="w-8 h-8 text-cyan-400" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Telegram Alerts</h3>
+              <h3 className="text-xl font-semibold mb-3">Mobile & push alerts</h3>
               <p className="text-zinc-500">
                 Real-time trading signals delivered directly to your phone. Never miss an opportunity.
               </p>
@@ -595,12 +595,12 @@ python demo.py AAPL`
               </div>
             </div>
 
-            {/* Telegram screenshot */}
+            {/* Example mobile alert screenshot */}
             <div className="rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden group hover:border-blue-500/50 transition-colors">
               <div className="relative bg-zinc-950 p-2">
                 <Image
-                  src="/screenshots/telegram_alert_screenshot.png"
-                  alt="Telegram Trading Alerts"
+                  src="/screenshots/dashboard_screenshot.png"
+                  alt="Trading alert preview"
                   width={800}
                   height={500}
                   className="w-full h-auto rounded-lg group-hover:scale-[1.02] transition-transform duration-500"
@@ -609,7 +609,7 @@ python demo.py AAPL`
               <div className="p-4 border-t border-zinc-800">
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm font-medium text-zinc-200">Telegram Alerts</span>
+                  <span className="text-sm font-medium text-zinc-200">Push notifications</span>
                 </div>
                 <p className="text-xs text-zinc-500 mt-1">Instant buy/sell signals delivered to your phone</p>
               </div>

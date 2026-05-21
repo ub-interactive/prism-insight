@@ -304,7 +304,6 @@ gcloud pubsub subscriptions update my-prism-signals \
 ## 📞 지원 및 문의
 
 - **GitHub Issues**: https://github.com/your-repo/prism-insight/issues
-- **Telegram 채널**: @your_channel
 - **문서**: https://github.com/your-repo/prism-insight/docs
 
 ## ⚠️ 면책 조항

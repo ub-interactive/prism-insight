@@ -3,13 +3,13 @@
 archive_api.py — Lightweight FastAPI server for PRISM archive queries.
 
 Runs on the pipeline server (where archive.db lives).
-The Telegram bot server calls this API to answer /insight queries.
+HTTP clients (dashboards, internal tools, or your own integrations) call this API for archive search and Q&A flows.
 
 Usage:
     # Start server (pipeline server)
     ARCHIVE_API_KEY=your_secret uvicorn archive_api:app --host 0.0.0.0 --port 8765
 
-    # Or bind to localhost only (use SSH tunnel from bot server)
+    # Or bind to localhost only (requires your own ingress / tunnel setup)
     ARCHIVE_API_KEY=your_secret uvicorn archive_api:app --host 127.0.0.1 --port 8765
 
 Endpoints:

@@ -33,8 +33,8 @@ services:
     # Mount only essential volumes
     volumes:
       # Output directory for reports
-      - ./quickstart-output/reports:/app/prism-insight/prism-us/reports
-      - ./quickstart-output/pdf_reports:/app/prism-insight/prism-us/pdf_reports
+      - ./quickstart-output/reports:/app/prism-insight/reports
+      - ./quickstart-output/pdf_reports:/app/prism-insight/pdf_reports
 
       # Persistent quickstart config (generated on first run)
       - ./quickstart-config:/app/prism-insight/quickstart-config

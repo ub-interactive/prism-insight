@@ -6,11 +6,11 @@ Processes queued reserved orders that were placed outside the KIS API time windo
 KIS reserved order window: 10:00~23:20 KST (except 16:30~16:45)
 
 This script is intended to run via cron at 10:05 KST (Tue-Sat):
-  5 10 * * 2-6 cd /app/prism-insight && python3 prism-us/us_pending_order_batch.py
+  5 10 * * 2-6 cd /app/prism-insight && python3 pending_order_batch.py
 
 Flow:
   1. Check if reserved order window is currently open
-  2. Query pending orders from us_pending_orders table (today only)
+  2. Query pending orders from pending_orders table (today only)
   3. Execute each order via buy_reserved_order / sell_reserved_order
   4. Update order status (executed / failed)
   5. Expire old pending orders (created before today)
@@ -25,9 +25,9 @@ import argparse
 import datetime
 from pathlib import Path
 
-# Add project paths (prism-us first so its trading/ takes priority over KR trading/)
+# Add project path for root-level imports
 _prism_us_dir = str(Path(__file__).resolve().parent)
-_project_root = str(Path(__file__).resolve().parent.parent)
+_project_root = str(Path(__file__).resolve().parent)
 sys.path.insert(0, _project_root)
 sys.path.insert(0, _prism_us_dir)
 
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 KST = pytz.timezone('Asia/Seoul')
 
 # DB path (same as trading module)
-DB_PATH = Path(__file__).resolve().parent.parent / "stock_tracking_db.sqlite"
+DB_PATH = Path(__file__).resolve().parent / "stock_tracking_db.sqlite"
 
 
 def get_pending_orders(conn: sqlite3.Connection, today_str: str) -> list:
@@ -51,7 +51,7 @@ def get_pending_orders(conn: sqlite3.Connection, today_str: str) -> list:
     cursor = conn.cursor()
     cursor.execute(
         """SELECT id, account_key, account_name, product_code, mode, ticker, order_type, limit_price, buy_amount, exchange
-           FROM us_pending_orders
+           FROM pending_orders
            WHERE status = 'pending' AND date(created_at) = ?
            ORDER BY id ASC""",
         (today_str,)
@@ -65,7 +65,7 @@ def update_order_status(conn: sqlite3.Connection, order_id: int,
     """Update order status after execution attempt."""
     now_kst = datetime.datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')
     conn.execute(
-        """UPDATE us_pending_orders
+        """UPDATE pending_orders
            SET status = ?, executed_at = ?, order_result = ?, failure_reason = ?
            WHERE id = ?""",
         (status, now_kst, json.dumps(result) if result else None, failure_reason, order_id)
@@ -77,7 +77,7 @@ def expire_old_orders(conn: sqlite3.Connection, today_str: str) -> int:
     """Mark old pending orders (before today) as expired."""
     cursor = conn.cursor()
     cursor.execute(
-        """UPDATE us_pending_orders
+        """UPDATE pending_orders
            SET status = 'expired', failure_reason = 'Order expired (not processed on creation day)'
            WHERE status = 'pending' AND date(created_at) < ?""",
         (today_str,)
@@ -115,8 +115,8 @@ def process_pending_orders(dry_run: bool = False):
 
     logger.info(f"Found {len(pending_orders)} pending order(s) to process")
 
-    # Import trading module (prism-us/trading/ is first in sys.path)
-    from trading.us_stock_trading import USStockTrading
+     # Import trading module
+    from trading.stock_trading import USStockTrading
 
     # Check if reserved order window is open using a representative trader
     try:

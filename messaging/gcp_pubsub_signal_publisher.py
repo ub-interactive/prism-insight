@@ -188,7 +188,7 @@ class SignalPublisher:
 
             logger.info(
                 f"Signal published: {signal_type} {company_name}({ticker}) "
-                f"@ {price:,.0f} KRW [ID: {message_id}]"
+                f"@ ${price:,.2f} USD [ID: {message_id}]"
             )
             return message_id
 
@@ -334,12 +334,12 @@ async def publish_buy_signal(
     scenario: Optional[Dict[str, Any]] = None,
     source: str = "AI Analysis",
     trade_result: Optional[Dict[str, Any]] = None,
-    market: str = "KR"
+    market: str = "US"
 ) -> Optional[str]:
     """Publish buy signal via global publisher (convenience function)
 
     Args:
-        market: Market identifier ("KR" for Korea, "US" for US stocks)
+        market: Market identifier (US-only runtime, default "US")
     """
     publisher = await get_signal_publisher()
     # Include market in scenario for signal data
@@ -363,12 +363,12 @@ async def publish_sell_signal(
     profit_rate: float,
     sell_reason: str,
     trade_result: Optional[Dict[str, Any]] = None,
-    market: str = "KR"
+    market: str = "US"
 ) -> Optional[str]:
     """Publish sell signal via global publisher (convenience function)
 
     Args:
-        market: Market identifier ("KR" for Korea, "US" for US stocks)
+        market: Market identifier (US-only runtime, default "US")
     """
     publisher = await get_signal_publisher()
     # Include market in extra_data by passing through the publish_signal method

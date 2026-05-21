@@ -11,7 +11,6 @@ import { AIDecisionsPage } from "@/components/ai-decisions-page"
 import { TradingHistoryPage } from "@/components/trading-history-page"
 import { WatchlistPage } from "@/components/watchlist-page"
 import { TradingInsightsPage } from "@/components/trading-insights-page"
-import { JeoninguLabPage } from "@/components/jeoningu-lab-page"
 import { StockDetailModal } from "@/components/stock-detail-modal"
 import { ProjectFooter } from "@/components/project-footer"
 import { useLanguage } from "@/components/language-provider"
@@ -19,16 +18,12 @@ import { useMarket } from "@/components/market-selector"
 import { TriggerReliabilityBadge } from "@/components/trigger-reliability-badge"
 import type { DashboardData, Holding, Market } from "@/types/dashboard"
 
-type TabType = "dashboard" | "ai-decisions" | "trading" | "watchlist" | "insights" | "jeoningu-lab"
-const VALID_TABS: TabType[] = ["dashboard", "ai-decisions", "trading", "watchlist", "insights", "jeoningu-lab"]
+type TabType = "dashboard" | "ai-decisions" | "trading" | "watchlist" | "insights"
+const VALID_TABS: TabType[] = ["dashboard", "ai-decisions", "trading", "watchlist", "insights"]
 
 // Get data file path based on market and language
 function getDataFilePath(market: Market, language: string): string {
-  if (market === "US") {
-    return language === "en" ? "/us_dashboard_data_en.json" : "/us_dashboard_data.json"
-  } else {
-    return language === "en" ? "/dashboard_data_en.json" : "/dashboard_data.json"
-  }
+  return language === "en" ? "/us_dashboard_data_en.json" : "/us_dashboard_data.json"
 }
 
 // Suspense 경계를 위한 로딩 컴포넌트
@@ -60,10 +55,6 @@ function DashboardContent() {
 
   // 탭 변경 시 URL 업데이트
   const handleTabChange = (tab: TabType) => {
-    // Jeoningu Lab is only available for KR market
-    if (tab === "jeoningu-lab" && market === "US") {
-      return
-    }
     const params = new URLSearchParams(searchParams.toString())
     if (tab === "dashboard") {
       params.delete("tab")
@@ -77,10 +68,6 @@ function DashboardContent() {
   // Handle market change
   const handleMarketChange = (newMarket: Market) => {
     setMarket(newMarket)
-    // Reset tab to dashboard if current tab is jeoningu-lab and switching to US
-    if (activeTab === "jeoningu-lab" && newMarket === "US") {
-      handleTabChange("dashboard")
-    }
   }
 
   useEffect(() => {
@@ -258,7 +245,6 @@ function DashboardContent() {
 
         {activeTab === "insights" && data.trading_insights && <TradingInsightsPage data={data.trading_insights} market={market} />}
 
-        {activeTab === "jeoningu-lab" && market === "KR" && data.jeoningu_lab && <JeoninguLabPage data={data.jeoningu_lab} />}
       </main>
 
       {/* 프로젝트 소개 Footer */}

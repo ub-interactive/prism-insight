@@ -113,69 +113,27 @@ def generate_triggers_message(db_path: str) -> str:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        # Query KR analysis data
-        kr_analysis = {}
+        # Query US-only analysis data (canonical table name)
+        us_analysis = {}
         try:
             cursor.execute("""
                 SELECT trigger_type,
                        COUNT(*) as total,
-                       SUM(CASE WHEN tracking_status = 'completed' THEN 1 ELSE 0 END) as completed,
-                       AVG(CASE WHEN tracking_status = 'completed' THEN tracked_30d_return ELSE NULL END) as avg_return,
-                       SUM(CASE WHEN tracking_status = 'completed' AND tracked_30d_return > 0 THEN 1 ELSE 0 END) as wins,
-                       SUM(CASE WHEN tracking_status = 'completed' AND tracked_30d_return <= 0 THEN 1 ELSE 0 END) as losses
+                       SUM(CASE WHEN return_30d IS NOT NULL THEN 1 ELSE 0 END) as completed,
+                       AVG(CASE WHEN return_30d IS NOT NULL THEN return_30d ELSE NULL END) as avg_return,
+                       SUM(CASE WHEN return_30d IS NOT NULL AND return_30d > 0 THEN 1 ELSE 0 END) as wins,
+                       SUM(CASE WHEN return_30d IS NOT NULL AND return_30d <= 0 THEN 1 ELSE 0 END) as losses
                 FROM analysis_performance_tracker
                 WHERE trigger_type IS NOT NULL
                 GROUP BY trigger_type
                 ORDER BY completed DESC
             """)
             for row in cursor.fetchall():
-                kr_analysis[row['trigger_type']] = dict(row)
+                us_analysis[row['trigger_type']] = dict(row)
         except sqlite3.Error:
             pass
 
-        # Query KR trading data
-        kr_trading = {}
-        try:
-            cursor.execute("""
-                SELECT COALESCE(trigger_type, 'AI분석') as trigger_type,
-                       COUNT(*) as count,
-                       SUM(CASE WHEN profit_rate > 0 THEN 1 ELSE 0 END) as wins,
-                       AVG(profit_rate) as avg_profit
-                FROM trading_history
-                GROUP BY COALESCE(trigger_type, 'AI분석')
-            """)
-            for row in cursor.fetchall():
-                kr_trading[row['trigger_type']] = dict(row)
-        except sqlite3.Error:
-            pass
-
-        # Query US analysis data
-        us_analysis = {}
-        try:
-            # Check if table exists
-            cursor.execute("""
-                SELECT name FROM sqlite_master
-                WHERE type='table' AND name='us_analysis_performance_tracker'
-            """)
-            if cursor.fetchone():
-                cursor.execute("""
-                    SELECT trigger_type,
-                           COUNT(*) as total,
-                           SUM(CASE WHEN return_30d IS NOT NULL THEN 1 ELSE 0 END) as completed,
-                           AVG(CASE WHEN return_30d IS NOT NULL THEN return_30d ELSE NULL END) as avg_return,
-                           SUM(CASE WHEN return_30d IS NOT NULL AND return_30d > 0 THEN 1 ELSE 0 END) as wins,
-                           SUM(CASE WHEN return_30d IS NOT NULL AND return_30d <= 0 THEN 1 ELSE 0 END) as losses
-                    FROM us_analysis_performance_tracker
-                    WHERE trigger_type IS NOT NULL
-                    GROUP BY trigger_type
-                    ORDER BY completed DESC
-                """)
-                for row in cursor.fetchall():
-                    us_analysis[row['trigger_type']] = dict(row)
-        except sqlite3.Error:
-            pass
-
-        # Query US trading data
+        # Query US-only trading data (canonical table name)
         us_trading = {}
         try:
             cursor.execute("""
@@ -183,7 +141,7 @@ def generate_triggers_message(db_path: str) -> str:
                        COUNT(*) as count,
                        SUM(CASE WHEN profit_rate > 0 THEN 1 ELSE 0 END) as wins,
                        AVG(profit_rate) as avg_profit
-                FROM us_trading_history
+                FROM trading_history
                 GROUP BY COALESCE(trigger_type, 'AI Analysis')
             """)
             for row in cursor.fetchall():
@@ -268,24 +226,7 @@ def generate_triggers_message(db_path: str) -> str:
         for g in ['A', 'B', 'C', 'D']:
             msg_parts.append(f"  {grade_emoji[g]} {g} — {grade_label[g]}")
 
-        # KR section
-        msg_parts.append("\n🇰🇷 한국시장")
-        msg_parts.append("─────────────────")
-        kr_triggers = []
-        for trigger_type, analysis_data in kr_analysis.items():
-            trading_data = kr_trading.get(trigger_type, {})
-            kr_triggers.append(_format_trigger_line(trigger_type, analysis_data, trading_data))
-
         grade_order = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
-        kr_triggers.sort(key=lambda x: (grade_order[x[0]], -x[1]))
-
-        if kr_triggers:
-            for _, _, line in kr_triggers:
-                msg_parts.append(line)
-        else:
-            msg_parts.append("  데이터 없음")
-
-        # US section
         msg_parts.append("\n🇺🇸 미국시장")
         msg_parts.append("─────────────────")
         us_triggers = []
@@ -304,7 +245,7 @@ def generate_triggers_message(db_path: str) -> str:
         # Summary & insight
         msg_parts.append("\n━━━━━━━━━━━━━━━━━━━━")
 
-        all_triggers = kr_triggers + us_triggers
+        all_triggers = us_triggers
         a_grade = [t for t in all_triggers if t[0] == 'A']
         c_or_d = [t for t in all_triggers if t[0] in ('C', 'D')]
 
@@ -334,7 +275,7 @@ def generate_triggers_message(db_path: str) -> str:
 
 class ConversationContext:
     """Conversation context management"""
-    def __init__(self, market_type: str = "kr"):
+    def __init__(self, market_type: str = "us"):
         self.message_id = None
         self.chat_id = None
         self.user_id = None
@@ -347,10 +288,9 @@ class ConversationContext:
         self.conversation_history = []
         self.created_at = datetime.now()
         self.last_updated = datetime.now()
-        # Market type: "kr" (Korea) or "us" (USA)
+        # US-only runtime
         self.market_type = market_type
-        # Currency: KRW (Korea) or USD (USA)
-        self.currency = "USD" if market_type == "us" else "KRW"
+        self.currency = "USD"
 
     def add_to_history(self, role: str, content: str):
         self.conversation_history.append({
@@ -791,8 +731,8 @@ class TelegramAIBot:
                 MessageHandler(filters.Regex(r'^/report(@\w+)?$'), self.handle_report_start)
             ],
             states={
-                REPORT_CHOOSING_TICKER: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_report_ticker_input)
+                US_REPORT_CHOOSING_TICKER: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_us_report_ticker_input)
                 ]
             },
             fallbacks=[
@@ -832,20 +772,20 @@ class TelegramAIBot:
                 MessageHandler(filters.Regex(r'^/evaluate(@\w+)?$'), self.handle_evaluate_start)
             ],
             states={
-                CHOOSING_TICKER: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_ticker_input)
+                US_CHOOSING_TICKER: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_us_ticker_input)
                 ],
-                ENTERING_AVGPRICE: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_avgprice_input)
+                US_ENTERING_AVGPRICE: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_us_avgprice_input)
                 ],
-                ENTERING_PERIOD: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_period_input)
+                US_ENTERING_PERIOD: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_us_period_input)
                 ],
-                ENTERING_TONE: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_tone_input)
+                US_ENTERING_TONE: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_us_tone_input)
                 ],
-                ENTERING_BACKGROUND: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_background_input)
+                US_ENTERING_BACKGROUND: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_us_background_input)
                 ]
             },
             fallbacks=[
@@ -961,7 +901,7 @@ class TelegramAIBot:
                 CommandHandler("signal", self.handle_signal_start),
                 MessageHandler(filters.Regex(r'^/signal(@\w+)?$'), self.handle_signal_start),
             ],
-            states={SIGNAL_ENTERING_QUERY: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_signal_query)]},
+            states={US_SIGNAL_ENTERING_QUERY: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_us_signal_query)]},
             fallbacks=[CommandHandler("cancel", self.handle_cancel)],
             per_chat=False, per_user=True, conversation_timeout=300,
         )
@@ -983,7 +923,7 @@ class TelegramAIBot:
                 CommandHandler("theme", self.handle_theme_start),
                 MessageHandler(filters.Regex(r'^/theme(@\w+)?$'), self.handle_theme_start),
             ],
-            states={THEME_ENTERING_QUERY: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_theme_query)]},
+            states={US_THEME_ENTERING_QUERY: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_us_theme_query)]},
             fallbacks=[CommandHandler("cancel", self.handle_cancel)],
             per_chat=False, per_user=True, conversation_timeout=300,
         )
@@ -1419,96 +1359,12 @@ class TelegramAIBot:
             await update.message.reply_text("트리거 신뢰도 데이터를 불러오는 중 오류가 발생했습니다.")
 
     async def handle_report_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle report command - first step"""
-        user_id = update.effective_user.id
-        user_name = update.effective_user.first_name
-
-        # Check channel subscription
-        is_subscribed = await self.check_channel_subscription(user_id)
-
-        if not is_subscribed:
-            await update.message.reply_text(
-                "이 봇은 채널 구독자만 사용할 수 있습니다.\n"
-                "아래 링크를 통해 채널을 구독해주세요:\n\n"
-                "https://t.me/stock_ai_agent"
-            )
-            return ConversationHandler.END
-
-        # Check daily usage limit
-        if not self.check_daily_limit(user_id, "report"):
-            await update.message.reply_text(
-                "⚠️ /report 명령어는 하루에 1회만 사용할 수 있습니다.\n\n"
-                "내일 다시 이용해 주세요."
-            )
-            return ConversationHandler.END
-
-        # Check if group chat or private chat
-        is_group = update.effective_chat.type in ["group", "supergroup"]
-        greeting = f"{user_name}님, " if is_group else ""
-
-        await update.message.reply_text(
-            f"{greeting}상세 분석 보고서를 생성할 종목 코드나 이름을 입력해주세요.\n"
-            "예: 005930 또는 삼성전자"
-        )
-
-        return REPORT_CHOOSING_TICKER
+        """US-only alias for /report."""
+        return await self.handle_us_report_start(update, context)
 
     async def handle_report_ticker_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle stock input for report request"""
-        user_id = update.effective_user.id
-        user_input = update.message.text.strip()
-        chat_id = update.effective_chat.id
-
-        logger.info(f"Received report stock input - User: {user_id}, Input: {user_input}")
-
-        # Process stock code or name
-        stock_code, stock_name, error_message = await self.get_stock_code(user_input)
-
-        if error_message:
-            # Notify user of error and request re-input
-            await update.message.reply_text(error_message)
-            return REPORT_CHOOSING_TICKER
-
-        # Send waiting message
-        waiting_message = await update.message.reply_text(
-            f"📊 {stock_name} ({stock_code}) 분석 보고서 생성 요청이 등록되었습니다.\n\n"
-            f"요청은 도착 순서대로 처리되며, 한 건당 분석에 약 5-10분이 소요됩니다.\n\n"
-            f"다른 사용자의 요청이 많을 경우 대기 시간이 길어질 수 있습니다.\n\n "
-            f"완료되면 바로 알려드리겠습니다."
-        )
-
-        # Create analysis request and add to queue
-        request = AnalysisRequest(
-            stock_code=stock_code,
-            company_name=stock_name,
-            chat_id=chat_id,
-            message_id=waiting_message.message_id,
-            user_id=user_id
-        )
-
-        # Check if cached report exists
-        is_cached, cached_content, cached_file, cached_pdf = get_cached_report(stock_code)
-
-        if is_cached:
-            logger.info(f"Found cached report: {cached_file}")
-            # Send result immediately if cached report exists
-            request.result = cached_content
-            request.status = "completed"
-            request.report_path = cached_file
-            request.pdf_path = cached_pdf
-
-            await waiting_message.edit_text(
-                f"✅ {stock_name} ({stock_code}) 분석 보고서가 준비되었습니다. 잠시 후 전송됩니다."
-            )
-
-            # Send result
-            await self.send_report_result(request)
-        else:
-            # New analysis needed
-            self.pending_requests[request.id] = request
-            analysis_queue.put(request)
-
-        return ConversationHandler.END
+        """US-only alias for /report ticker input."""
+        return await self.handle_us_report_ticker_input(update, context)
 
     async def handle_history_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle history command - first step"""
@@ -1642,34 +1498,8 @@ class TelegramAIBot:
             return False
 
     async def handle_evaluate_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle evaluate command - first step"""
-        user_id = update.effective_user.id
-        user_name = update.effective_user.first_name
-
-        # Check channel subscription
-        is_subscribed = await self.check_channel_subscription(user_id)
-
-        if not is_subscribed:
-            await update.message.reply_text(
-                "이 봇은 채널 구독자만 사용할 수 있습니다.\n"
-                "아래 링크를 통해 채널을 구독해주세요:\n\n"
-                "https://t.me/stock_ai_agent"
-            )
-            return ConversationHandler.END
-
-        # Check if group chat or private chat
-        is_group = update.effective_chat.type in ["group", "supergroup"]
-
-        logger.info(f"Evaluation command started - User: {user_name}, Chat type: {'group' if is_group else 'private'}")
-
-        # Mention username in group chats
-        greeting = f"{user_name}님, " if is_group else ""
-
-        await update.message.reply_text(
-            f"{greeting}보유하신 종목의 코드나 이름을 입력해주세요. \n"
-            "예: 005930 또는 삼성전자"
-        )
-        return CHOOSING_TICKER
+        """US-only alias for /evaluate."""
+        return await self.handle_us_evaluate_start(update, context)
 
     async def handle_ticker_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle ticker input"""
@@ -2299,9 +2129,9 @@ class TelegramAIBot:
             return ConversationHandler.END
 
         # Check daily usage limit
-        if not self.check_daily_limit(user_id, "us_report"):
+        if not self.check_daily_limit(user_id, "report"):
             await update.message.reply_text(
-                "⚠️ /us_report 명령어는 하루에 1회만 사용할 수 있습니다.\n\n"
+                "⚠️ /report 명령어는 하루에 1회만 사용할 수 있습니다.\n\n"
                 "내일 다시 이용해 주세요."
             )
             return ConversationHandler.END
@@ -2762,49 +2592,10 @@ class TelegramAIBot:
     # ==========================================================================
 
     async def handle_signal_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = update.effective_user.id
-        if not await self.check_channel_subscription(user_id):
-            await update.message.reply_text(
-                "이 봇은 채널 구독자만 사용할 수 있습니다.\n"
-                "아래 링크를 통해 채널을 구독해주세요:\n\nhttps://t.me/stock_ai_agent"
-            )
-            return ConversationHandler.END
-        allowed, _ = self.peek_daily_limit_count(user_id, "signal", max_count=10)
-        if not allowed:
-            await update.message.reply_text("⚠️ 오늘의 /signal 사용 횟수(10회)를 모두 소진하였습니다.")
-            return ConversationHandler.END
-        await update.message.reply_text(
-            "🇰🇷 어떤 이벤트/뉴스가 한국 증시에 미치는 영향을 분석할까요?\n"
-            "예: 트럼프 관세 인상, 이란 미국 휴전, 삼성전자 역대급 실적"
-        )
-        return SIGNAL_ENTERING_QUERY
+        return await self.handle_us_signal_start(update, context)
 
     async def handle_signal_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = update.effective_user.id
-        allowed, _ = self.check_daily_limit_count(user_id, "signal", max_count=10)
-        if not allowed:
-            await update.message.reply_text("⚠️ 오늘의 /signal 사용 횟수(10회)를 모두 소진하였습니다.")
-            return ConversationHandler.END
-        event = update.message.text.strip()[:200]
-        today = datetime.now().strftime("%Y년 %m월")
-        logger.info(f"/signal query - user={user_id}, event='{event[:50]}'")
-        search_query = f"{event} 한국증시 영향 {today}"
-        analysis_prompt = (
-            f"위 검색 결과를 바탕으로, '{event}'가 한국 주식시장에 미치는 영향을 분석해줘.\n"
-            "1. 수혜 예상 섹터와 대표 종목 3개\n"
-            "2. 피해 예상 섹터와 대표 종목 3개\n"
-            "3. 과거 유사 사례\n"
-            "4. 개인투자자 대응 전략\n"
-            "텔레그램 메시지 형태로 이모지 포함하여 작성. 3000자 이내."
-        )
-        success, response_text, msg_id = await self._run_search_and_claude(
-            update, search_query, analysis_prompt, self._DISCLAIMER_KR
-        )
-        if success and msg_id and response_text:
-            ctx = FirecrawlConversationContext("signal", event)
-            ctx.add_to_history("assistant", response_text)
-            self.firecrawl_contexts[msg_id] = ctx
-        return ConversationHandler.END
+        return await self.handle_us_signal_query(update, context)
 
     # ==========================================================================
     # /us_signal — US event impact
@@ -2860,50 +2651,10 @@ class TelegramAIBot:
     # ==========================================================================
 
     async def handle_theme_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = update.effective_user.id
-        if not await self.check_channel_subscription(user_id):
-            await update.message.reply_text(
-                "이 봇은 채널 구독자만 사용할 수 있습니다.\n"
-                "아래 링크를 통해 채널을 구독해주세요:\n\nhttps://t.me/stock_ai_agent"
-            )
-            return ConversationHandler.END
-        allowed, _ = self.peek_daily_limit_count(user_id, "theme", max_count=10)
-        if not allowed:
-            await update.message.reply_text("⚠️ 오늘의 /theme 사용 횟수(10회)를 모두 소진하였습니다.")
-            return ConversationHandler.END
-        await update.message.reply_text(
-            "🇰🇷 어떤 한국 테마/섹터의 건강도를 진단할까요?\n"
-            "예: 2차전지, 방산, AI 반도체, 조선"
-        )
-        return THEME_ENTERING_QUERY
+        return await self.handle_us_theme_start(update, context)
 
     async def handle_theme_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = update.effective_user.id
-        allowed, _ = self.check_daily_limit_count(user_id, "theme", max_count=10)
-        if not allowed:
-            await update.message.reply_text("⚠️ 오늘의 /theme 사용 횟수(10회)를 모두 소진하였습니다.")
-            return ConversationHandler.END
-        theme = update.message.text.strip()[:200]
-        today = datetime.now().strftime("%Y년 %m월")
-        logger.info(f"/theme query - user={user_id}, theme='{theme[:50]}'")
-        search_query = f"{theme} 테마주 뉴스 {today}"
-        analysis_prompt = (
-            f"위 검색 결과를 바탕으로, 한국 주식시장에서 '{theme}' 테마의 현재 건강도를 진단해줘.\n"
-            "1. 테마 온도 (🟢과열/🟡적정/🔴냉각 중 택1, 근거 포함)\n"
-            "2. 대장주 3개와 최근 주가 동향\n"
-            "3. 긍정 요인 3개\n"
-            "4. 부정 요인 3개\n"
-            "5. 진입 타이밍 의견\n"
-            "텔레그램 메시지 형태로 이모지 포함하여 작성. 3000자 이내."
-        )
-        success, response_text, msg_id = await self._run_search_and_claude(
-            update, search_query, analysis_prompt, self._DISCLAIMER_KR
-        )
-        if success and msg_id and response_text:
-            ctx = FirecrawlConversationContext("theme", theme)
-            ctx.add_to_history("assistant", response_text)
-            self.firecrawl_contexts[msg_id] = ctx
-        return ConversationHandler.END
+        return await self.handle_us_theme_query(update, context)
 
     # ==========================================================================
     # /us_theme — US theme health check

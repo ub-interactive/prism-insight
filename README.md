@@ -134,7 +134,7 @@ python3 demo.py TSLA --language ko  # Tesla (Korean report)
 >
 > **Optional**: Add `ADANOS_API_KEY` to enrich US stock news analysis with structured social sentiment context
 
-Your AI-generated PDF reports will be saved in `prism-us/pdf_reports/`.
+Your AI-generated PDF reports will be saved in `pdf_reports/`.
 
 <details>
 <summary>Or use Docker (no Python setup needed)</summary>
@@ -182,7 +182,7 @@ cd perplexity-ask && npm install && npm run build && cd ..
 cp mcp_agent.config.yaml.example mcp_agent.config.yaml
 cp mcp_agent.secrets.yaml.example mcp_agent.secrets.yaml
 # Edit mcp_agent.secrets.yaml with your OpenAI API key
-# Edit mcp_agent.config.yaml with KRX credentials (Kakao account)
+# Edit mcp_agent.config.yaml with your MCP/API credentials
 
 # 5. Run analysis (no Telegram required!)
 python stock_analysis_orchestrator.py --mode morning --no-telegram
@@ -211,7 +211,7 @@ docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mod
 
 ## What is PRISM-INSIGHT?
 
-PRISM-INSIGHT is a **completely open-source, free** AI-powered stock analysis system for **Korean (KOSPI/KOSDAQ)** and **US (NYSE/NASDAQ)** markets.
+PRISM-INSIGHT is a **completely open-source, free** AI-powered stock analysis system for the **US market (NYSE/NASDAQ)**.
 
 ### Core Capabilities
 - **Surge Stock Detection** — Automatic detection of stocks with unusual volume/price movements
@@ -280,18 +280,7 @@ PRISM-INSIGHT is a **completely open-source, free** AI-powered stock analysis sy
 
 ## Trading Performance
 
-### KR Market — Season 2
-
-| Metric | Value |
-|--------|-------|
-| Period | 2025.09.30 ~ 2026.03.24 |
-| Total Trades | 86 |
-| Win Rate | 45.35% |
-| Avg Return per Trade | +2.84% |
-| **Cumulative Return** | **+244.63%** |
-| Current Holdings | 5 stocks |
-
-### US Market (Beta)
+### US Market
 
 | Metric | Value |
 |--------|-------|
@@ -303,16 +292,16 @@ PRISM-INSIGHT is a **completely open-source, free** AI-powered stock analysis sy
 
 ---
 
-## US Stock Market Module
+## Analysis Commands
 
-Same AI-powered workflow for US markets:
+Run the US pipeline from canonical root entry points:
 
 ```bash
-# Run US analysis
-python prism-us/us_stock_analysis_orchestrator.py --mode morning --no-telegram
+# Run morning analysis
+python stock_analysis_orchestrator.py --mode morning --no-telegram
 
 # With English reports
-python prism-us/us_stock_analysis_orchestrator.py --mode morning --language en
+python stock_analysis_orchestrator.py --mode morning --language en
 ```
 
 **Data Sources**: yahoo-finance-mcp, sec-edgar-mcp (SEC filings, insider trading)
@@ -344,7 +333,7 @@ npm run dev
 # Visit http://localhost:3000
 ```
 
-**Features**: Portfolio overview, trading history, performance metrics, market selector (KR/US), return comparison vs KOSPI/KOSDAQ
+**Features**: Portfolio overview, trading history, performance metrics, and return comparison.
 
 **Dashboard Setup Guide**: [examples/dashboard/DASHBOARD_README.md](examples/dashboard/DASHBOARD_README.md)
 
@@ -352,15 +341,12 @@ npm run dev
 
 ## MCP Servers
 
-### Korean Market
-- **[kospi_kosdaq](https://github.com/dragon1086/kospi-kosdaq-stock-server)** — KRX stock data
-- **[firecrawl](https://github.com/mendableai/firecrawl-mcp-server)** — Web crawling
-- **[perplexity](https://github.com/perplexityai/modelcontextprotocol)** — Web search
-- **[sqlite](https://github.com/modelcontextprotocol/servers-archived)** — Trading simulation DB
-
 ### US Market
 - **[yahoo-finance-mcp](https://pypi.org/project/yahoo-finance-mcp/)** — OHLCV, financials
 - **[sec-edgar-mcp](https://pypi.org/project/sec-edgar-mcp/)** — SEC filings, insider trading
+- **[firecrawl](https://github.com/mendableai/firecrawl-mcp-server)** — Web crawling
+- **[perplexity](https://github.com/perplexityai/modelcontextprotocol)** — Web search
+- **[sqlite](https://github.com/modelcontextprotocol/servers-archived)** — Trading simulation DB
 
 ---
 

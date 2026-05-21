@@ -35,19 +35,6 @@ export function MarketSelector({ market, onMarketChange }: MarketSelectorProps) 
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onMarketChange("KR")}
-              className={`rounded-full px-3 h-8 font-medium transition-all ${
-                market === "KR"
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700"
-                  : "hover:bg-muted text-muted-foreground"
-              }`}
-            >
-              <span className="mr-1.5">🇰🇷</span>
-              <span className="text-sm">KR</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
               onClick={() => onMarketChange("US")}
               className={`rounded-full px-3 h-8 font-medium transition-all ${
                 market === "US"
@@ -61,9 +48,7 @@ export function MarketSelector({ market, onMarketChange }: MarketSelectorProps) 
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p className="text-xs">
-            {market === "KR" ? "한국 주식 시장" : "US Stock Market"}
-          </p>
+          <p className="text-xs">US Stock Market</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -72,12 +57,12 @@ export function MarketSelector({ market, onMarketChange }: MarketSelectorProps) 
 
 // Hook for managing market state with localStorage persistence
 export function useMarket(): [Market, (market: Market) => void] {
-  const [market, setMarketState] = useState<Market>("KR")
+  const [market, setMarketState] = useState<Market>("US")
 
   useEffect(() => {
     // Load from localStorage on mount
     const stored = localStorage.getItem("prism-market") as Market
-    if (stored === "KR" || stored === "US") {
+    if (stored === "US") {
       setMarketState(stored)
     }
   }, [])

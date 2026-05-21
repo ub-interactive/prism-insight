@@ -12,9 +12,7 @@ echo "========================================"
 
 mkdir -p "${CONFIG_DIR}" \
          "${PROJECT_ROOT}/reports" \
-         "${PROJECT_ROOT}/pdf_reports" \
-         "${PROJECT_ROOT}/prism-us/reports" \
-         "${PROJECT_ROOT}/prism-us/pdf_reports"
+         "${PROJECT_ROOT}/pdf_reports"
 
 if [ -z "${OPENAI_API_KEY:-}" ]; then
     echo "[ERROR] OPENAI_API_KEY is required for quickstart."

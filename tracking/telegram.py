@@ -104,21 +104,9 @@ class TelegramSender:
                 await asyncio.sleep(0.5)
 
     async def _translate_messages(self, messages: List[str], to_lang: str) -> List[str]:
-        """Translate messages to target language."""
-        try:
-            from cores.agents.telegram_translator_agent import translate_telegram_message
-
-            logger.info(f"Translating {len(messages)} messages to {to_lang}")
-            translated = []
-            for idx, message in enumerate(messages, 1):
-                logger.info(f"Translating message {idx}/{len(messages)}")
-                result = await translate_telegram_message(message, model="gpt-5-nano")
-                translated.append(result)
-            logger.info("All messages translated successfully")
-            return translated
-        except Exception as e:
-            logger.error(f"Translation failed: {str(e)}. Using original messages.")
-            return messages
+        """US-only runtime keeps original messages."""
+        _ = to_lang
+        return messages
 
     async def send_to_translation_channels(self, messages: List[str]):
         """Send messages to broadcast translation channels.
@@ -128,35 +116,17 @@ class TelegramSender:
         if not self.config or not self.config.broadcast_languages:
             return
 
-        try:
-            from cores.agents.telegram_translator_agent import translate_telegram_message
-
-            for lang in self.config.broadcast_languages:
-                try:
-                    channel_id = self.config.get_broadcast_channel_id(lang)
-                    if not channel_id:
-                        logger.warning(f"No channel ID for language: {lang}")
-                        continue
-
-                    logger.info(f"Sending tracking messages to {lang} channel")
-
-                    for message in messages:
-                        try:
-                            translated = await translate_telegram_message(
-                                message, model="gpt-5-nano",
-                                from_lang="ko", to_lang=lang
-                            )
-                            await self._send_single_message(channel_id, translated)
-                            logger.info(f"Message sent to {lang} channel")
-                            await asyncio.sleep(1)
-                        except Exception as e:
-                            logger.error(f"Error sending to {lang}: {str(e)}")
-
-                except Exception as e:
-                    logger.error(f"Error processing language {lang}: {str(e)}")
-
-        except Exception as e:
-            logger.error(f"Error in send_to_translation_channels: {str(e)}")
+        for lang in self.config.broadcast_languages:
+            try:
+                channel_id = self.config.get_broadcast_channel_id(lang)
+                if not channel_id:
+                    logger.warning(f"No channel ID for language: {lang}")
+                    continue
+                for message in messages:
+                    await self._send_single_message(channel_id, message)
+                    await asyncio.sleep(1)
+            except Exception as e:
+                logger.error(f"Error sending to {lang}: {str(e)}")
 
     @staticmethod
     def _split_message(message: str) -> List[str]:

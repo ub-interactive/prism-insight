@@ -1,5 +1,5 @@
 // Market Type
-export type Market = "KR" | "US"
+export type Market = "US"
 
 export interface PortfolioSummary {
   total_stocks: number

@@ -2,7 +2,7 @@
 
 > **Last Updated**: 2026-03-11
 > **Version**: 4.0 (v2.5.3)
-> **File**: `trigger_batch.py`, `prism-us/us_trigger_batch.py`
+> **File**: `trigger_batch.py`
 > **Purpose**: 급등주/모멘텀 종목 자동 스크리닝 + 거시경제 연동 하이브리드 선정
 
 ---
@@ -47,12 +47,12 @@ stock_analysis_orchestrator.py (AI 분석)
     ↓
 stock_tracking_agent.py (매수/매도 결정)
     ↓
-trading/domestic_stock_trading.py (실제 주문)
+trading/stock_trading.py (실제 주문)
 ```
 
 ### 데이터 소스
 
-- **kospi_kosdaq_stock_server**: KRX 정보데이터시스템 API
+- **yahoo_finance / sec_edgar**: US market and filing context
 - **스냅샷 데이터**: OHLCV (시가, 고가, 저가, 종가, 거래량, 거래대금)
 - **시가총액 데이터**: 종목별 시가총액
 
@@ -454,7 +454,6 @@ topdown_score = base_score × (1 + sector_confidence × 0.3)
 **섹터 매칭**: 정확 매칭 우선, fuzzy substring 매칭을 방어 수단으로 사용. LLM이 sector_taxonomy에서 벗어나는 경우를 대비한 안전장치.
 
 ```python
-# KR 섹터: KRX 표준 26개 업종 (전기·전자, 화학, 제약 등)
 # US 섹터: yfinance GICS 11개 업종 (Technology, Healthcare 등)
 ```
 
@@ -521,14 +520,14 @@ Selection summary: 1 top-down + 2 bottom-up = 3 total (regime=moderate_bull, str
 
 **종목별 `selection_channel`**: 각 종목의 JSON 출력에 `"selection_channel": "top-down"` 또는 `"bottom-up"` 포함.
 
-### KR vs US 차이점
+### Canonical US Notes
 
-| 항목 | KR (`trigger_batch.py`) | US (`us_trigger_batch.py`) |
-|------|------------------------|---------------------------|
-| 점수 컬럼 | `composite_score`, `final_score` | `CompositeScore`, `FinalScore` |
-| 섹터 소스 | `macro_context["sector_map"]` (KRX 26개 업종) | `get_us_sector_map()` via yfinance (GICS 11개 업종) |
-| 종목명 컬럼 | `stock_name` | `CompanyName` |
-| 섹터 예시 | 전기·전자, 화학, 제약, 운송장비·부품 | Technology, Healthcare, Financial Services |
+| 항목 | US (`trigger_batch.py`) |
+|------|-------------------------|
+| 점수 컬럼 | `CompositeScore`, `FinalScore` |
+| 섹터 소스 | `get_us_sector_map()` via yfinance (GICS 11개 업종) |
+| 종목명 컬럼 | `CompanyName` |
+| 섹터 예시 | Technology, Healthcare, Financial Services |
 
 ---
 

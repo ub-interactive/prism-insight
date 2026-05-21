@@ -1,3 +1,10 @@
+"""
+US Telegram Summary Agent
+
+Generates telegram summary messages from US stock analysis reports.
+Uses EvaluatorOptimizerLLM workflow for quality-assured summaries.
+"""
+
 import asyncio
 import re
 import os
@@ -6,7 +13,6 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-import cores.openai_debug  # noqa: F401 — OpenAI 400/429 request metadata logging
 from mcp_agent.agents.agent import Agent
 from mcp_agent.app import MCPApp
 from mcp_agent.workflows.llm.augmented_llm import RequestParams
@@ -16,63 +22,6 @@ from mcp_agent.workflows.evaluator_optimizer.evaluator_optimizer import (
     QualityRating,
 )
 
-from cores.openai_error_logging import log_openai_error
-
-
-def _extract_last_valid_json(text: str) -> str:
-    """Extract the last complete JSON object from text that may contain multiple objects.
-
-    gpt-5.x reasoning models sometimes emit empty {} thinking tokens before the
-    real JSON payload, producing strings like '{}\n{}\n{"rating":1,...}'.
-    This helper finds the last (most complete) top-level JSON object.
-    """
-    depth = 0
-    start = -1
-    last_complete = None
-    for i, ch in enumerate(text):
-        if ch == '{':
-            if depth == 0:
-                start = i
-            depth += 1
-        elif ch == '}':
-            depth -= 1
-            if depth == 0 and start != -1:
-                last_complete = text[start:i + 1]
-    return last_complete or text
-
-
-class _RobustEvaluatorLLM:
-    """Thin wrapper around an AugmentedLLM that recovers from multi-JSON responses.
-
-    gpt-5.x reasoning models sometimes return several JSON objects in a single
-    completion (e.g. empty `{}` thinking tokens followed by the real payload).
-    The mcp_agent library calls `json.loads` / `model_validate_json` on the raw
-    content and raises a Pydantic ValidationError for trailing characters.
-
-    This wrapper intercepts that failure, calls `generate_str` as a fallback to
-    get the raw text, extracts the last well-formed JSON object, and re-validates.
-    """
-
-    def __init__(self, llm):
-        self._llm = llm
-
-    def __getattr__(self, name):
-        return getattr(self._llm, name)
-
-    async def generate_structured(self, message, response_model, request_params=None):
-        try:
-            return await self._llm.generate_structured(message, response_model, request_params)
-        except Exception as e:
-            log_openai_error(logger, e, "telegram summary evaluator structured generation")
-            logger.warning(f"generate_structured failed ({e}), retrying with JSON extraction fallback")
-            text = await self._llm.generate_str(message=message, request_params=request_params)
-            candidate = _extract_last_valid_json(text)
-            try:
-                data = json.loads(candidate)
-                return response_model.model_validate(data)
-            except Exception:
-                return response_model.model_validate_json(candidate)
-
 # Logging setup
 logging.basicConfig(
     level=logging.INFO,
@@ -80,21 +29,43 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create MCPApp instance
-app = MCPApp(name="telegram_summary")
+# Add parent directory to path for imports
+import sys
+_project_root = Path(__file__).parent
+sys.path.insert(0, str(_project_root))
 
-class TelegramSummaryGenerator:
+from cores.model_config import get_configured_model, get_optional_reasoning_effort
+from cores.openai_error_logging import log_openai_error
+
+US_TELEGRAM_SUMMARY_MODEL = get_configured_model("us_telegram_summary", "gpt-5.4-mini")
+
+# MCPApp instance
+app = MCPApp(name="us_telegram_summary")
+
+# US-specific paths
+US_REPORTS_DIR = _project_root / "reports"
+US_TELEGRAM_MSGS_DIR = _project_root / "telegram_messages"
+US_PDF_REPORTS_DIR = _project_root / "pdf_reports"
+
+
+class USTelegramSummaryGenerator:
     """
-    Class for generating Telegram message summaries from report files
+    Generates telegram summary messages from US stock analysis reports.
     """
 
     def __init__(self):
         """Constructor"""
         pass
 
-    async def read_report(self, report_path):
+    async def read_report(self, report_path: str) -> str:
         """
-        Read report file
+        Read report file content.
+
+        Args:
+            report_path: Path to the report file
+
+        Returns:
+            Report content as string
         """
         try:
             with open(report_path, 'r', encoding='utf-8') as file:
@@ -104,168 +75,385 @@ class TelegramSummaryGenerator:
             logger.error(f"Failed to read report file: {e}")
             raise
 
-    def extract_metadata_from_filename(self, filename):
+    def extract_metadata_from_filename(self, filename: str) -> dict:
         """
-        Extract ticker code, company name, date etc. from filename
+        Extract ticker, company name, and date from filename.
+
+        US filename format: AAPL_Apple Inc_20260118_gpt5.4-mini.pdf
+
+        Args:
+            filename: Report filename
+
+        Returns:
+            Dictionary with ticker, company_name, date
         """
-        pattern = r'(\w+)_(.+)_(\d{8})_.*\.pdf'
+        # US filename pattern: TICKER_CompanyName_YYYYMMDD_*.pdf
+        pattern = r'([A-Z]+)_(.+)_(\d{8})_.*\.pdf'
         match = re.match(pattern, filename)
 
         if match:
-            stock_code = match.group(1)
-            stock_name = match.group(2)
+            ticker = match.group(1)
+            company_name = match.group(2)
             date_str = match.group(3)
 
-            # Convert YYYYMMDD format to YYYY.MM.DD format
+            # Convert YYYYMMDD to YYYY.MM.DD format
             formatted_date = f"{date_str[:4]}.{date_str[4:6]}.{date_str[6:8]}"
 
             return {
-                "stock_code": stock_code,
-                "stock_name": stock_name,
+                "ticker": ticker,
+                "company_name": company_name,
                 "date": formatted_date
             }
         else:
-            # If unable to extract info from filename, use defaults
+            # Fallback if pattern doesn't match
             return {
-                "stock_code": "N/A",
-                "stock_name": Path(filename).stem,
+                "ticker": "N/A",
+                "company_name": Path(filename).stem,
                 "date": datetime.now().strftime("%Y.%m.%d")
             }
 
-    def determine_trigger_type(self, stock_code: str, report_date=None):
+    def determine_trigger_type(self, ticker: str, report_date: str = None) -> tuple:
         """
-        Determine trigger type for the stock from trigger result files
+        Determine trigger type from US trigger results file.
 
         Logic:
-        1. Check both morning and afternoon mode trigger result files
-        2. If both exist, prioritize afternoon (most recent data)
-        3. If only one exists, select that mode
-        4. If neither exists, return default value
-
-        This considers the daily schedule execution order (morning → afternoon)
-        to utilize the most recent market data.
+        1. Check both morning and afternoon trigger result files
+        2. If both exist, prefer afternoon (most recent data)
+        3. If only one exists, use that mode
+        4. If neither exists, return default
 
         Args:
-            stock_code: Stock code
+            ticker: Stock ticker symbol
             report_date: Report date (YYYYMMDD)
 
         Returns:
-            tuple: (trigger type, trigger mode)
+            Tuple of (trigger_type, trigger_mode)
         """
-        logger.info(f"Starting trigger type determination for stock {stock_code}")
+        logger.info(f"Determining trigger type for {ticker}")
 
         # Use current date if not provided
         if report_date is None:
             report_date = datetime.now().strftime("%Y%m%d")
         elif report_date and "." in report_date:
-            # Convert YYYY.MM.DD format to YYYYMMDD
+            # Convert YYYY.MM.DD to YYYYMMDD
             report_date = report_date.replace(".", "")
 
-        # Store found trigger info by mode
-        found_triggers = {}  # {mode: (trigger_type, stocks)}
+        # Store found triggers by mode
+        found_triggers = {}  # {mode: (trigger_type, mode)}
 
-        # Check all possible modes (morning, afternoon)
+        # Check all modes (morning, afternoon)
         for mode in ["morning", "afternoon"]:
-            # Trigger result file path
-            results_file = f"trigger_results_{mode}_{report_date}.json"
+            # US trigger results file path (matches orchestrator naming: trigger_results_us_{mode}_{date}.json)
+            results_file = _project_root / f"trigger_results_us_{mode}_{report_date}.json"
 
-            logger.info(f"Checking trigger result file: {results_file}")
+            logger.info(f"Checking trigger results file: {results_file}")
 
-            if os.path.exists(results_file):
+            if results_file.exists():
                 try:
                     with open(results_file, 'r', encoding='utf-8') as f:
                         results = json.load(f)
 
-                    # Check all trigger results (exclude metadata)
+                    # Check all trigger types (excluding metadata)
                     for trigger_type, stocks in results.items():
                         if trigger_type != "metadata":
-                            # Check each trigger type
                             if isinstance(stocks, list):
                                 for stock in stocks:
-                                    if stock.get("code") == stock_code:
-                                        # Trigger found in this mode
+                                    if stock.get("ticker") == ticker:
                                         found_triggers[mode] = (trigger_type, mode)
-                                        logger.info(f"Trigger found for stock {stock_code} - Type: {trigger_type}, Mode: {mode}")
+                                        logger.info(f"Found trigger for {ticker} - type: {trigger_type}, mode: {mode}")
                                         break
 
-                        # No need to check next trigger_type if already found
-                        if mode in found_triggers:
-                            break
+                            # Already found, no need to check other trigger types
+                            if mode in found_triggers:
+                                break
 
                 except Exception as e:
-                    logger.error(f"Error reading trigger result file: {e}")
+                    logger.error(f"Error reading trigger results file: {e}")
 
-        # Return result by priority: afternoon > morning
+        # Return based on priority: afternoon > morning
         if "afternoon" in found_triggers:
             trigger_type, mode = found_triggers["afternoon"]
-            logger.info(f"Final selection: afternoon mode - Trigger type: {trigger_type}")
+            logger.info(f"Final selection: afternoon mode - trigger type: {trigger_type}")
             return trigger_type, mode
         elif "morning" in found_triggers:
             trigger_type, mode = found_triggers["morning"]
-            logger.info(f"Final selection: morning mode - Trigger type: {trigger_type}")
+            logger.info(f"Final selection: morning mode - trigger type: {trigger_type}")
             return trigger_type, mode
 
-        # Return default if trigger type not found
-        logger.warning(f"Trigger type not found in result files for stock {stock_code}, using default")
+        # Default if not found
+        logger.warning(f"Could not find trigger type for {ticker} in results file, using default")
         return "Notable Pattern", "unknown"
 
-    def create_optimizer_agent(self, metadata, current_date, from_lang="ko", to_lang="ko"):
+    def _get_trigger_display_name(self, trigger_type: str) -> str:
         """
-        Create Telegram summary generation agent
+        Get display name for trigger type.
+
+        Args:
+            trigger_type: Trigger type name from JSON file
+
+        Returns:
+            Human-readable trigger display name
+        """
+        # Actual trigger types from us_trigger_batch.py JSON output
+        trigger_names = {
+            # Morning triggers
+            "Volume Surge Top": "Volume Surge",
+            "Gap Up Momentum Top": "Gap Up Momentum",
+            # Afternoon triggers
+            "Intraday Rise Top": "Intraday Rise",
+            "Volume Surge Sideways": "Volume Surge (Sideways)",
+            # Fallback/legacy names
+            "intraday_surge": "Intraday Surge",
+            "volume_surge": "Volume Surge",
+            "gap_up": "Gap Up",
+            "sector_momentum": "Sector Momentum",
+            "Notable Pattern": "Notable Pattern"
+        }
+        return trigger_names.get(trigger_type, trigger_type)
+
+    def create_optimizer_agent(self, metadata: dict, current_date: str, language: str = "ko") -> Agent:
+        """
+        Create telegram summary optimizer agent.
 
         Args:
             metadata: Stock metadata
             current_date: Current date (YYYY.MM.DD)
-            from_lang: Report source language (default: "ko")
-            to_lang: Summary target language (default: "ko")
-        """
-        from cores.agents.telegram_summary_optimizer_agent import create_telegram_summary_optimizer_agent
+            language: Target language (default: "ko")
 
-        return create_telegram_summary_optimizer_agent(
-            metadata=metadata,
-            current_date=current_date,
-            from_lang=from_lang,
-            to_lang=to_lang
+        Returns:
+            Agent instance for optimization
+        """
+        # Create US-specific optimizer agent
+        ticker = metadata.get("ticker", "N/A")
+        company_name = metadata.get("company_name", "Unknown")
+
+        # Warning message for morning mode
+        if language == "ko":
+            warning_message = ""
+            if metadata.get('trigger_mode') == 'morning':
+                warning_message = '메시지 중간에 "⚠️ 주의: 본 정보는 장 시작 후 10분 시점 데이터 기준으로, 현재 시장 상황과 차이가 있을 수 있습니다." 문구를 반드시 포함해 주세요.'
+
+            instruction = f"""당신은 미국 주식 정보 요약 전문가입니다.
+상세한 주식 분석 보고서를 읽고, 일반 투자자를 위한 가치 있는 텔레그램 메시지로 요약해야 합니다.
+메시지는 핵심 정보와 통찰력을 포함해야 하며, 아래 형식을 따라야 합니다:
+
+## 현재 맥락
+- 날짜: {current_date}
+- 종목: {company_name} ({ticker})
+- 시장: 미국 (NYSE/NASDAQ)
+
+## 메시지 형식 요구사항
+1. 이모지와 함께 종목 정보 표시 (📊, 📈, 💰 등 적절한 이모지)
+2. 종목명(티커) 및 간략한 사업 설명 (1-2문장)
+3. 핵심 거래 정보:
+   - 현재가 (USD)
+   - 전일 대비 등락률
+   - 최근 거래량 동향
+4. 주요 지지선/저항선 레벨
+5. 기관 보유 현황 (의미있는 변동이 있는 경우)
+6. 투자 관점 - 리스크/리워드 평가
+
+전체 메시지는 2000자 이내로 작성하세요. 투자자가 즉시 활용할 수 있는 실질적인 정보에 집중하세요.
+수치는 가능한 구체적으로 표현하고, 주관적 투자 조언이나 '추천'이라는 단어는 사용하지 마세요.
+
+{warning_message}
+
+메시지 끝에는 "본 정보는 투자 참고용이며, 투자 결정과 책임은 투자자에게 있습니다." 문구를 반드시 포함하세요.
+"""
+
+        else:  # English
+            warning_message = ""
+            if metadata.get('trigger_mode') == 'morning':
+                warning_message = 'IMPORTANT: You must include this warning in the middle of the message: "⚠️ Note: This information is based on data from 10 minutes after market open and may differ from current market conditions."'
+
+            instruction = f"""You are a financial analyst specializing in creating concise, engaging Telegram messages for US stock market analysis.
+
+## Current Context
+- Date: {current_date}
+- Stock: {company_name} ({ticker})
+- Market: US (NYSE/NASDAQ)
+
+## Your Task
+Transform the detailed stock analysis report into a compelling Telegram summary message that:
+1. Captures the key investment thesis
+2. Highlights critical price levels and technical signals
+3. Summarizes institutional activity if notable
+4. Provides clear risk/reward assessment
+5. Uses appropriate emojis for visual engagement
+
+## Message Format Requirements
+- Start with an emoji that reflects the overall sentiment (📈 bullish, 📉 bearish, 📊 neutral)
+- Include: Company Name (TICKER) - Analysis Summary
+- Use numbered points for clarity
+- Keep total length under 2000 characters
+- End with: "This information is for reference only. Investment decisions and responsibilities belong to the investor."
+
+## Key Sections to Include
+1. Current Price & Trend Direction
+2. Key Support/Resistance Levels
+3. Volume Analysis
+4. Institutional Ownership Changes (if significant)
+5. Risk Factors & Target Price Range
+
+{warning_message}
+
+Generate a professional, informative Telegram message."""
+
+        return Agent(
+            name="us_telegram_optimizer",
+            instruction=instruction,
+            server_names=[]
         )
 
-    def create_evaluator_agent(self, current_date, from_lang="ko", to_lang="ko"):
+    def create_evaluator_agent(self, current_date: str, language: str = "ko") -> Agent:
         """
-        Create Telegram summary evaluation agent
+        Create telegram summary evaluator agent.
 
         Args:
             current_date: Current date (YYYY.MM.DD)
-            from_lang: Report source language (default: "ko")
-            to_lang: Summary target language (default: "ko")
-        """
-        from cores.agents.telegram_summary_evaluator_agent import create_telegram_summary_evaluator_agent
+            language: Target language (default: "ko")
 
-        return create_telegram_summary_evaluator_agent(
-            current_date=current_date,
-            from_lang=from_lang,
-            to_lang=to_lang
+        Returns:
+            Agent instance for evaluation
+        """
+        # Language-specific instructions
+        if language == "ko":
+            instruction = f"""당신은 미국 주식 정보 요약 메시지를 평가하는 전문가입니다.
+주식 분석 보고서와 생성된 텔레그램 메시지를 비교하여 다음 기준에 따라 평가해야 합니다:
+
+## 평가 날짜
+- 날짜: {current_date}
+
+## 평가 기준 (각 항목별 1-5점)
+
+1. **정확성** (가중치: 30%)
+   - 가격 수준과 변동률이 정확한가?
+   - 기술적 지표가 올바르게 설명되어 있는가?
+   - 기관 보유 현황이 정확히 보고되어 있는가?
+
+2. **명확성** (가중치: 25%)
+   - 메시지가 이해하기 쉬운가?
+   - 구조가 논리적이고 잘 정리되어 있는가?
+   - 복잡한 개념이 쉽게 설명되어 있는가?
+
+3. **완전성** (가중치: 20%)
+   - 주요 가격 수준이 포함되어 있는가?
+   - 리스크와 기회가 언급되어 있는가?
+   - 투자 논거가 명확한가?
+
+4. **참여도** (가중치: 15%)
+   - 이모지가 적절하게 사용되었는가?
+   - 전문적이면서도 접근하기 쉬운 톤인가?
+   - 추가 연구를 권장하고 있는가?
+
+5. **규정 준수** (가중치: 10%)
+   - 적절한 면책 조항이 포함되어 있는가?
+   - 명시적인 매수/매도 권고를 피하고 있는가?
+   - 텔레그램 형식에 맞는가?
+
+## 평가 등급
+- EXCELLENT (3): 게시 준비 완료, 수정 불필요
+- GOOD (2): 약간의 개선 가능
+- FAIR (1): 일부 수정 필요
+- POOR (0): 상당한 문제 있음
+
+**중요: 반드시 아래 JSON 형식으로 응답해야 합니다:**
+```json
+{{
+    "rating": <0=POOR, 1=FAIR, 2=GOOD, 3=EXCELLENT 중 숫자>,
+    "feedback": "<상세한 피드백 문자열>",
+    "needs_improvement": <rating이 3 미만이면 true, 3이면 false>,
+    "focus_areas": ["<개선영역1>", "<개선영역2>", ...]
+}}
+```"""
+
+        else:  # English
+            instruction = f"""You are a quality evaluator for US stock market Telegram messages.
+
+## Evaluation Date
+- Date: {current_date}
+
+## Your Role
+Evaluate the quality of Telegram summary messages for US stocks based on these criteria:
+
+## Evaluation Criteria (Score 1-5 for each)
+
+1. **Accuracy** (Weight: 30%)
+   - Are price levels and percentages accurate?
+   - Are technical indicators correctly described?
+   - Are institutional holdings properly reported?
+
+2. **Clarity** (Weight: 25%)
+   - Is the message easy to understand?
+   - Is the structure logical and well-organized?
+   - Are complex concepts explained simply?
+
+3. **Completeness** (Weight: 20%)
+   - Does it cover key price levels?
+   - Does it mention risks and opportunities?
+   - Is the investment thesis clear?
+
+4. **Engagement** (Weight: 15%)
+   - Are emojis used appropriately?
+   - Is the tone professional yet accessible?
+   - Does it encourage further research?
+
+5. **Compliance** (Weight: 10%)
+   - Does it include proper disclaimer?
+   - Does it avoid explicit buy/sell recommendations?
+   - Is the format correct for Telegram?
+
+## Rating Scale
+- EXCELLENT (3): Publication-ready, no changes needed
+- GOOD (2): Minor improvements possible
+- FAIR (1): Requires some revisions
+- POOR (0): Significant issues
+
+**IMPORTANT: You MUST respond with a JSON object in the following exact format:**
+```json
+{{
+    "rating": <0=POOR, 1=FAIR, 2=GOOD, 3=EXCELLENT as integer>,
+    "feedback": "<detailed feedback string>",
+    "needs_improvement": <true if rating < 3, false if rating == 3>,
+    "focus_areas": ["<area1>", "<area2>", ...]
+}}
+```"""
+
+        return Agent(
+            name="us_telegram_evaluator",
+            instruction=instruction,
+            server_names=[]
         )
 
-    async def generate_telegram_message(self, report_content, metadata, trigger_type, from_lang="ko", to_lang="ko"):
+    async def generate_telegram_message(
+        self,
+        report_content: str,
+        metadata: dict,
+        trigger_type: str,
+        language: str = "ko"
+    ) -> str:
         """
-        Generate Telegram message (with evaluation and optimization)
+        Generate telegram message with evaluation and optimization.
 
         Args:
             report_content: Report content
             metadata: Stock metadata
             trigger_type: Trigger type
-            from_lang: Report source language (default: "ko")
-            to_lang: Summary target language (default: "ko")
+            language: Target language (default: "ko")
+
+        Returns:
+            Generated telegram message
         """
-        # Set current date (YYYY.MM.DD format)
+        # Current date (YYYY.MM.DD format)
         current_date = datetime.now().strftime("%Y.%m.%d")
 
         # Create optimizer agent
-        optimizer = self.create_optimizer_agent(metadata, current_date, from_lang, to_lang)
+        optimizer = self.create_optimizer_agent(metadata, current_date, language)
 
         # Create evaluator agent
-        evaluator = self.create_evaluator_agent(current_date, from_lang, to_lang)
+        evaluator = self.create_evaluator_agent(current_date, language)
 
-        # Configure evaluation-optimization workflow
+        # Setup evaluator-optimizer workflow
         evaluator_optimizer = EvaluatorOptimizerLLM(
             optimizer=optimizer,
             evaluator=evaluator,
@@ -273,124 +461,154 @@ class TelegramSummaryGenerator:
             min_rating=QualityRating.EXCELLENT
         )
 
-        # Wrap evaluator_llm to handle multi-JSON responses from gpt-5.x reasoning models
-        evaluator_optimizer.evaluator_llm = _RobustEvaluatorLLM(evaluator_optimizer.evaluator_llm)
+        # Get display name for trigger type
+        trigger_display = self._get_trigger_display_name(trigger_type)
 
-        # Construct message prompt
-        prompt_message = f"""다음은 {metadata['stock_name']}({metadata['stock_code']}) 종목에 대한 상세 분석 보고서입니다.
-            이 종목은 {trigger_type} 트리거에 포착되었습니다.
+        # Compose message prompt
+        prompt_message = f"""The following is a detailed analysis report for {metadata['company_name']} ({metadata['ticker']}).
+This stock was detected by the {trigger_display} trigger.
 
-            보고서 내용:
-            {report_content}
-            """
+Report Content:
+{report_content}
+"""
 
-        # Add warning message if trigger mode is morning
+        # Add warning for morning mode (data may be stale)
         if metadata.get('trigger_mode') == 'morning':
-            logger.info("Adding warning message for 10-minute post-market-open data")
-            prompt_message += "\n⚠️ 주의: 본 정보는 장 시작 후 10분 시점 데이터입니다. 현재 상황과 다를 수 있습니다."
+            logger.info("Adding morning data warning")
+            prompt_message += "\nNote: This stock was detected 10 minutes after market open. Current conditions may differ."
 
-        # Generate Telegram message using evaluation-optimization workflow
+        # Generate telegram message using evaluator-optimizer workflow
         response = await evaluator_optimizer.generate_str(
             message=prompt_message,
             request_params=RequestParams(
-                model="gpt-5.4-mini",
-                reasoning_effort="none",
+                model=US_TELEGRAM_SUMMARY_MODEL,
                 maxTokens=6000,
-                max_iterations=2
+                max_iterations=2,
+                **get_optional_reasoning_effort(US_TELEGRAM_SUMMARY_MODEL, "none"),
             )
         )
 
-        # Process response - improved method
+        # Process response
         logger.info(f"Response type: {type(response)}")
 
-        # If response is string (most ideal case)
+        # If response is already a string
         if isinstance(response, str):
-            logger.info("Response is in string format.")
+            logger.info("Response is string format")
             # Check if already in message format
             if response.startswith(('📊', '📈', '📉', '💰', '⚠️', '🔍')):
                 return response
 
-            # Find and remove Python object representations
+            # Remove Python object representations
             cleaned_response = re.sub(r'[A-Za-z]+\([^)]*\)', '', response)
 
-            # Try to extract only actual message content
+            # Try to extract actual message content
             emoji_start = re.search(r'(📊|📈|📉|💰|⚠️|🔍)', cleaned_response)
-            message_end = re.search(r'본 정보는 투자 참고용이며, 투자 결정과 책임은 투자자에게 있습니다\.', cleaned_response)
+            # Support both Korean and English disclaimers
+            message_end = re.search(
+                r'(This information is for reference only\..*?investor\.|본 정보는 투자 참고용이며.*?있습니다\.)',
+                cleaned_response, re.DOTALL
+            )
 
             if emoji_start and message_end:
                 return cleaned_response[emoji_start.start():message_end.end()]
 
-        # If OpenAI API response object (has content attribute)
+        # Handle OpenAI API response object
         if hasattr(response, 'content') and response.content is not None:
-            logger.info("Response has content attribute.")
+            logger.info("Response has content attribute")
             return response.content
 
-        # ChatCompletionMessage case - has tool_calls
+        # Handle ChatCompletionMessage with tool_calls
         if hasattr(response, 'tool_calls') and response.tool_calls:
-            logger.info("Response has tool_calls.")
+            logger.info("Response has tool_calls")
 
-            # Ignore tool_calls info, return function_call result if exists
             if hasattr(response, 'function_call') and response.function_call:
-                logger.info("Response has function_call result.")
+                logger.info("Response has function_call result")
                 return f"Function call result: {response.function_call}"
 
-            # Only generate text format response for subsequent processing
-            # Actual tool_calls processing needs separate logic
-            return "Cannot extract text from tool call result. Contact administrator."
+            return "Unable to extract text from tool call result. Please contact administrator."
 
-        # Last attempt: convert to string and extract message format with regex
+        # Last attempt: convert to string and extract message format
         response_str = str(response)
         logger.debug(f"Response string before regex: {response_str[:100]}...")
 
-        # Try to extract Telegram message format with regex
-        content_match = re.search(r'(📊|📈|📉|💰|⚠️|🔍).*?본 정보는 투자 참고용이며, 투자 결정과 책임은 투자자에게 있습니다\.', response_str, re.DOTALL)
+        # Regex to extract telegram message format (support both Korean and English)
+        content_match = re.search(
+            r'(📊|📈|📉|💰|⚠️|🔍).*?(This information is for reference only\..*?investor\.|본 정보는 투자 참고용이며.*?있습니다\.)',
+            response_str,
+            re.DOTALL
+        )
 
         if content_match:
-            logger.info("Extracted message content with regex.")
+            logger.info("Extracted message content using regex")
             return content_match.group(0)
 
-        # If regex also fails, return default message
-        logger.warning("Cannot extract valid Telegram message from response.")
-        logger.warning(f"Original message not extracted by regex: {response_str[:100]}...")
+        # Fallback: generate default message (language-aware)
+        logger.warning("Unable to extract valid telegram message from response")
+        logger.warning(f"Original message (first 100 chars): {response_str[:100]}...")
 
-        # Generate default message
-        default_message = f"""📊 {metadata['stock_name']}({metadata['stock_code']}) - 분석 요약
+        # Default message based on language
+        if language == "ko":
+            default_message = f"""📊 {metadata['company_name']} ({metadata['ticker']}) - Analysis Summary
 
-    1. 현재가: (정보 없음)
-    2. 최근 추세: (정보 없음)
-    3. 주요 체크포인트: 상세 분석 보고서 참조.
+1. Current Price: (Information unavailable)
+2. Recent Trend: (Information unavailable)
+3. Key Checkpoints: Please refer to the detailed analysis report.
 
-    ⚠️ 자동 생성 오류로 상세 정보를 표시할 수 없습니다. 전체 보고서를 확인하세요.
-    본 정보는 투자 참고용이며, 투자 결정과 책임은 투자자에게 있습니다."""
+⚠️ Unable to display detailed information due to auto-generation error. Please check the full report.
+This information is for reference only. Investment decisions and responsibilities belong to the investor."""
+        else:
+            default_message = f"""📊 {metadata['company_name']} ({metadata['ticker']}) - Analysis Summary
+
+1. Current Price: (Information unavailable)
+2. Recent Trend: (Information unavailable)
+3. Key Checkpoints: Please refer to the detailed analysis report.
+
+⚠️ Unable to display detailed information due to auto-generation error. Please check the full report.
+This information is for reference only. Investment decisions and responsibilities belong to the investor."""
 
         return default_message
 
-    def save_telegram_message(self, message, output_path):
+    def save_telegram_message(self, message: str, output_path: str):
         """
-        Save generated Telegram message to file
+        Save generated telegram message to file.
+
+        Args:
+            message: Telegram message content
+            output_path: Output file path
         """
         try:
-            # Create directory if it doesn't exist
+            # Create directory if not exists
             os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
 
             with open(output_path, 'w', encoding='utf-8') as file:
                 file.write(message)
-            logger.info(f"Telegram message saved to {output_path}.")
+            logger.info(f"Telegram message saved to {output_path}")
         except Exception as e:
-            logger.error(f"Failed to save Telegram message: {e}")
+            logger.error(f"Failed to save telegram message: {e}")
             raise
 
-    async def process_report(self, report_pdf_path, output_dir="telegram_messages", from_lang="ko", to_lang="ko"):
+    async def process_report(
+        self,
+        report_pdf_path: str,
+        output_dir: str = None,
+        language: str = "ko"
+    ) -> str:
         """
-        Process report file to generate Telegram summary message
+        Process report file to generate telegram summary message.
 
         Args:
             report_pdf_path: Report file path
             output_dir: Output directory
-            from_lang: Report source language (default: "ko")
-            to_lang: Summary target language (default: "ko")
+            language: Target language (default: "ko")
+
+        Returns:
+            Generated telegram message
         """
         try:
+            # Default output directory
+            if output_dir is None:
+                output_dir = str(US_TELEGRAM_MSGS_DIR)
+
             # Create output directory
             os.makedirs(output_dir, exist_ok=True)
 
@@ -398,7 +616,7 @@ class TelegramSummaryGenerator:
             filename = os.path.basename(report_pdf_path)
             metadata = self.extract_metadata_from_filename(filename)
 
-            logger.info(f"Processing: {filename} - {metadata['stock_name']}({metadata['stock_code']})")
+            logger.info(f"Processing: {filename} - {metadata['company_name']} ({metadata['ticker']})")
 
             # Read report content
             from pdf_converter import pdf_to_markdown_text
@@ -406,7 +624,7 @@ class TelegramSummaryGenerator:
 
             # Determine trigger type and mode
             trigger_type, trigger_mode = self.determine_trigger_type(
-                metadata['stock_code'],
+                metadata['ticker'],
                 metadata.get('date', '').replace('.', '')  # YYYY.MM.DD → YYYYMMDD
             )
             logger.info(f"Detected trigger type: {trigger_type}, mode: {trigger_mode}")
@@ -414,48 +632,62 @@ class TelegramSummaryGenerator:
             # Add trigger mode to metadata
             metadata['trigger_mode'] = trigger_mode
 
-            # Generate Telegram summary message
+            # Generate telegram summary message
             telegram_message = await self.generate_telegram_message(
-                report_content, metadata, trigger_type, from_lang, to_lang
+                report_content, metadata, trigger_type, language
             )
 
-            # Create output file path
-            output_file = os.path.join(output_dir, f"{metadata['stock_code']}_{metadata['stock_name']}_telegram.txt")
+            # Generate output file path
+            output_file = os.path.join(
+                output_dir,
+                f"{metadata['ticker']}_{metadata['company_name']}_telegram.txt"
+            )
 
             # Save message
             self.save_telegram_message(telegram_message, output_file)
 
-            logger.info(f"Telegram message generation complete: {output_file}")
+            logger.info(f"Telegram message generated: {output_file}")
 
             return telegram_message
 
         except Exception as e:
-            log_openai_error(logger, e, f"telegram summary report processing for {report_pdf_path}")
+            log_openai_error(logger, e, f"US telegram summary report processing for {report_pdf_path}")
             logger.error(f"Error processing report: {e}")
             raise
 
-async def process_all_reports(reports_dir="pdf_reports", output_dir="telegram_messages", date_filter=None, from_lang="ko", to_lang="ko"):
+
+async def process_all_reports(
+    reports_dir: str = None,
+    output_dir: str = None,
+    date_filter: str = None,
+    language: str = "ko"
+):
     """
-    Process all report files in specified directory
+    Process all report files in the specified directory.
 
     Args:
-        reports_dir: Report directory
+        reports_dir: Reports directory
         output_dir: Output directory
-        date_filter: Date filter
-        from_lang: Report source language (default: "ko")
-        to_lang: Summary target language (default: "ko")
+        date_filter: Date filter (YYYYMMDD)
+        language: Target language (default: "ko")
     """
-    # Initialize Telegram summary generator
-    generator = TelegramSummaryGenerator()
+    # Default directories
+    if reports_dir is None:
+        reports_dir = str(US_PDF_REPORTS_DIR)
+    if output_dir is None:
+        output_dir = str(US_TELEGRAM_MSGS_DIR)
 
-    # Check PDF report directory
+    # Initialize generator
+    generator = USTelegramSummaryGenerator()
+
+    # Check reports directory
     reports_path = Path(reports_dir)
     if not reports_path.exists() or not reports_path.is_dir():
-        logger.error(f"Report directory does not exist: {reports_dir}")
+        logger.error(f"Reports directory does not exist: {reports_dir}")
         return
 
     # Find report files
-    report_files = list(reports_path.glob("*.md"))
+    report_files = list(reports_path.glob("*.pdf"))
 
     # Apply date filter
     if date_filter:
@@ -470,12 +702,13 @@ async def process_all_reports(reports_dir="pdf_reports", output_dir="telegram_me
     # Process each report
     for report_file in report_files:
         try:
-            await generator.process_report(str(report_file), output_dir, from_lang, to_lang)
+            await generator.process_report(str(report_file), output_dir, language)
         except Exception as e:
-            log_openai_error(logger, e, f"telegram summary batch item {report_file.name}")
+            log_openai_error(logger, e, f"US telegram summary batch item {report_file.name}")
             logger.error(f"Error processing {report_file.name}: {e}")
 
-    logger.info("All report processing completed.")
+    logger.info("All reports processed.")
+
 
 async def main():
     """
@@ -483,57 +716,79 @@ async def main():
     """
     import argparse
 
-    parser = argparse.ArgumentParser(description="Summarize all files in report directory to Telegram messages.")
-    parser.add_argument("--reports-dir", default="reports", help="Directory path where report files are stored")
-    parser.add_argument("--output-dir", default="telegram_messages", help="Directory path to save Telegram messages")
-    parser.add_argument("--date", help="Process only reports from specific date (YYYYMMDD format)")
-    parser.add_argument("--today", action="store_true", help="Process only today's reports")
-    parser.add_argument("--report", help="Process specific report file only")
-    parser.add_argument("--from-lang", default="ko", help="Report source language code (default: ko)")
-    parser.add_argument("--to-lang", default="ko", help="Summary target language code (default: ko)")
+    parser = argparse.ArgumentParser(
+        description="Generate Telegram summary messages from US stock analysis reports."
+    )
+    parser.add_argument(
+        "--reports-dir",
+        default=str(US_PDF_REPORTS_DIR),
+        help="Directory containing report files"
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=str(US_TELEGRAM_MSGS_DIR),
+        help="Directory to save Telegram messages"
+    )
+    parser.add_argument(
+        "--date",
+        help="Process only reports for specific date (YYYYMMDD format)"
+    )
+    parser.add_argument(
+        "--today",
+        action="store_true",
+        help="Process only today's reports"
+    )
+    parser.add_argument(
+        "--report",
+        help="Process a specific report file"
+    )
+    parser.add_argument(
+        "--language",
+        default="ko",
+        help="Target language code (default: ko)"
+    )
 
     args = parser.parse_args()
 
     async with app.run() as parallel_app:
-        logger = parallel_app.logger
+        app_logger = parallel_app.logger
 
-        # Process specific report only
+        # Process specific report
         if args.report:
             report_pdf_path = args.report
             if not os.path.exists(report_pdf_path):
-                logger.error(f"Specified report file does not exist: {report_pdf_path}")
+                app_logger.error(f"Specified report file does not exist: {report_pdf_path}")
                 return
 
-            generator = TelegramSummaryGenerator()
+            generator = USTelegramSummaryGenerator()
             telegram_message = await generator.process_report(
                 report_pdf_path,
                 args.output_dir,
-                args.from_lang,
-                args.to_lang
+                args.language
             )
 
             # Print generated message
-            print("\nGenerated Telegram message:")
+            print("\nGenerated Telegram Message:")
             print("-" * 50)
             print(telegram_message)
             print("-" * 50)
 
         else:
-            # Apply today's date filter
+            # Apply date filter
             date_filter = None
             if args.today:
                 date_filter = datetime.now().strftime("%Y%m%d")
             elif args.date:
                 date_filter = args.date
 
-            # Process all pdf reports
+            # Process all reports
             await process_all_reports(
                 reports_dir=args.reports_dir,
                 output_dir=args.output_dir,
                 date_filter=date_filter,
-                from_lang=args.from_lang,
-                to_lang=args.to_lang
+                language=args.language
             )
+
 
 if __name__ == "__main__":
     asyncio.run(main())

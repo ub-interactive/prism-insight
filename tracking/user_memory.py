@@ -63,7 +63,7 @@ class UserMemoryManager:
                     summary TEXT,
                     ticker TEXT,
                     ticker_name TEXT,
-                    market_type TEXT DEFAULT 'kr',
+                    market_type TEXT DEFAULT 'us',
                     importance_score REAL DEFAULT 0.5,
                     compression_layer INTEGER DEFAULT 1,
                     created_at TEXT NOT NULL,
@@ -119,7 +119,7 @@ class UserMemoryManager:
         content: Dict[str, Any],
         ticker: Optional[str] = None,
         ticker_name: Optional[str] = None,
-        market_type: str = 'kr',
+        market_type: str = 'us',
         importance_score: float = 0.5,
         command_source: Optional[str] = None,
         message_id: Optional[int] = None,
@@ -134,7 +134,7 @@ class UserMemoryManager:
             content: Content to save (dict -> JSON)
             ticker: Stock code/ticker
             ticker_name: Stock name
-            market_type: Market type (kr, us)
+            market_type: Market type (us)
             importance_score: Importance score (0.0 ~ 1.0)
             command_source: Command source
             message_id: Telegram message ID
@@ -384,11 +384,7 @@ class UserMemoryManager:
         tickers = []
 
         # 1. Korean stock codes (6-digit numbers)
-        kr_pattern = r'\b(\d{6})\b'
-        kr_matches = re.findall(kr_pattern, text)
-        tickers.extend(kr_matches)
-
-        # 2. US tickers (1-5 uppercase letters)
+        # US tickers (1-5 uppercase letters)
         us_pattern = r'\b([A-Z]{1,5})\b'
         excluded_words = {
             'I', 'A', 'AN', 'THE', 'IN', 'ON', 'AT', 'TO', 'FOR', 'OF',
@@ -401,7 +397,7 @@ class UserMemoryManager:
             if t not in excluded_words and t not in tickers:
                 tickers.append(t)
 
-        # 3. Match stock names from user's past records
+        # Match stock names from user's past records
         try:
             past_journals = self.get_journals(user_id, limit=50)
             known_names = {}
@@ -429,7 +425,7 @@ class UserMemoryManager:
         text: str,
         ticker: Optional[str] = None,
         ticker_name: Optional[str] = None,
-        market_type: str = 'kr',
+        market_type: str = 'us',
         message_id: Optional[int] = None
     ) -> int:
         """

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Weekly Firecrawl Intelligence Report — AI-powered market research via Firecrawl Agent
-Generates KR and US market intelligence reports and sends to Telegram channel.
+Generates US market intelligence reports and sends to Telegram channel.
 
 Usage:
     python3 weekly_firecrawl_intelligence.py                              # Send to Telegram
@@ -25,32 +25,6 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 _DISCLAIMER = "\n\n⚠️ 본 내용은 투자 참고용이며, 투자 판단의 책임은 본인에게 있습니다."
-
-
-async def _generate_kr_report() -> str:
-    """Generate KR market intelligence report via Firecrawl search + Claude."""
-    from report_generator import generate_firecrawl_search_response
-
-    today_str = datetime.now().strftime("%Y년 %m월 %d일")
-
-    search_query = f"코스피 코스닥 주간 시황 {today_str} 외국인 기관 수급"
-    analysis_prompt = (
-        f"오늘 날짜는 {today_str}입니다.\n"
-        "위 검색 결과를 바탕으로 이번 주 한국 주식시장 주간 인텔리전스 리포트를 작성해줘.\n\n"
-        "포함 내용:\n"
-        "1. 이번 주 KOSPI/KOSDAQ 주요 흐름 요약\n"
-        "2. 가장 주목받은 테마 3개와 대표 종목\n"
-        "3. 외국인/기관 수급 동향\n"
-        "4. 다음 주 주요 일정 및 이벤트\n"
-        "5. 개인투자자를 위한 전략 제안\n\n"
-        "텔레그램 메시지 형태로 이모지 포함하여 작성. 4000자 이내."
-    )
-
-    result = await generate_firecrawl_search_response(search_query, analysis_prompt, limit=10)
-    if not result:
-        logger.error("Failed to generate KR intelligence report")
-        return ""
-    return result
 
 
 async def _generate_us_report() -> str:
@@ -80,22 +54,18 @@ async def _generate_us_report() -> str:
 
 
 async def generate_weekly_intelligence() -> str:
-    """Generate combined weekly intelligence report."""
+    """Generate weekly US intelligence report."""
     today = datetime.now()
     date_display = today.strftime("%-m/%-d")
 
-    kr_report = await _generate_kr_report()
     us_report = await _generate_us_report()
 
     sections = [f"🔥 PRISM 주간 Firecrawl 인텔리전스 ({date_display})"]
 
-    if kr_report:
-        sections.append(f"\n🇰🇷 한국시장 인텔리전스\n━━━━━━━━━━━━━━━━━━━━\n{kr_report}")
-
     if us_report:
         sections.append(f"\n🇺🇸 미국시장 인텔리전스\n━━━━━━━━━━━━━━━━━━━━\n{us_report}")
 
-    if not kr_report and not us_report:
+    if not us_report:
         sections.append("\n⚠️ Firecrawl 리포트 생성에 실패했습니다. 로그를 확인해주세요.")
 
     sections.append(_DISCLAIMER)
@@ -134,17 +104,11 @@ async def send_to_telegram(message: str):
 
 
 async def _send_broadcast(message: str, broadcast_languages: list):
-    """Send translated report to broadcast language channels."""
+    """Send report to broadcast language channels."""
     if not broadcast_languages:
         return
 
     try:
-        import sys
-        cores_path = str(Path(__file__).parent / "cores")
-        if cores_path not in sys.path:
-            sys.path.insert(0, cores_path)
-
-        from agents.telegram_translator_agent import translate_telegram_message
         from telegram import Bot
 
         token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -162,16 +126,12 @@ async def _send_broadcast(message: str, broadcast_languages: list):
                     logger.warning(f"No channel ID for language: {lang} (TELEGRAM_CHANNEL_ID_{lang_upper})")
                     continue
 
-                logger.info(f"Translating intelligence report to {lang}")
-                translated = await translate_telegram_message(
-                    message, model="gpt-5-nano", from_lang="ko", to_lang=lang
-                )
-                if len(translated) > 4096:
-                    for i in range(0, len(translated), 4096):
-                        chunk = translated[i:i + 4096]
+                if len(message) > 4096:
+                    for i in range(0, len(message), 4096):
+                        chunk = message[i:i + 4096]
                         await bot.send_message(chat_id=channel_id, text=chunk, parse_mode=None)
                 else:
-                    await bot.send_message(chat_id=channel_id, text=translated, parse_mode=None)
+                    await bot.send_message(chat_id=channel_id, text=message, parse_mode=None)
                 logger.info(f"Intelligence report sent to {lang} channel")
 
             except Exception as e:

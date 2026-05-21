@@ -6,9 +6,9 @@ FROM ubuntu:24.04
 # 환경 변수 설정
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Asia/Seoul \
-    LANG=ko_KR.UTF-8 \
-    LANGUAGE=ko_KR:ko \
-    LC_ALL=ko_KR.UTF-8 \
+    LANG=C.UTF-8 \
+    LANGUAGE=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
     PYTHONUNBUFFERED=1 \
     PYTHON_VERSION=3.12 \
     ENABLE_CRON=true
@@ -28,16 +28,10 @@ RUN apt-get update && apt-get upgrade -y && \
     wget \
     ca-certificates \
     gnupg \
-    locales \
     tzdata \
-    fonts-nanum \
-    fonts-nanum-coding \
-    fonts-nanum-extra \
     vim \
     nano \
     cron \
-    && locale-gen ko_KR.UTF-8 \
-    && update-locale LANG=ko_KR.UTF-8 \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && apt-get clean \
@@ -68,7 +62,7 @@ WORKDIR /app/prism-insight
 # Python 의존성을 먼저 복사해 캐시 효율을 높임
 COPY requirements.txt /app/prism-insight/requirements.txt
 
-# Python 의존성 설치 (setuptools for pykrx compatibility)
+# Python dependencies
 RUN pip install --no-cache-dir --upgrade pip setuptools && \
     pip install --no-cache-dir -r requirements.txt
 
@@ -81,12 +75,8 @@ RUN playwright install --with-deps chromium
 # Perplexity MCP 서버 설치 (공식 npm 패키지)
 RUN npm install -g @perplexity-ai/mcp-server
 
-# 한글 폰트 설치 (Ubuntu용)
-RUN python3 ./cores/ubuntu_font_installer.py || true
-
-# 폰트 캐시 갱신
-RUN fc-cache -fv && \
-    python3 -c "import matplotlib.font_manager as fm; fm.fontManager.rebuild()" || true
+# Font cache refresh
+RUN fc-cache -fv || true
 
 # 설정 파일 복사 (예시 파일들)
 RUN cp .env.example .env && \

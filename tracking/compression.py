@@ -1,621 +1,478 @@
 """
-Memory Compression Manager
+US Trading Memory Compression Manager
 
-Handles hierarchical compression of trading journal entries.
-Extracted from stock_tracking_agent.py for LLM context efficiency.
+Handles compression of old journal entries and cleanup of stale data for US stocks.
+Based on compress_trading_memory.py but adapted for US market with market='US' filter.
 """
 
 import json
 import logging
-import re
-import traceback
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
-
-from cores.openai_error_logging import log_openai_error
-from cores.utils import parse_llm_json
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class CompressionManager:
-    """Manages trading memory compression operations."""
+class USCompressionManager:
+    """Manages memory compression for US trading data."""
 
-    def __init__(self, cursor, conn, language: str = "ko", enable_journal: bool = False):
+    MARKET = "US"  # Market identifier for shared tables
+
+    def __init__(self, cursor, conn):
         """
-        Initialize CompressionManager.
+        Initialize USCompressionManager.
 
         Args:
             cursor: SQLite cursor
             conn: SQLite connection
-            language: Language code (ko/en)
-            enable_journal: Whether journal feature is enabled
         """
         self.cursor = cursor
         self.conn = conn
-        self.language = language
-        self.enable_journal = enable_journal
 
-    async def compress_old_entries(
+    def get_compression_stats(self) -> Dict:
+        """
+        Get current compression statistics for US market.
+
+        Returns:
+            Dict with compression layer counts and stats
+        """
+        try:
+            stats = {
+                "entries_by_layer": {},
+                "active_intuitions": 0,
+                "active_principles": 0,
+                "oldest_uncompressed": None,
+                "avg_intuition_confidence": None,
+                "avg_intuition_success_rate": None
+            }
+
+            # Count entries by layer for US market
+            self.cursor.execute("""
+                SELECT compression_layer, COUNT(*)
+                FROM trading_journal
+                WHERE market = ?
+                GROUP BY compression_layer
+            """, (self.MARKET,))
+
+            layer_labels = {1: "layer1_detailed", 2: "layer2_summarized", 3: "layer3_compressed"}
+            for row in self.cursor.fetchall():
+                layer = row[0] or 1
+                stats["entries_by_layer"][layer_labels.get(layer, f"layer{layer}")] = row[1]
+
+            # Active intuitions for US
+            self.cursor.execute("""
+                SELECT COUNT(*) FROM trading_intuitions
+                WHERE is_active = 1 AND market = ?
+            """, (self.MARKET,))
+            stats["active_intuitions"] = self.cursor.fetchone()[0]
+
+            # Active principles for US
+            self.cursor.execute("""
+                SELECT COUNT(*) FROM trading_principles
+                WHERE is_active = 1 AND market = ?
+            """, (self.MARKET,))
+            stats["active_principles"] = self.cursor.fetchone()[0]
+
+            # Oldest uncompressed entry for US
+            self.cursor.execute("""
+                SELECT MIN(trade_date) FROM trading_journal
+                WHERE compression_layer = 1 AND market = ?
+            """, (self.MARKET,))
+            oldest = self.cursor.fetchone()[0]
+            if oldest:
+                stats["oldest_uncompressed"] = oldest
+
+            # Average intuition metrics for US
+            self.cursor.execute("""
+                SELECT AVG(confidence), AVG(success_rate)
+                FROM trading_intuitions
+                WHERE is_active = 1 AND market = ?
+            """, (self.MARKET,))
+            avg_stats = self.cursor.fetchone()
+            if avg_stats[0]:
+                stats["avg_intuition_confidence"] = avg_stats[0]
+            if avg_stats[1]:
+                stats["avg_intuition_success_rate"] = avg_stats[1]
+
+            return stats
+
+        except Exception as e:
+            logger.error(f"Error getting US compression stats: {e}")
+            return {"error": str(e)}
+
+    async def compress_old_journal_entries(
         self,
         layer1_age_days: int = 7,
         layer2_age_days: int = 30,
-        min_entries: int = 3
-    ) -> Dict[str, Any]:
+        min_entries_for_compression: int = 3
+    ) -> Dict:
         """
-        Compress old trading journal entries.
+        Compress old journal entries for US market.
 
-        Implements hierarchical memory compression:
-        - Layer 1 -> Layer 2: Entries older than layer1_age_days
-        - Layer 2 -> Layer 3: Entries older than layer2_age_days
+        Layer 1 (0-7 days): Full detail
+        Layer 2 (8-30 days): Summarized
+        Layer 3 (31+ days): Compressed intuitions
 
         Args:
-            layer1_age_days: Days after which to compress Layer 1 -> 2
-            layer2_age_days: Days after which to compress Layer 2 -> 3
-            min_entries: Minimum entries required for compression
+            layer1_age_days: Days before Layer 1 entries are compressed
+            layer2_age_days: Days before Layer 2 entries are compressed
+            min_entries_for_compression: Minimum entries to trigger compression
 
         Returns:
-            Dict: Compression results with statistics
+            Dict with compression results
         """
-        if not self.enable_journal:
-            return {"skipped": True, "reason": "journal_disabled"}
+        results = {
+            "layer1_to_layer2": {"compressed": 0, "skipped": 0},
+            "layer2_to_layer3": {"compressed": 0, "skipped": 0},
+            "intuitions_generated": 0
+        }
 
         try:
-            from cores.agents.memory_compressor_agent import create_memory_compressor_agent
-            from mcp_agent.workflows.llm.augmented_llm import RequestParams
-            from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
-
-            results = {
-                "layer1_to_layer2": {"processed": 0, "compressed": 0},
-                "layer2_to_layer3": {"processed": 0, "compressed": 0},
-                "intuitions_generated": 0,
-                "errors": []
-            }
-
             cutoff_layer1 = (datetime.now() - timedelta(days=layer1_age_days)).strftime("%Y-%m-%d")
             cutoff_layer2 = (datetime.now() - timedelta(days=layer2_age_days)).strftime("%Y-%m-%d")
 
-            # Layer 1 -> Layer 2
+            # Compress Layer 1 → Layer 2 for US
             self.cursor.execute("""
-                SELECT id, ticker, company_name, trade_date, profit_rate,
-                       situation_analysis, judgment_evaluation, lessons,
-                       pattern_tags, one_line_summary, buy_scenario, sell_price
+                SELECT id, ticker, company_name, profit_rate, holding_days,
+                       one_line_summary, lessons, pattern_tags, sell_price
                 FROM trading_journal
-                WHERE compression_layer = 1 AND trade_date < ?
-                ORDER BY trade_date ASC
-            """, (cutoff_layer1,))
-            layer1_entries = [dict(zip([d[0] for d in self.cursor.description], row))
-                              for row in self.cursor.fetchall()]
+                WHERE compression_layer = 1 AND trade_date < ? AND market = ?
+            """, (cutoff_layer1, self.MARKET))
 
-            if len(layer1_entries) >= min_entries:
-                logger.info(f"Compressing {len(layer1_entries)} Layer 1 entries")
-                result = await self._compress_to_layer2(layer1_entries)
-                results["layer1_to_layer2"] = result
+            layer1_entries = self.cursor.fetchall()
 
-            # Layer 2 -> Layer 3
-            self.cursor.execute("""
-                SELECT id, ticker, company_name, trade_date, profit_rate,
-                       compressed_summary, pattern_tags, buy_scenario
-                FROM trading_journal
-                WHERE compression_layer = 2 AND trade_date < ?
-                ORDER BY trade_date ASC
-            """, (cutoff_layer2,))
-            layer2_entries = [dict(zip([d[0] for d in self.cursor.description], row))
-                              for row in self.cursor.fetchall()]
+            if len(layer1_entries) >= min_entries_for_compression:
+                # Fetch hindsight prices for sold tickers
+                tickers = [entry[1] for entry in layer1_entries if entry[1]]
+                hindsight_prices = self._fetch_us_hindsight_prices(tickers)
 
-            if len(layer2_entries) >= min_entries:
-                logger.info(f"Compressing {len(layer2_entries)} Layer 2 entries")
-                result = await self._compress_to_layer3(layer2_entries)
-                results["layer2_to_layer3"] = result
-                results["intuitions_generated"] = result.get("intuitions_generated", 0)
+                for entry in layer1_entries:
+                    # entry: (id, ticker, company_name, profit_rate, holding_days,
+                    #         one_line_summary, lessons, pattern_tags, sell_price)
+                    entry_id, ticker, company_name = entry[0], entry[1], entry[2]
+                    sell_price = entry[8] if len(entry) > 8 else None
 
-            return results
+                    # Build hindsight summary if price data available
+                    hindsight_note = ""
+                    if ticker in hindsight_prices and sell_price:
+                        current = hindsight_prices[ticker]
+                        change = (current - sell_price) / sell_price * 100
+                        if change < -1:
+                            verdict = "Good sell"
+                        elif change > 3:
+                            verdict = "Could have waited"
+                        else:
+                            verdict = "Appropriate sell"
+                        hindsight_note = f" [Hindsight: ${sell_price:.2f} → ${current:.2f} ({change:+.1f}%) - {verdict}]"
+                        logger.info(f"US hindsight: {ticker} sold at ${sell_price:.2f}, now ${current:.2f} ({change:+.1f}%) - {verdict}")
 
-        except Exception as e:
-            log_openai_error(logger, e, "journal compression")
-            logger.error(f"Error during compression: {e}")
-            traceback.print_exc()
-            return {"error": str(e)}
+                    # Update to Layer 2 with optional hindsight in compressed_summary
+                    summary = entry[5] or ""  # one_line_summary
+                    compressed_summary = (summary + hindsight_note) if hindsight_note else summary
 
-    async def _compress_to_layer2(self, entries: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Compress Layer 1 entries to Layer 2 (summary format)."""
-        try:
-            from cores.agents.memory_compressor_agent import create_memory_compressor_agent
-            from mcp_agent.workflows.llm.augmented_llm import RequestParams
-            from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
-
-            results = {"processed": len(entries), "compressed": 0, "errors": []}
-
-            compressor_agent = create_memory_compressor_agent(self.language)
-
-            async with compressor_agent:
-                llm = await compressor_agent.attach_llm(OpenAIAugmentedLLM)
-
-                # Fetch current prices for hindsight context
-                hindsight_prices = self._fetch_hindsight_prices(entries)
-
-                entries_text = self._format_entries_for_compression(entries, hindsight_prices)
-                prompt = self._build_layer2_prompt(entries_text, len(entries))
-
-                response = await llm.generate_str(
-                    message=prompt,
-                    request_params=RequestParams(model="gpt-5.4", reasoning_effort="none", maxTokens=8000)
-                )
-
-            compression_data = self._parse_response(response)
-
-            compressed_entries = compression_data.get('compressed_entries', [])
-            for comp_entry in compressed_entries:
-                original_ids = comp_entry.get('original_ids', [])
-                compressed_summary = comp_entry.get('compressed_summary', '')
-                key_lessons = json.dumps(comp_entry.get('key_lessons', []), ensure_ascii=False)
-
-                for entry_id in original_ids:
                     self.cursor.execute("""
                         UPDATE trading_journal
-                        SET compression_layer = 2, compressed_summary = ?,
-                            lessons = ?, last_compressed_at = ?
+                        SET compression_layer = 2, compressed_summary = ?
                         WHERE id = ?
-                    """, (compressed_summary, key_lessons,
-                          datetime.now().strftime("%Y-%m-%d %H:%M:%S"), entry_id))
-                    results["compressed"] += 1
+                    """, (compressed_summary or None, entry_id))
+                    results["layer1_to_layer2"]["compressed"] += 1
 
-            if not compressed_entries:
-                for entry in entries:
-                    summary = self._generate_simple_summary(entry)
+                self.conn.commit()
+                logger.info(f"US: Compressed {results['layer1_to_layer2']['compressed']} entries from Layer 1 to Layer 2")
+
+            # Compress Layer 2 → Layer 3 for US
+            self.cursor.execute("""
+                SELECT id, ticker, company_name, profit_rate, holding_days,
+                       one_line_summary, lessons, pattern_tags, buy_scenario
+                FROM trading_journal
+                WHERE compression_layer = 2 AND trade_date < ? AND market = ?
+            """, (cutoff_layer2, self.MARKET))
+
+            layer2_entries = self.cursor.fetchall()
+
+            if len(layer2_entries) >= min_entries_for_compression:
+                # Extract patterns and create intuitions
+                pattern_groups = {}
+                for entry in layer2_entries:
+                    try:
+                        pattern_tags = json.loads(entry[7]) if entry[7] else []
+                        for tag in pattern_tags:
+                            if tag not in pattern_groups:
+                                pattern_groups[tag] = []
+                            pattern_groups[tag].append({
+                                "ticker": entry[1],
+                                "profit_rate": entry[3],
+                                "lessons": json.loads(entry[6]) if entry[6] else []
+                            })
+                    except:
+                        pass
+
+                # Generate intuitions from patterns
+                for pattern, trades in pattern_groups.items():
+                    if len(trades) >= 2:
+                        avg_profit = sum(t["profit_rate"] for t in trades) / len(trades)
+                        success_rate = sum(1 for t in trades if t["profit_rate"] > 0) / len(trades)
+
+                        self._save_intuition(
+                            category=pattern,
+                            condition=f"Pattern: {pattern}",
+                            insight=f"Avg return {avg_profit:.1f}% over {len(trades)} trades",
+                            confidence=min(0.9, 0.4 + success_rate * 0.5),
+                            success_rate=success_rate,
+                            supporting_count=len(trades)
+                        )
+                        results["intuitions_generated"] += 1
+
+                # Update entries to Layer 3
+                for entry in layer2_entries:
                     self.cursor.execute("""
                         UPDATE trading_journal
-                        SET compression_layer = 2, compressed_summary = ?,
-                            last_compressed_at = ?
+                        SET compression_layer = 3
                         WHERE id = ?
-                    """, (summary, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), entry['id']))
-                    results["compressed"] += 1
+                    """, (entry[0],))
+                    results["layer2_to_layer3"]["compressed"] += 1
 
-            self.conn.commit()
+                self.conn.commit()
+                logger.info(f"US: Compressed {results['layer2_to_layer3']['compressed']} entries from Layer 2 to Layer 3")
+                logger.info(f"US: Generated {results['intuitions_generated']} intuitions")
+
             return results
 
         except Exception as e:
-            log_openai_error(logger, e, "layer2 journal compression")
-            logger.error(f"Error in Layer 2 compression: {e}")
-            return {"processed": len(entries), "compressed": 0, "errors": [str(e)]}
-
-    async def _compress_to_layer3(self, entries: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Compress Layer 2 entries to Layer 3 and extract intuitions."""
-        try:
-            from cores.agents.memory_compressor_agent import create_memory_compressor_agent
-            from mcp_agent.workflows.llm.augmented_llm import RequestParams
-            from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
-
-            results = {"processed": len(entries), "compressed": 0, "intuitions_generated": 0, "errors": []}
-
-            compressor_agent = create_memory_compressor_agent(self.language)
-
-            async with compressor_agent:
-                llm = await compressor_agent.attach_llm(OpenAIAugmentedLLM)
-
-                entries_text = self._format_entries_for_intuition(entries)
-                prompt = self._build_layer3_prompt(entries_text, len(entries))
-
-                response = await llm.generate_str(
-                    message=prompt,
-                    request_params=RequestParams(model="gpt-5.4", reasoning_effort="none", maxTokens=8000)
-                )
-
-            compression_data = self._parse_response(response)
-
-            new_intuitions = compression_data.get('new_intuitions', [])
-            source_ids = [e['id'] for e in entries]
-            for intuition in new_intuitions:
-                if self._save_intuition(intuition, source_ids):
-                    results["intuitions_generated"] += 1
-
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            for entry in entries:
-                self.cursor.execute("""
-                    UPDATE trading_journal SET compression_layer = 3, last_compressed_at = ?
-                    WHERE id = ?
-                """, (now, entry['id']))
-                results["compressed"] += 1
-
-            self.conn.commit()
+            logger.error(f"Error during US compression: {e}")
             return results
 
-        except Exception as e:
-            log_openai_error(logger, e, "layer3 journal compression")
-            logger.error(f"Error in Layer 3 compression: {e}")
-            return {"processed": len(entries), "compressed": 0, "intuitions_generated": 0, "errors": [str(e)]}
+    def _fetch_us_hindsight_prices(self, tickers: List[str]) -> Dict[str, float]:
+        """Fetch current US prices for hindsight context during compression.
 
-    def _fetch_hindsight_prices(self, entries: List[Dict[str, Any]]) -> Dict[str, float]:
-        """Fetch current prices for tickers to add hindsight context during compression.
-
-        Uses pykrx batch API (single call for all KR tickers).
-        Returns empty dict on failure — compression proceeds without hindsight.
+        Uses yfinance batch download. Returns empty dict on failure.
         """
+        if not tickers:
+            return {}
         try:
-            from krx_data_client import get_nearest_business_day_in_a_week, get_market_ohlcv_by_ticker
-            import datetime as dt
-
-            today = dt.datetime.now().strftime("%Y%m%d")
-            trade_date = get_nearest_business_day_in_a_week(today, prev=True)
-            df = get_market_ohlcv_by_ticker(trade_date)
-
+            import yfinance as yf
+            data = yf.download(tickers, period="1d", progress=False)
             prices = {}
-            for entry in entries:
-                ticker = entry.get('ticker', '')
-                if ticker and ticker in df.index:
-                    prices[ticker] = float(df.loc[ticker, "Close"])
-            logger.info(f"Fetched hindsight prices for {len(prices)} tickers")
+            for ticker in tickers:
+                try:
+                    if len(tickers) == 1:
+                        prices[ticker] = float(data['Close'].iloc[-1])
+                    else:
+                        prices[ticker] = float(data['Close'][ticker].iloc[-1])
+                except Exception:
+                    pass
+            logger.info(f"US: Fetched hindsight prices for {len(prices)} tickers")
             return prices
         except Exception as e:
-            logger.warning(f"Failed to fetch hindsight prices: {e}")
+            logger.warning(f"US: Failed to fetch hindsight prices: {e}")
             return {}
 
-    def _format_entries_for_compression(self, entries: List[Dict[str, Any]], hindsight_prices: Dict[str, float] | None = None) -> str:
-        """Format entries for LLM compression."""
-        formatted = []
-        for entry in entries:
-            try:
-                lessons = json.loads(entry.get('lessons', '[]')) if entry.get('lessons') else []
-                lessons_str = ", ".join([l.get('action', '') for l in lessons[:3] if isinstance(l, dict)])
-            except:
-                lessons_str = ""
-
-            try:
-                tags = json.loads(entry.get('pattern_tags', '[]')) if entry.get('pattern_tags') else []
-                tags_str = ", ".join(tags)
-            except:
-                tags_str = ""
-
-            profit_emoji = "✅" if entry.get('profit_rate', 0) > 0 else "❌"
-            line = (
-                f"[ID:{entry['id']}] {entry.get('company_name', '')}({entry.get('ticker', '')}) "
-                f"{profit_emoji} {entry.get('profit_rate', 0):.1f}% | "
-                f"Summary: {entry.get('one_line_summary', 'N/A')} | Lessons: {lessons_str} | Tags: {tags_str}"
-            )
-
-            # Append hindsight evaluation if price data available
-            if hindsight_prices:
-                ticker = entry.get('ticker', '')
-                sell_price = entry.get('sell_price')
-                if ticker in hindsight_prices and sell_price:
-                    current = hindsight_prices[ticker]
-                    change = (current - sell_price) / sell_price * 100
-                    if change < -1:
-                        verdict = "잘 팔았음"
-                    elif change > 3:
-                        verdict = "좀 더 기다릴 수 있었음"
-                    else:
-                        verdict = "적절한 매도"
-                    line += f" | [후행평가: 매도가 {sell_price:,.0f}원 → 현재가 {current:,.0f}원 ({change:+.1f}%) - {verdict}]"
-
-            formatted.append(line)
-        return "\n".join(formatted)
-
-    def _format_entries_for_intuition(self, entries: List[Dict[str, Any]]) -> str:
-        """Format entries for intuition extraction."""
-        formatted = []
-        for entry in entries:
-            try:
-                scenario = json.loads(entry.get('buy_scenario', '{}')) if entry.get('buy_scenario') else {}
-                sector = scenario.get('sector', 'Unknown')
-            except:
-                sector = 'Unknown'
-
-            try:
-                tags = json.loads(entry.get('pattern_tags', '[]')) if entry.get('pattern_tags') else []
-                tags_str = ", ".join(tags)
-            except:
-                tags_str = ""
-
-            profit_emoji = "✅" if entry.get('profit_rate', 0) > 0 else "❌"
-            formatted.append(
-                f"[ID:{entry['id']}] {entry.get('company_name', '')} | Sector: {sector} | "
-                f"{profit_emoji} {entry.get('profit_rate', 0):.1f}% | "
-                f"Summary: {entry.get('compressed_summary', 'N/A')} | Tags: {tags_str}"
-            )
-        return "\n".join(formatted)
-
-    def _generate_simple_summary(self, entry: Dict[str, Any]) -> str:
-        """Generate simple summary without LLM."""
-        try:
-            scenario = json.loads(entry.get('buy_scenario', '{}')) if entry.get('buy_scenario') else {}
-            sector = scenario.get('sector', '')
-        except:
-            sector = ''
-
-        profit = entry.get('profit_rate', 0)
-        result = "Profit" if profit > 0 else "Loss"
-        summary = entry.get('one_line_summary', '')
-        if summary:
-            return summary[:100]
-        return f"{sector} {result} {abs(profit):.1f}%"
-
-    def _build_layer2_prompt(self, entries_text: str, count: int) -> str:
-        """Build prompt for Layer 2 compression."""
-        if self.language == "ko":
-            return f"""
-Compress these trading journal entries to Layer 2 (summary) format.
-
-## Entries to Compress ({count} items)
-{entries_text}
-
-## Requirements
-1. Summarize each item as "{{sector}} + {{trigger}} → {{action}} → {{result}}" format
-2. Group similar patterns
-3. Identify recurring lessons
-4. Calculate sector statistics
-
-Please respond in JSON.
-"""
-        else:
-            return f"""
-Compress these entries to Layer 2 (summary) format.
-
-## Entries ({count})
-{entries_text}
-
-## Requirements
-1. Summarize each as "{{sector}} + {{trigger}} → {{action}} → {{result}}"
-2. Group similar patterns
-3. Identify recurring lessons
-4. Calculate sector stats
-
-Respond in JSON.
-"""
-
-    def _build_layer3_prompt(self, entries_text: str, count: int) -> str:
-        """Build prompt for Layer 3 / intuition extraction."""
-        if self.language == "ko":
-            return f"""
-Extract intuitions from these compressed records.
-
-## Compressed Records ({count} items)
-{entries_text}
-
-## Requirements
-1. Extract intuitions from patterns appearing 2+ times
-2. Generate intuitions in "{{condition}} = {{principle}}" format
-3. Calculate confidence/success rate
-4. Categorize by sector/market/pattern
-5. Include both failure and success patterns
-
-Please respond in JSON.
-"""
-        else:
-            return f"""
-Extract intuitions from these compressed records.
-
-## Records ({count})
-{entries_text}
-
-## Requirements
-1. Extract from patterns appearing 2+ times
-2. Generate as "{{condition}} = {{principle}}"
-3. Calculate confidence/success rate
-4. Categorize by sector/market/pattern
-5. Include failure and success patterns
-
-Respond in JSON.
-"""
-
-    def _parse_response(self, response: str) -> Dict[str, Any]:
-        """Parse compression response."""
-        result = parse_llm_json(response, context='compression response')
-        if result is not None:
-            return result
-        logger.error(f"Compression response parse failed. Full response: {response}")
-        return {"compressed_entries": [], "new_intuitions": []}
-
-    def _save_intuition(self, intuition: Dict[str, Any], source_ids: List[int]) -> bool:
-        """Save intuition to database."""
+    def _save_intuition(
+        self,
+        category: str,
+        condition: str,
+        insight: str,
+        confidence: float,
+        success_rate: float,
+        supporting_count: int
+    ) -> bool:
+        """Save an intuition to database with market='US'."""
         try:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+            # Check for existing similar intuition
             self.cursor.execute("""
-                SELECT id FROM trading_intuitions
-                WHERE condition = ? AND insight = ?
-            """, (intuition.get('condition', ''), intuition.get('insight', '')))
+                SELECT id, supporting_count
+                FROM trading_intuitions
+                WHERE category = ? AND condition = ? AND is_active = 1 AND market = ?
+            """, (category, condition, self.MARKET))
 
             existing = self.cursor.fetchone()
+
             if existing:
+                # Update existing
                 self.cursor.execute("""
                     UPDATE trading_intuitions
-                    SET supporting_trades = supporting_trades + ?,
-                        confidence = (confidence + ?) / 2,
-                        success_rate = (success_rate + ?) / 2,
-                        source_journal_ids = ?,
+                    SET confidence = ?,
+                        success_rate = ?,
+                        supporting_count = supporting_count + ?,
                         last_validated_at = ?
                     WHERE id = ?
-                """, (
-                    intuition.get('supporting_trades', 1),
-                    intuition.get('confidence', 0.5),
-                    intuition.get('success_rate', 0.5),
-                    json.dumps(source_ids),
-                    now, existing[0]
-                ))
+                """, (confidence, success_rate, supporting_count, now, existing[0]))
             else:
+                # Insert new
                 self.cursor.execute("""
                     INSERT INTO trading_intuitions
-                    (category, subcategory, condition, insight, confidence,
-                     supporting_trades, success_rate, source_journal_ids,
-                     created_at, last_validated_at, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    intuition.get('category', 'pattern'),
-                    intuition.get('subcategory', ''),
-                    intuition.get('condition', ''),
-                    intuition.get('insight', ''),
-                    intuition.get('confidence', 0.5),
-                    intuition.get('supporting_trades', 1),
-                    intuition.get('success_rate', 0.5),
-                    json.dumps(source_ids), now, now, 1
-                ))
+                    (category, condition, insight, confidence, success_rate,
+                     supporting_count, created_at, is_active, market)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+                """, (category, condition, insight, confidence, success_rate,
+                      supporting_count, now, self.MARKET))
 
             self.conn.commit()
             return True
 
         except Exception as e:
-            logger.error(f"Error saving intuition: {e}")
+            logger.error(f"Error saving US intuition: {e}")
             return False
-
-    def get_stats(self) -> Dict[str, Any]:
-        """Get compression statistics."""
-        if not self.enable_journal:
-            return {"enabled": False}
-
-        try:
-            stats = {"enabled": True}
-
-            self.cursor.execute("""
-                SELECT compression_layer, COUNT(*) as count
-                FROM trading_journal GROUP BY compression_layer
-            """)
-            layer_counts = {}
-            for row in self.cursor.fetchall():
-                layer_counts[row[0]] = row[1]
-
-            stats['entries_by_layer'] = {
-                'layer1_detailed': layer_counts.get(1, 0),
-                'layer2_summarized': layer_counts.get(2, 0),
-                'layer3_compressed': layer_counts.get(3, 0)
-            }
-
-            self.cursor.execute("SELECT COUNT(*) FROM trading_intuitions WHERE is_active = 1")
-            stats['active_intuitions'] = self.cursor.fetchone()[0]
-
-            self.cursor.execute("""
-                SELECT MIN(trade_date) FROM trading_journal WHERE compression_layer = 1
-            """)
-            result = self.cursor.fetchone()
-            stats['oldest_uncompressed'] = result[0] if result and result[0] else None
-
-            self.cursor.execute("""
-                SELECT AVG(confidence), AVG(success_rate)
-                FROM trading_intuitions WHERE is_active = 1
-            """)
-            result = self.cursor.fetchone()
-            if result:
-                stats['avg_intuition_confidence'] = result[0] or 0
-                stats['avg_intuition_success_rate'] = result[1] or 0
-
-            return stats
-
-        except Exception as e:
-            logger.error(f"Error getting compression stats: {e}")
-            return {}
 
     def cleanup_stale_data(
         self,
         max_principles: int = 50,
         max_intuitions: int = 50,
-        min_confidence: float = 0.3,
         stale_days: int = 90,
-        archive_days: int = 365,
+        archive_layer3_days: int = 365,
         dry_run: bool = False
-    ) -> Dict[str, Any]:
-        """Clean up stale and low-quality data."""
-        if not self.enable_journal:
-            return {"skipped": True, "reason": "journal_disabled"}
+    ) -> Dict:
+        """
+        Clean up stale data for US market.
+
+        Args:
+            max_principles: Maximum active principles to keep
+            max_intuitions: Maximum active intuitions to keep
+            stale_days: Days without validation before deactivation
+            archive_layer3_days: Days after which to archive Layer 3 entries
+            dry_run: If True, only count what would be cleaned
+
+        Returns:
+            Dict with cleanup results
+        """
+        results = {
+            "principles_deactivated": 0,
+            "intuitions_deactivated": 0,
+            "journal_entries_archived": 0,
+            "low_confidence_principles": 0,
+            "stale_principles": 0,
+            "low_confidence_intuitions": 0,
+            "stale_intuitions": 0,
+            "old_layer3_entries": 0
+        }
 
         try:
-            stats = {"principles_deactivated": 0, "intuitions_deactivated": 0,
-                     "journal_entries_archived": 0, "dry_run": dry_run,
-                     "low_confidence_principles": 0, "stale_principles": 0,
-                     "excess_principles": 0, "low_confidence_intuitions": 0,
-                     "old_layer3_entries": 0}
+            stale_cutoff = (datetime.now() - timedelta(days=stale_days)).strftime("%Y-%m-%d")
+            archive_cutoff = (datetime.now() - timedelta(days=archive_layer3_days)).strftime("%Y-%m-%d")
 
-            now = datetime.now()
-            stale_cutoff = (now - timedelta(days=stale_days)).strftime("%Y-%m-%d")
-            archive_cutoff = (now - timedelta(days=archive_days)).strftime("%Y-%m-%d")
-
-            # Low confidence principles
+            # Count/deactivate low-confidence principles for US
             self.cursor.execute("""
                 SELECT COUNT(*) FROM trading_principles
-                WHERE is_active = 1 AND confidence < ?
-            """, (min_confidence,))
-            low_conf = self.cursor.fetchone()[0]
-            stats["low_confidence_principles"] = low_conf
+                WHERE is_active = 1 AND confidence < 0.3 AND market = ?
+            """, (self.MARKET,))
+            results["low_confidence_principles"] = self.cursor.fetchone()[0]
 
-            if not dry_run and low_conf > 0:
-                self.cursor.execute("""
-                    UPDATE trading_principles SET is_active = 0
-                    WHERE is_active = 1 AND confidence < ?
-                """, (min_confidence,))
-                stats["principles_deactivated"] += low_conf
-
-            # Stale principles
+            # Count/deactivate stale principles for US
             self.cursor.execute("""
                 SELECT COUNT(*) FROM trading_principles
-                WHERE is_active = 1
-                  AND (last_validated_at IS NULL OR last_validated_at < ?)
-                  AND created_at < ?
-            """, (stale_cutoff, stale_cutoff))
-            stale = self.cursor.fetchone()[0]
+                WHERE is_active = 1 AND (last_validated_at IS NULL OR last_validated_at < ?) AND market = ?
+            """, (stale_cutoff, self.MARKET))
+            results["stale_principles"] = self.cursor.fetchone()[0]
 
-            if not dry_run and stale > 0:
-                self.cursor.execute("""
-                    UPDATE trading_principles SET is_active = 0
-                    WHERE is_active = 1
-                      AND (last_validated_at IS NULL OR last_validated_at < ?)
-                      AND created_at < ?
-                """, (stale_cutoff, stale_cutoff))
-                stats["principles_deactivated"] += stale
-
-            # Enforce max_principles
-            self.cursor.execute("SELECT COUNT(*) FROM trading_principles WHERE is_active = 1")
-            active = self.cursor.fetchone()[0]
-            if active > max_principles:
-                excess = active - max_principles
-                if not dry_run:
-                    self.cursor.execute("""
-                        UPDATE trading_principles SET is_active = 0
-                        WHERE id IN (
-                            SELECT id FROM trading_principles WHERE is_active = 1
-                            ORDER BY confidence ASC LIMIT ?
-                        )
-                    """, (excess,))
-                    stats["principles_deactivated"] += excess
-
-            # Low confidence intuitions
+            # Count/deactivate low-confidence intuitions for US
             self.cursor.execute("""
                 SELECT COUNT(*) FROM trading_intuitions
-                WHERE is_active = 1 AND confidence < ?
-            """, (min_confidence,))
-            low_conf = self.cursor.fetchone()[0]
+                WHERE is_active = 1 AND confidence < 0.3 AND market = ?
+            """, (self.MARKET,))
+            results["low_confidence_intuitions"] = self.cursor.fetchone()[0]
 
-            if not dry_run and low_conf > 0:
-                self.cursor.execute("""
-                    UPDATE trading_intuitions SET is_active = 0
-                    WHERE is_active = 1 AND confidence < ?
-                """, (min_confidence,))
-                stats["intuitions_deactivated"] += low_conf
+            # Count/deactivate stale intuitions for US
+            self.cursor.execute("""
+                SELECT COUNT(*) FROM trading_intuitions
+                WHERE is_active = 1 AND (last_validated_at IS NULL OR last_validated_at < ?) AND market = ?
+            """, (stale_cutoff, self.MARKET))
+            results["stale_intuitions"] = self.cursor.fetchone()[0]
 
-            # Archive old Layer 3
+            # Count old Layer 3 entries for US
             self.cursor.execute("""
                 SELECT COUNT(*) FROM trading_journal
-                WHERE compression_layer = 3 AND trade_date < ?
-            """, (archive_cutoff,))
-            old = self.cursor.fetchone()[0]
-
-            if not dry_run and old > 0:
-                self.cursor.execute("""
-                    DELETE FROM trading_journal
-                    WHERE compression_layer = 3 AND trade_date < ?
-                """, (archive_cutoff,))
-                stats["journal_entries_archived"] = old
+                WHERE compression_layer = 3 AND trade_date < ? AND market = ?
+            """, (archive_cutoff, self.MARKET))
+            results["old_layer3_entries"] = self.cursor.fetchone()[0]
 
             if not dry_run:
+                # Deactivate low-confidence principles
+                self.cursor.execute("""
+                    UPDATE trading_principles
+                    SET is_active = 0
+                    WHERE is_active = 1 AND confidence < 0.3 AND market = ?
+                """, (self.MARKET,))
+                results["principles_deactivated"] += self.cursor.rowcount
+
+                # Deactivate stale principles
+                self.cursor.execute("""
+                    UPDATE trading_principles
+                    SET is_active = 0
+                    WHERE is_active = 1 AND (last_validated_at IS NULL OR last_validated_at < ?) AND market = ?
+                """, (stale_cutoff, self.MARKET))
+                results["principles_deactivated"] += self.cursor.rowcount
+
+                # Deactivate low-confidence intuitions
+                self.cursor.execute("""
+                    UPDATE trading_intuitions
+                    SET is_active = 0
+                    WHERE is_active = 1 AND confidence < 0.3 AND market = ?
+                """, (self.MARKET,))
+                results["intuitions_deactivated"] += self.cursor.rowcount
+
+                # Deactivate stale intuitions
+                self.cursor.execute("""
+                    UPDATE trading_intuitions
+                    SET is_active = 0
+                    WHERE is_active = 1 AND (last_validated_at IS NULL OR last_validated_at < ?) AND market = ?
+                """, (stale_cutoff, self.MARKET))
+                results["intuitions_deactivated"] += self.cursor.rowcount
+
+                # Archive (delete) old Layer 3 entries
+                self.cursor.execute("""
+                    DELETE FROM trading_journal
+                    WHERE compression_layer = 3 AND trade_date < ? AND market = ?
+                """, (archive_cutoff, self.MARKET))
+                results["journal_entries_archived"] = self.cursor.rowcount
+
+                # Enforce max limits for principles
+                self.cursor.execute("""
+                    SELECT COUNT(*) FROM trading_principles
+                    WHERE is_active = 1 AND market = ?
+                """, (self.MARKET,))
+                active_principles = self.cursor.fetchone()[0]
+
+                if active_principles > max_principles:
+                    excess = active_principles - max_principles
+                    self.cursor.execute("""
+                        UPDATE trading_principles
+                        SET is_active = 0
+                        WHERE id IN (
+                            SELECT id FROM trading_principles
+                            WHERE is_active = 1 AND market = ?
+                            ORDER BY confidence ASC, supporting_trades ASC
+                            LIMIT ?
+                        )
+                    """, (self.MARKET, excess))
+                    results["principles_deactivated"] += self.cursor.rowcount
+
+                # Enforce max limits for intuitions
+                self.cursor.execute("""
+                    SELECT COUNT(*) FROM trading_intuitions
+                    WHERE is_active = 1 AND market = ?
+                """, (self.MARKET,))
+                active_intuitions = self.cursor.fetchone()[0]
+
+                if active_intuitions > max_intuitions:
+                    excess = active_intuitions - max_intuitions
+                    self.cursor.execute("""
+                        UPDATE trading_intuitions
+                        SET is_active = 0
+                        WHERE id IN (
+                            SELECT id FROM trading_intuitions
+                            WHERE is_active = 1 AND market = ?
+                            ORDER BY confidence ASC, supporting_count ASC
+                            LIMIT ?
+                        )
+                    """, (self.MARKET, excess))
+                    results["intuitions_deactivated"] += self.cursor.rowcount
+
                 self.conn.commit()
 
-            logger.info(
-                f"Cleanup {'(dry-run) ' if dry_run else ''}complete: "
-                f"principles={stats['principles_deactivated']}, "
-                f"intuitions={stats['intuitions_deactivated']}, "
-                f"archived={stats['journal_entries_archived']}"
-            )
-
-            return stats
+            return results
 
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
-            return {"error": str(e)}
+            logger.error(f"Error during US cleanup: {e}")
+            return results

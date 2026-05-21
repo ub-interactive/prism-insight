@@ -10,7 +10,7 @@ Usage:
     python demo.py MSFT               # Analyze Microsoft
     python demo.py NVDA "NVIDIA Corp" # Analyze with custom company name
 
-Reports are saved to: prism-us/pdf_reports/
+Reports are saved to: pdf_reports/
 """
 import asyncio
 import argparse
@@ -23,15 +23,7 @@ from pathlib import Path
 # Add project root to path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
-sys.path.insert(0, str(project_root / "prism-us"))
-
-# Import us_analysis module dynamically (prism-us has hyphen in name)
-import importlib.util
-_us_analysis_path = project_root / "prism-us" / "cores" / "us_analysis.py"
-_spec = importlib.util.spec_from_file_location("us_analysis", _us_analysis_path)
-us_analysis_module = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(us_analysis_module)
-analyze_us_stock = us_analysis_module.analyze_us_stock
+from cores.analysis import analyze_us_stock
 
 
 def check_perplexity_configured() -> bool:

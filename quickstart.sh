@@ -9,7 +9,7 @@
 #   2. Configure your API key
 #   3. Run US stock analysis (no Telegram required)
 #
-# Reports will be saved to prism-us/pdf_reports/
+# Reports will be saved to pdf_reports/
 
 set -e
 
@@ -92,7 +92,7 @@ python3 demo.py AAPL
 echo ""
 echo "Next steps:"
 echo "  • Try analyzing other stocks: python3 demo.py MSFT"
-echo "  • Run full pipeline: python3 prism-us/us_stock_analysis_orchestrator.py --mode morning --no-telegram"
+echo "  • Run full pipeline: python3 stock_analysis_orchestrator.py --mode morning --no-telegram"
 echo "  • Set up Telegram for real-time alerts (see docs/SETUP.md)"
 echo ""
 echo -e "⭐ ${YELLOW}If this helped you, please star us on GitHub!${NC}"

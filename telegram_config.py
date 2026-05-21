@@ -179,13 +179,13 @@ def is_openai_quota_error(error: Exception) -> bool:
     )
 
 
-async def send_openai_quota_alert(telegram_config: "TelegramConfig", market: str = "KR"):
+async def send_openai_quota_alert(telegram_config: "TelegramConfig", market: str = "US"):
     """
     Send a Telegram alert when OpenAI API quota is exceeded.
 
     Args:
         telegram_config: TelegramConfig instance
-        market: Market identifier ("KR" or "US")
+        market: Market identifier ("US")
     """
     if not telegram_config or not telegram_config.use_telegram:
         return

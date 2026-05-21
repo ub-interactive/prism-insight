@@ -101,9 +101,9 @@ PDF_REPORTS_DIR = Path("pdf_reports")
 PDF_REPORTS_DIR.mkdir(exist_ok=True)  # PDF reports directory
 
 # US stock reports directory
-US_REPORTS_DIR = Path("prism-us/reports")
+US_REPORTS_DIR = Path("reports")
 US_REPORTS_DIR.mkdir(exist_ok=True, parents=True)
-US_PDF_REPORTS_DIR = Path("prism-us/pdf_reports")
+US_PDF_REPORTS_DIR = Path("pdf_reports")
 US_PDF_REPORTS_DIR.mkdir(exist_ok=True, parents=True)
 
 
@@ -222,10 +222,7 @@ def generate_us_report_response_sync(ticker: str, company_name: str) -> str:
 
         # Set project root directory (absolute path)
         project_root = os.path.dirname(os.path.abspath(__file__))
-        prism_us_dir = os.path.join(project_root, 'prism-us')
-
         # Run US analysis in separate process
-        # Uses analyze_us_stock function from prism-us/cores/us_analysis.py
         cmd = [
             sys.executable,  # 현재 Python 인터프리터
             "-c",
@@ -237,11 +234,9 @@ import os
 
 # Use absolute paths (Docker compatibility)
 project_root = r'{project_root}'
-prism_us_dir = r'{prism_us_dir}'
-sys.path.insert(0, prism_us_dir)
 os.chdir(project_root)
 
-from cores.us_analysis import analyze_us_stock
+from cores.analysis import analyze_us_stock
 from check_market_day import get_reference_date
 
 async def run():
@@ -716,7 +711,7 @@ async def generate_follow_up_response(ticker, ticker_name, conversation_context,
                         - 새로운 정보가 필요한 경우에만 도구를 사용
                         - 도구 호출 과정을 사용자에게 노출하지 마세요
                         """,
-            server_names=["perplexity", "kospi_kosdaq"]
+            server_names=["perplexity", "yahoo_finance"]
         )
 
         # LLM 연결
@@ -907,7 +902,7 @@ async def generate_evaluation_response(ticker, ticker_name, avg_price, period, t
                           도구 호출은 내부 처리 과정이며 최종 응답에서는 도구 사용 결과만 자연스럽게 통합하여 제시해야 합니다.
                         {memory_section}
                         """,
-            server_names=["perplexity", "kospi_kosdaq", "time"]
+            server_names=["perplexity", "yahoo_finance", "time"]
         )
 
         # LLM 연결
@@ -1311,7 +1306,7 @@ async def generate_journal_conversation_response(
 
 ## 주식 데이터 조회 (필요한 경우에만)
 - perplexity_ask: 최신 뉴스나 정보 검색
-- kospi_kosdaq: 한국 주식 정보 (get_stock_ohlcv, get_stock_trading_volume)
+- yahoo_finance: US stock data (price, holders, recommendations)
 사용자가 특정 종목에 대해 물어보면 도구를 사용해 최신 정보를 제공할 수 있습니다.
 
 ## 응답 가이드
@@ -1327,7 +1322,7 @@ async def generate_journal_conversation_response(
 - "나에 대해 알아?" 같은 질문에는 기록된 내용을 바탕으로 답하세요
 - 사용자를 존중하고 공감하는 태도를 유지하세요
 """,
-            server_names=["perplexity", "kospi_kosdaq"]
+            server_names=["perplexity", "yahoo_finance"]
         )
 
         # Connect to LLM
@@ -1448,19 +1443,19 @@ async def generate_firecrawl_search_response(search_query: str, analysis_prompt:
 
 # MCP server config per Firecrawl command type
 _FIRECRAWL_CMD_SERVERS = {
-    "signal":    ["perplexity", "kospi_kosdaq"],
+    "signal": ["perplexity", "yahoo_finance"],
     "us_signal": ["perplexity", "yahoo_finance"],
-    "theme":     ["perplexity", "kospi_kosdaq"],
-    "us_theme":  ["perplexity", "yahoo_finance"],
-    "ask":       ["perplexity", "kospi_kosdaq", "yahoo_finance"],
+    "theme": ["perplexity", "yahoo_finance"],
+    "us_theme": ["perplexity", "yahoo_finance"],
+    "ask": ["perplexity", "yahoo_finance"],
 }
 
 _FIRECRAWL_CMD_PERSONA = {
-    "signal":    "한국 주식시장 이벤트/뉴스 임팩트 분석 전문가",
+    "signal": "미국 주식시장 이벤트/뉴스 임팩트 분석 전문가",
     "us_signal": "미국 주식시장 이벤트/뉴스 임팩트 분석 전문가",
-    "theme":     "한국 테마/섹터 건강도 진단 전문가",
-    "us_theme":  "미국 테마/섹터 건강도 진단 전문가",
-    "ask":       "투자 리서처",
+    "theme": "미국 테마/섹터 건강도 진단 전문가",
+    "us_theme": "미국 테마/섹터 건강도 진단 전문가",
+    "ask": "미국 주식 투자 리서처",
 }
 
 
@@ -1491,9 +1486,6 @@ async def generate_firecrawl_followup_response(
 
         _data_tool_guide = (
             "- 미국 종목 주가·재무·거래량 조회는 yahoo_finance 도구를 우선 사용하세요.\n"
-            "- 최신 뉴스·이벤트 맥락은 perplexity 도구로 보완하세요.\n"
-        ) if command in ("us_signal", "us_theme", "ask") else (
-            "- 한국 종목 주가·거래량 조회는 kospi_kosdaq 도구를 우선 사용하세요.\n"
             "- 최신 뉴스·이벤트 맥락은 perplexity 도구로 보완하세요.\n"
         )
         agent = Agent(

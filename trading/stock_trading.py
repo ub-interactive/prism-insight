@@ -862,7 +862,7 @@ class USStockTrading:
         Queue a reserved order for later batch execution.
 
         When KIS API reserved order window is closed (before 10:00 KST),
-        saves the order to us_pending_orders table for processing by
+        saves the order to pending_orders table for processing by
         us_pending_order_batch.py (cron at 10:05 KST).
 
         Args:
@@ -885,7 +885,7 @@ class USStockTrading:
 
             # Ensure table exists
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS us_pending_orders (
+                CREATE TABLE IF NOT EXISTS pending_orders (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     account_key TEXT NOT NULL,
                     account_name TEXT,
@@ -908,7 +908,7 @@ class USStockTrading:
 
             now_kst = datetime.datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')
             cursor.execute(
-                """INSERT INTO us_pending_orders
+                """INSERT INTO pending_orders
                    (account_key, account_name, product_code, mode, ticker, order_type, limit_price, buy_amount, exchange, status, created_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
                 (

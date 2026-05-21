@@ -1,8 +1,8 @@
 """
-Trading Journal Manager
+US Trading Journal Manager
 
-Handles trading journal creation, principle extraction, and context retrieval.
-Extracted from stock_tracking_agent.py for LLM context efficiency.
+Handles trading journal creation, principle extraction, and context retrieval for US stocks.
+Based on tracking/journal.py but adapted for US market with market='US' filter.
 """
 
 import json
@@ -10,25 +10,36 @@ import logging
 import re
 import traceback
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
-from cores.openai_error_logging import log_openai_error
-from cores.utils import parse_llm_json
 
 logger = logging.getLogger(__name__)
 
 
-class JournalManager:
-    """Manages trading journal operations."""
+# =============================================================================
+# Helper function to import modules from main project cores/ (avoid namespace collision)
+# =============================================================================
+from cores.agents.trading_journal_agent import create_trading_journal_agent
+from cores.model_config import get_configured_model, get_optional_reasoning_effort
+from cores.utils import parse_llm_json
+
+
+US_JOURNAL_MODEL = get_configured_model("us_journal", "gpt-5.4-mini")
+
+
+class USJournalManager:
+    """Manages trading journal operations for US stocks."""
+
+    MARKET = "US"  # Market identifier for shared tables
 
     def __init__(self, cursor, conn, language: str = "ko", enable_journal: bool = False):
         """
-        Initialize JournalManager.
+        Initialize USJournalManager.
 
         Args:
             cursor: SQLite cursor
             conn: SQLite connection
-            language: Language code (ko/en)
+            language: Language code (en/ko)
             enable_journal: Whether journal feature is enabled
         """
         self.cursor = cursor
@@ -49,7 +60,7 @@ class JournalManager:
 
         Args:
             stock_data: Original stock data including buy info
-            sell_price: Price at which the stock was sold
+            sell_price: Price at which the stock was sold (USD)
             profit_rate: Realized profit/loss percentage
             holding_days: Number of days the stock was held
             sell_reason: Reason for selling
@@ -62,7 +73,6 @@ class JournalManager:
             return False
 
         try:
-            from cores.agents.trading_journal_agent import create_trading_journal_agent
             from mcp_agent.workflows.llm.augmented_llm import RequestParams
             from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
 
@@ -72,7 +82,7 @@ class JournalManager:
             buy_date = stock_data.get('buy_date', '')
             scenario_json = stock_data.get('scenario', '{}')
 
-            logger.info(f"Creating journal entry for {ticker}({company_name})")
+            logger.info(f"Creating US journal entry for {ticker}({company_name})")
 
             # Parse scenario
             scenario_data = {}
@@ -82,8 +92,8 @@ class JournalManager:
                 except:
                     scenario_data = {}
 
-            # Create journal agent
-            journal_agent = create_trading_journal_agent(self.language)
+            # Create journal agent (uses yahoo_finance instead of kospi_kosdaq)
+            journal_agent = create_trading_journal_agent(self.language, market="US")
 
             async with journal_agent:
                 llm = await journal_agent.attach_llm(OpenAIAugmentedLLM)
@@ -95,9 +105,13 @@ class JournalManager:
 
                 response = await llm.generate_str(
                     message=prompt,
-                    request_params=RequestParams(model="gpt-5.4-mini", reasoning_effort="none", maxTokens=16000)
+                    request_params=RequestParams(
+                        model=US_JOURNAL_MODEL,
+                        maxTokens=16000,
+                        **get_optional_reasoning_effort(US_JOURNAL_MODEL, "none"),
+                    )
                 )
-                logger.info(f"Journal agent response received: {len(response)} chars")
+                logger.info(f"US Journal agent response received: {len(response)} chars")
 
             # Parse and save
             journal_data = self._parse_response(response)
@@ -107,19 +121,22 @@ class JournalManager:
                 holding_days, journal_data
             )
 
-            logger.info(f"Journal entry created for {ticker}: {journal_data.get('one_line_summary', '')}")
+            logger.info(f"US Journal entry created for {ticker}: {journal_data.get('one_line_summary', '')}")
 
             # Extract principles
             lessons = journal_data.get('lessons', [])
             if lessons and journal_id > 0:
                 extracted_count = self.extract_principles(lessons, journal_id)
-                logger.info(f"Extracted {extracted_count} principles from journal {journal_id}")
+                logger.info(f"Extracted {extracted_count} principles from US journal {journal_id}")
 
             return True
 
+        except ImportError as ie:
+            # trading_journal_agent may not exist yet - gracefully handle
+            logger.warning(f"Trading journal agent not available for US market: {ie}")
+            return False
         except Exception as e:
-            log_openai_error(logger, e, f"journal entry creation for {stock_data.get('ticker', '')}")
-            logger.error(f"Error creating journal entry: {str(e)}")
+            logger.error(f"Error creating US journal entry: {str(e)}")
             logger.error(traceback.format_exc())
             return False
 
@@ -131,58 +148,58 @@ class JournalManager:
         """Build prompt for retrospective analysis."""
         if self.language == "ko":
             return f"""
-Please review the following completed trade:
+Please review the following completed US stock trade:
 
 ## Buy Information
 - Stock: {company_name}({ticker})
-- Buy Price: {buy_price:,.0f} KRW
+- Buy Price: ${buy_price:,.2f}
 - Buy Date: {buy_date}
 - Buy Scenario:
   - Buy Score: {scenario_data.get('buy_score', 'N/A')}
-  - Rationale: {scenario_data.get('rationale', 'N/A')}
-  - Target Price: {scenario_data.get('target_price', 'N/A')} KRW
-  - Stop Loss: {scenario_data.get('stop_loss', 'N/A')} KRW
+  - Investment Rationale: {scenario_data.get('rationale', 'N/A')}
+  - Target Price: ${scenario_data.get('target_price', 'N/A')}
+  - Stop Loss: ${scenario_data.get('stop_loss', 'N/A')}
   - Investment Period: {scenario_data.get('investment_period', 'N/A')}
   - Sector: {scenario_data.get('sector', 'N/A')}
   - Market Condition: {scenario_data.get('market_condition', 'N/A')}
 
 ## Sell Information
-- Sell Price: {sell_price:,.0f} KRW
-- Profit Rate: {profit_rate:.2f}%
+- Sell Price: ${sell_price:,.2f}
+- Return: {profit_rate:.2f}%
 - Holding Days: {holding_days} days
 - Sell Reason: {sell_reason}
 
 ## Analysis Request
-1. Use kospi_kosdaq tools to check current market conditions and stock trends
-2. Compare and analyze buy-time vs sell-time situations
+1. Use yahoo_finance tool to check current market conditions and recent stock trends
+2. Compare and analyze buy and sell timing situations
 3. Evaluate decision appropriateness and extract lessons
 4. Assign pattern tags
 """
         else:
             return f"""
-Please review the following completed trade:
+Please review the following completed US stock trade:
 
 ## Buy Information
 - Stock: {company_name}({ticker})
-- Buy Price: {buy_price:,.0f} KRW
+- Buy Price: ${buy_price:,.2f}
 - Buy Date: {buy_date}
 - Buy Scenario:
   - Buy Score: {scenario_data.get('buy_score', 'N/A')}
   - Rationale: {scenario_data.get('rationale', 'N/A')}
-  - Target Price: {scenario_data.get('target_price', 'N/A')} KRW
-  - Stop Loss: {scenario_data.get('stop_loss', 'N/A')} KRW
+  - Target Price: ${scenario_data.get('target_price', 'N/A')}
+  - Stop Loss: ${scenario_data.get('stop_loss', 'N/A')}
   - Investment Period: {scenario_data.get('investment_period', 'N/A')}
   - Sector: {scenario_data.get('sector', 'N/A')}
   - Market Condition: {scenario_data.get('market_condition', 'N/A')}
 
 ## Sell Information
-- Sell Price: {sell_price:,.0f} KRW
+- Sell Price: ${sell_price:,.2f}
 - Profit Rate: {profit_rate:.2f}%
 - Holding Days: {holding_days} days
 - Sell Reason: {sell_reason}
 
 ## Analysis Request
-1. Use kospi_kosdaq tools to check current market and stock trends
+1. Use yahoo_finance tools to check current market and stock trends
 2. Compare buy time vs sell time situations
 3. Evaluate decisions and extract lessons
 4. Assign pattern tags
@@ -190,10 +207,10 @@ Please review the following completed trade:
 
     def _parse_response(self, response: str) -> Dict[str, Any]:
         """Parse journal agent response into structured data."""
-        result = parse_llm_json(response, context='journal response')
+        result = parse_llm_json(response, context='US journal response')
         if result is not None:
             return result
-        logger.error(f"Journal response parse failed. Full response: {response}")
+        logger.error(f"US journal response parse failed. Full response: {response}")
         return {
             "situation_analysis": {"raw_response": response[:500]},
             "judgment_evaluation": {},
@@ -208,7 +225,7 @@ Please review the following completed trade:
         scenario_json: str, scenario_data: Dict, sell_price: float, sell_reason: str,
         profit_rate: float, holding_days: int, journal_data: Dict
     ) -> int:
-        """Save journal entry to database."""
+        """Save journal entry to database with market='US'."""
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.cursor.execute(
             """
@@ -217,8 +234,8 @@ Please review the following completed trade:
              buy_price, buy_date, buy_scenario, buy_market_context,
              sell_price, sell_reason, profit_rate, holding_days,
              situation_analysis, judgment_evaluation, lessons, pattern_tags,
-             one_line_summary, confidence_score, compression_layer, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             one_line_summary, confidence_score, compression_layer, created_at, market)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 ticker, company_name, now, 'sell',
@@ -231,7 +248,7 @@ Please review the following completed trade:
                 json.dumps(journal_data.get('pattern_tags', []), ensure_ascii=False),
                 journal_data.get('one_line_summary', ''),
                 journal_data.get('confidence_score', 0.5),
-                1, now
+                1, now, self.MARKET
             )
         )
         self.conn.commit()
@@ -264,15 +281,15 @@ Please review the following completed trade:
         self, scope: str, scope_context: Optional[str], condition: str,
         action: str, reason: str, priority: str, source_journal_id: int
     ) -> bool:
-        """Save a principle to database."""
+        """Save a principle to database with market='US'."""
         try:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             self.cursor.execute("""
                 SELECT id, supporting_trades, source_journal_ids
                 FROM trading_principles
-                WHERE condition = ? AND action = ? AND is_active = 1
-            """, (condition, action))
+                WHERE condition = ? AND action = ? AND is_active = 1 AND market = ?
+            """, (condition, action, self.MARKET))
 
             existing = self.cursor.fetchone()
 
@@ -292,23 +309,23 @@ Please review the following completed trade:
                 self.cursor.execute("""
                     INSERT INTO trading_principles
                     (scope, scope_context, condition, action, reason, priority,
-                     confidence, supporting_trades, source_journal_ids, created_at, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     confidence, supporting_trades, source_journal_ids, created_at, is_active, market)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (scope, scope_context, condition, action, reason, priority,
-                      0.5, 1, str(source_journal_id), now, 1))
+                      0.5, 1, str(source_journal_id), now, 1, self.MARKET))
 
             self.conn.commit()
             return True
 
         except Exception as e:
-            logger.error(f"Error saving principle: {e}")
+            logger.error(f"Error saving US principle: {e}")
             return False
 
     def get_performance_tracker_stats(self, trigger_type: str = None) -> Dict[str, Any]:
         """
         Get performance statistics from analysis_performance_tracker.
 
-        Queries actual 7/14/30-day returns for all analyzed stocks (both traded and watched)
+        Queries actual 7/14/30-day returns for all analyzed US stocks (both traded and watched)
         to provide ground-truth performance data for buy decisions.
 
         Args:
@@ -331,10 +348,10 @@ Please review the following completed trade:
                 self.cursor.execute("""
                     SELECT
                         COUNT(*) as total,
-                        SUM(CASE WHEN tracked_30d_return > 0 THEN 1 ELSE 0 END) as wins,
-                        AVG(tracked_7d_return) as avg_7d,
-                        AVG(tracked_14d_return) as avg_14d,
-                        AVG(tracked_30d_return) as avg_30d
+                        SUM(CASE WHEN return_30d > 0 THEN 1 ELSE 0 END) as wins,
+                        AVG(return_7d) as avg_7d,
+                        AVG(return_14d) as avg_14d,
+                        AVG(return_30d) as avg_30d
                     FROM analysis_performance_tracker
                     WHERE trigger_type = ? AND tracking_status = 'completed'
                 """, (trigger_type,))
@@ -353,11 +370,11 @@ Please review the following completed trade:
             self.cursor.execute("""
                 SELECT
                     COUNT(*) as total_skipped,
-                    SUM(CASE WHEN tracked_30d_return > 5 THEN 1 ELSE 0 END) as missed_gains,
-                    AVG(CASE WHEN tracked_30d_return > 5 THEN tracked_30d_return END) as avg_missed_gain
+                    SUM(CASE WHEN return_30d > 5 THEN 1 ELSE 0 END) as missed_gains,
+                    AVG(CASE WHEN return_30d > 5 THEN return_30d END) as avg_missed_gain
                 FROM analysis_performance_tracker
                 WHERE was_traded = 0 AND tracking_status = 'completed'
-                    AND tracked_30d_return IS NOT NULL
+                    AND return_30d IS NOT NULL
             """)
             row = self.cursor.fetchone()
             if row and row[0] > 0:
@@ -372,9 +389,9 @@ Please review the following completed trade:
                 SELECT
                     was_traded,
                     COUNT(*) as count,
-                    AVG(tracked_30d_return) as avg_30d
+                    AVG(return_30d) as avg_30d
                 FROM analysis_performance_tracker
-                WHERE tracking_status = 'completed' AND tracked_30d_return IS NOT NULL
+                WHERE tracking_status = 'completed' AND return_30d IS NOT NULL
                 GROUP BY was_traded
             """)
             traded_vs_watched = {}
@@ -392,10 +409,10 @@ Please review the following completed trade:
                 SELECT
                     trigger_type,
                     COUNT(*) as total,
-                    SUM(CASE WHEN tracked_30d_return > 0 THEN 1 ELSE 0 END) as wins,
-                    AVG(tracked_30d_return) as avg_30d
+                    SUM(CASE WHEN return_30d > 0 THEN 1 ELSE 0 END) as wins,
+                    AVG(return_30d) as avg_30d
                 FROM analysis_performance_tracker
-                WHERE tracking_status = 'completed' AND tracked_30d_return IS NOT NULL
+                WHERE tracking_status = 'completed' AND return_30d IS NOT NULL
                     AND trigger_type IS NOT NULL
                 GROUP BY trigger_type
                 HAVING total >= 3
@@ -413,7 +430,7 @@ Please review the following completed trade:
                 stats['trigger_ranking'] = trigger_ranking
 
         except Exception as e:
-            logger.warning(f"Failed to get performance tracker stats: {e}")
+            logger.warning(f"Failed to get US performance tracker stats: {e}")
 
         return stats
 
@@ -465,25 +482,24 @@ Please review the following completed trade:
             if perf_context:
                 context_parts.extend(perf_context)
 
-            # Universal principles
+            # Universal principles for US market
             principles = self.get_universal_principles()
             if principles:
-                context_parts.append("#### 🎯 Core Trading Principles (Applied to All Trades)")
+                context_parts.append("#### 🎯 Core Trading Principles (Applied to all trades)")
                 context_parts.extend(principles)
                 context_parts.append("")
 
-            # Same stock history
+            # Same stock history for US
             self.cursor.execute("""
                 SELECT ticker, company_name, profit_rate, holding_days,
-                       one_line_summary, lessons, pattern_tags, trade_date,
-                       sell_reason, situation_analysis, judgment_evaluation
-                FROM trading_journal WHERE ticker = ?
+                       one_line_summary, lessons, pattern_tags, trade_date
+                FROM trading_journal WHERE ticker = ? AND market = ?
                 ORDER BY trade_date DESC LIMIT 3
-            """, (ticker,))
+            """, (ticker, self.MARKET))
 
             for entry in self.cursor.fetchall():
-                if not context_parts or context_parts[-1] != "#### Same Stock Trade History":
-                    context_parts.append("#### Same Stock Trade History")
+                if not context_parts or "Past Trading History" not in context_parts[-1]:
+                    context_parts.append("#### Same Stock Past Trading History")
 
                 lessons_str = ""
                 try:
@@ -498,47 +514,18 @@ Please review the following completed trade:
                 profit_emoji = "✅" if entry[2] > 0 else "❌"
                 context_parts.append(
                     f"- [{entry[7][:10]}] {profit_emoji} Return {entry[2]:.1f}% "
-                    f"(held {entry[3]} days) - {entry[4]}{lessons_str}"
+                    f"(Held {entry[3]} days) - {entry[4]}{lessons_str}"
                 )
-
-                # Enrich with sell context so the buy LLM understands WHY the stock was exited
-                sell_reason = entry[8] or ""
-                if sell_reason:
-                    context_parts.append(f"  - 매도 사유: {sell_reason}")
-
-                try:
-                    situation = json.loads(entry[9]) if entry[9] else {}
-                    sell_ctx = situation.get("sell_context_summary", "")
-                    if sell_ctx:
-                        context_parts.append(f"  - 매도 시 상황: {sell_ctx}")
-                    key_changes = situation.get("key_changes", [])
-                    if key_changes:
-                        changes_str = " / ".join(str(c) for c in key_changes[:3])
-                        context_parts.append(f"  - 핵심 변화: {changes_str}")
-                except Exception:
-                    pass
-
-                try:
-                    judgment = json.loads(entry[10]) if entry[10] else {}
-                    sell_quality_reason = judgment.get("sell_quality_reason", "")
-                    if sell_quality_reason:
-                        context_parts.append(f"  - 매도 판단: {sell_quality_reason}")
-                    missed = judgment.get("missed_signals", [])
-                    if missed:
-                        missed_str = " / ".join(str(m) for m in missed[:2])
-                        context_parts.append(f"  - 놓친 신호: {missed_str}")
-                except Exception:
-                    pass
 
             if context_parts and context_parts[-1].startswith("-"):
                 context_parts.append("")
 
-            # Intuitions
+            # Intuitions for US market
             self.cursor.execute("""
                 SELECT category, condition, insight, confidence
-                FROM trading_intuitions WHERE is_active = 1
+                FROM trading_intuitions WHERE is_active = 1 AND market = ?
                 ORDER BY confidence DESC LIMIT 10
-            """)
+            """, (self.MARKET,))
 
             intuitions = self.cursor.fetchall()
             if intuitions:
@@ -555,11 +542,11 @@ Please review the following completed trade:
             return ""
 
         except Exception as e:
-            logger.warning(f"Failed to get journal context: {e}")
+            logger.warning(f"Failed to get US journal context: {e}")
             return ""
 
     def get_universal_principles(self, limit: int = 5) -> List[str]:
-        """Retrieve universal trading principles.
+        """Retrieve universal trading principles for US market.
 
         Only includes principles with supporting_trades >= 2 to avoid injecting
         unverified rules into LLM prompts. Limited to top 5 to reduce token usage.
@@ -568,11 +555,11 @@ Please review the following completed trade:
             self.cursor.execute("""
                 SELECT condition, action, reason, priority, confidence, supporting_trades
                 FROM trading_principles
-                WHERE is_active = 1 AND scope = 'universal'
+                WHERE is_active = 1 AND scope = 'universal' AND market = ?
                   AND supporting_trades >= 2
                 ORDER BY priority DESC, confidence DESC
                 LIMIT ?
-            """, (limit,))
+            """, (self.MARKET, limit))
 
             result = []
             for p in self.cursor.fetchall():
@@ -588,46 +575,46 @@ Please review the following completed trade:
             return result
 
         except Exception as e:
-            logger.warning(f"Failed to get universal principles: {e}")
+            logger.warning(f"Failed to get US universal principles: {e}")
             return []
 
     def get_score_adjustment(self, ticker: str, sector: str = None, trigger_type: str = None) -> Tuple[int, List[str]]:
-        """Calculate score adjustment based on past experiences and performance tracker data."""
+        """Calculate score adjustment based on past experiences and performance tracker data for US stocks."""
         try:
             adjustment = 0
             reasons = []
 
-            # Same stock history (from journal)
+            # Same stock history for US
             self.cursor.execute("""
                 SELECT profit_rate FROM trading_journal
-                WHERE ticker = ? ORDER BY trade_date DESC LIMIT 3
-            """, (ticker,))
+                WHERE ticker = ? AND market = ? ORDER BY trade_date DESC LIMIT 3
+            """, (ticker, self.MARKET))
 
             same_stock = self.cursor.fetchall()
             if same_stock:
                 avg_profit = sum(s[0] for s in same_stock) / len(same_stock)
                 if avg_profit < -5:
                     adjustment -= 1
-                    reasons.append(f"Same stock historical avg loss {avg_profit:.1f}%")
+                    reasons.append(f"Same stock past average loss {avg_profit:.1f}%")
                 elif avg_profit > 10:
                     adjustment += 1
-                    reasons.append(f"Same stock historical avg profit {avg_profit:.1f}%")
+                    reasons.append(f"Same stock past average profit {avg_profit:.1f}%")
 
-            # Sector performance (from journal)
-            if sector and sector != "Unknown":
+            # Sector performance for US
+            if sector and sector.lower() != "unknown":
                 self.cursor.execute("""
                     SELECT AVG(profit_rate), COUNT(*)
-                    FROM trading_journal WHERE buy_scenario LIKE ?
-                """, (f'%"{sector}"%',))
+                    FROM trading_journal WHERE buy_scenario LIKE ? AND market = ?
+                """, (f'%"{sector}"%', self.MARKET))
 
                 sector_stats = self.cursor.fetchone()
                 if sector_stats and sector_stats[1] >= 3:
                     if sector_stats[0] < -3:
                         adjustment -= 1
-                        reasons.append(f"{sector} sector avg loss {sector_stats[0]:.1f}%")
+                        reasons.append(f"{sector} sector average loss {sector_stats[0]:.1f}%")
                     elif sector_stats[0] > 5:
                         adjustment += 1
-                        reasons.append(f"{sector} sector avg profit {sector_stats[0]:.1f}%")
+                        reasons.append(f"{sector} sector average profit {sector_stats[0]:.1f}%")
 
             # Trigger type performance (from performance_tracker - ground truth)
             if trigger_type:
@@ -651,5 +638,5 @@ Please review the following completed trade:
             return max(-3, min(3, adjustment)), reasons
 
         except Exception as e:
-            logger.warning(f"Failed to calculate score adjustment: {e}")
+            logger.warning(f"Failed to calculate US score adjustment: {e}")
             return 0, []

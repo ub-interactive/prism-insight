@@ -63,7 +63,7 @@
 **6. Market Analyst** (`create_market_index_analysis_agent`)
 - **File**: `cores/agents/market_index_agents.py`
 - **Purpose**: Market and macro environment
-- **Analyzes**: KOSPI/KOSDAQ indices, macro indicators, global correlations
+- **Analyzes**: S&P 500/NASDAQ indices, macro indicators, global correlations
 - **Output**: Market analysis section
 - **Note**: Results are cached to reduce API calls
 
@@ -262,7 +262,7 @@ def create_your_agent(company_name, company_code, reference_date, language="ko")
         instruction=instruction,
         description=f"Custom Agent for {company_name}",
         # Add MCP tools if needed
-        mcp_servers=["kospi_kosdaq", "firecrawl", "perplexity"],
+        mcp_servers=["yahoo_finance", "firecrawl", "perplexity"],
     )
 
 # Register in cores/agents/__init__.py

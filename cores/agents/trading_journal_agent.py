@@ -78,7 +78,7 @@ def create_trading_journal_agent(language: str = "ko"):
     - "proper_position_sizing", "good_risk_reward"
 
     ## Tool Usage
-    - Use kospi_kosdaq tools to fetch current market data for context
+    - Use yahoo_finance tools to fetch current market data for context
     - Use sqlite to query related past trades if needed
     - Use time tool to get accurate timestamps
 
@@ -126,7 +126,7 @@ def create_trading_journal_agent(language: str = "ko"):
     return Agent(
         name="trading_journal_agent",
         instruction=instruction,
-        server_names=["kospi_kosdaq", "sqlite", "time"]
+        server_names=["yahoo_finance", "sqlite", "time"]
     )
 
 

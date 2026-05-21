@@ -33,13 +33,7 @@ logger = logging.getLogger(__name__)
 # Path setup (before importing other modules)
 SCRIPT_DIR = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-PRISM_US_DIR = PROJECT_ROOT / "prism-us"
 TRADING_DIR = PROJECT_ROOT / "trading"
-# IMPORTANT: do NOT add PRISM_US_DIR to sys.path. prism-us/trading/ would shadow
-# the root trading/ package (which exposes kis_auth) and cause:
-#   ImportError: cannot import name 'kis_auth' from 'trading'
-#   (.../prism-us/trading/__init__.py)
-# USStockTrading is loaded via importlib.util below to avoid the namespace clash.
 sys.path.insert(0, str(SCRIPT_DIR))  # examples/ folder (for translation_utils)
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -51,23 +45,12 @@ except ImportError:
     YFINANCE_AVAILABLE = False
     logger.warning("yfinance not installed. Market index data will be unavailable.")
 
-# KIS US Stock Trading import.
-# Loaded via importlib.util from an explicit path so prism-us/trading/__init__.py
-# does NOT get registered as the top-level `trading` package — see comment above.
-USStockTrading = None
 KIS_US_AVAILABLE = False
 try:
-    import importlib.util as _ilu
-    _us_trading_path = PRISM_US_DIR / "trading" / "us_stock_trading.py"
-    if _us_trading_path.exists():
-        _spec = _ilu.spec_from_file_location("prism_us_stock_trading", _us_trading_path)
-        _us_trading_module = _ilu.module_from_spec(_spec)
-        _spec.loader.exec_module(_us_trading_module)
-        USStockTrading = _us_trading_module.USStockTrading
-        KIS_US_AVAILABLE = True
-    else:
-        logger.warning(f"prism-us trading module not found at {_us_trading_path}.")
+    from trading.stock_trading import USStockTrading
+    KIS_US_AVAILABLE = True
 except Exception as exc:
+    USStockTrading = None
     logger.warning(f"KIS US Stock Trading module not available: {exc}. Real portfolio will be empty.")
 
 # Translation utility import (after path setup)
@@ -284,7 +267,7 @@ class USDashboardDataGenerator:
         # Check if table exists
         cursor.execute("""
             SELECT name FROM sqlite_master
-            WHERE type='table' AND name='us_stock_holdings'
+            WHERE type='table' AND name='stock_holdings'
         """)
         if not cursor.fetchone():
             logger.warning("us_stock_holdings table not found")
@@ -295,7 +278,7 @@ class USDashboardDataGenerator:
                 SELECT ticker, company_name, buy_price, buy_date, current_price,
                        last_updated, scenario, target_price, stop_loss, trigger_type,
                        trigger_mode, sector
-                FROM us_stock_holdings
+                FROM stock_holdings
                 WHERE account_key = ?
                 ORDER BY buy_date DESC
             """, (primary_account_key,))
@@ -304,7 +287,7 @@ class USDashboardDataGenerator:
                 SELECT ticker, company_name, buy_price, buy_date, current_price,
                        last_updated, scenario, target_price, stop_loss, trigger_type,
                        trigger_mode, sector
-                FROM us_stock_holdings
+                FROM stock_holdings
                 ORDER BY buy_date DESC
             """)
 
@@ -350,7 +333,7 @@ class USDashboardDataGenerator:
         # Check if table exists
         cursor.execute("""
             SELECT name FROM sqlite_master
-            WHERE type='table' AND name='us_trading_history'
+            WHERE type='table' AND name='trading_history'
         """)
         if not cursor.fetchone():
             logger.warning("us_trading_history table not found")
@@ -361,7 +344,7 @@ class USDashboardDataGenerator:
                 SELECT id, ticker, company_name, buy_price, buy_date, sell_price,
                        sell_date, profit_rate, holding_days, scenario, trigger_type,
                        trigger_mode, sector
-                FROM us_trading_history
+                FROM trading_history
                 WHERE account_key = ?
                 ORDER BY sell_date DESC
             """, (primary_account_key,))
@@ -370,7 +353,7 @@ class USDashboardDataGenerator:
                 SELECT id, ticker, company_name, buy_price, buy_date, sell_price,
                        sell_date, profit_rate, holding_days, scenario, trigger_type,
                        trigger_mode, sector
-                FROM us_trading_history
+                FROM trading_history
                 ORDER BY sell_date DESC
             """)
 
@@ -399,7 +382,7 @@ class USDashboardDataGenerator:
             # Check if table exists
             cursor.execute("""
                 SELECT name FROM sqlite_master
-                WHERE type='table' AND name='us_holding_decisions'
+                WHERE type='table' AND name='holding_decisions'
             """)
             if not cursor.fetchone():
                 logger.warning("us_holding_decisions table not found")
@@ -408,11 +391,11 @@ class USDashboardDataGenerator:
             # Get the most recent decision_date
             if primary_account_key:
                 cursor.execute("""
-                    SELECT MAX(decision_date) FROM us_holding_decisions WHERE account_key = ?
+                    SELECT MAX(decision_date) FROM holding_decisions WHERE account_key = ?
                 """, (primary_account_key,))
             else:
                 cursor.execute("""
-                    SELECT MAX(decision_date) FROM us_holding_decisions
+                    SELECT MAX(decision_date) FROM holding_decisions
                 """)
             latest_date_row = cursor.fetchone()
             latest_date = latest_date_row[0] if latest_date_row else None
@@ -421,7 +404,7 @@ class USDashboardDataGenerator:
                 logger.info("US holding decisions: no records found")
                 return []
 
-            # LEFT JOIN with us_stock_holdings to get company_name
+            # LEFT JOIN with stock_holdings to get company_name
             if primary_account_key:
                 cursor.execute("""
                     SELECT hd.id, hd.ticker, hd.decision_date, hd.decision_time, hd.current_price,
@@ -431,8 +414,8 @@ class USDashboardDataGenerator:
                            hd.new_target_price, hd.new_stop_loss, hd.adjustment_urgency,
                            hd.full_json_data, hd.created_at,
                            sh.company_name
-                    FROM us_holding_decisions hd
-                    LEFT JOIN us_stock_holdings sh ON hd.ticker = sh.ticker AND hd.account_key = sh.account_key
+                    FROM holding_decisions hd
+                    LEFT JOIN stock_holdings sh ON hd.ticker = sh.ticker AND hd.account_key = sh.account_key
                     WHERE hd.decision_date = ? AND hd.account_key = ?
                     ORDER BY hd.created_at DESC
                 """, (latest_date, primary_account_key))
@@ -445,8 +428,8 @@ class USDashboardDataGenerator:
                            hd.new_target_price, hd.new_stop_loss, hd.adjustment_urgency,
                            hd.full_json_data, hd.created_at,
                            sh.company_name
-                    FROM us_holding_decisions hd
-                    LEFT JOIN us_stock_holdings sh ON hd.ticker = sh.ticker
+                    FROM holding_decisions hd
+                    LEFT JOIN stock_holdings sh ON hd.ticker = sh.ticker
                     WHERE hd.decision_date = ?
                     ORDER BY hd.created_at DESC
                 """, (latest_date,))
@@ -499,7 +482,7 @@ class USDashboardDataGenerator:
         # Check if table exists
         cursor.execute("""
             SELECT name FROM sqlite_master
-            WHERE type='table' AND name='us_watchlist_history'
+            WHERE type='table' AND name='watchlist_history'
         """)
         if not cursor.fetchone():
             logger.warning("us_watchlist_history table not found")
@@ -509,7 +492,7 @@ class USDashboardDataGenerator:
             SELECT id, ticker, company_name, analyzed_date, buy_score, decision,
                    skip_reason, scenario, trigger_type, trigger_mode, sector,
                    market_cap, current_price
-            FROM us_watchlist_history
+            FROM watchlist_history
             ORDER BY analyzed_date DESC
         """)
 
@@ -695,7 +678,7 @@ class USDashboardDataGenerator:
             # Check if table exists
             cursor.execute("""
                 SELECT name FROM sqlite_master
-                WHERE type='table' AND name='us_analysis_performance_tracker'
+                WHERE type='table' AND name='analysis_performance_tracker'
             """)
             if not cursor.fetchone():
                 logger.warning("us_analysis_performance_tracker table not found")
@@ -712,7 +695,7 @@ class USDashboardDataGenerator:
                         END
                     ) as status,
                     COUNT(*) as count
-                FROM us_analysis_performance_tracker
+                FROM analysis_performance_tracker
                 GROUP BY status
             """)
             status_counts = {row[0]: row[1] for row in cursor.fetchall()}
@@ -722,7 +705,7 @@ class USDashboardDataGenerator:
                 SELECT
                     COALESCE(was_traded, 0) as was_traded,
                     COUNT(*) as count
-                FROM us_analysis_performance_tracker
+                FROM analysis_performance_tracker
                 GROUP BY was_traded
             """)
             traded_counts = {}
@@ -749,7 +732,7 @@ class USDashboardDataGenerator:
                     AVG(return_30d) as avg_30d_return,
                     SUM(CASE WHEN return_30d > 0 THEN 1 ELSE 0 END) * 1.0 /
                         NULLIF(SUM(CASE WHEN return_30d IS NOT NULL THEN 1 ELSE 0 END), 0) as win_rate_30d
-                FROM us_analysis_performance_tracker
+                FROM analysis_performance_tracker
                 WHERE return_30d IS NOT NULL
                 GROUP BY trigger_type
                 ORDER BY count DESC
@@ -785,7 +768,7 @@ class USDashboardDataGenerator:
                         MIN(profit_rate) as max_loss,
                         SUM(CASE WHEN profit_rate > 0 THEN profit_rate ELSE 0 END) as total_profit,
                         SUM(CASE WHEN profit_rate < 0 THEN ABS(profit_rate) ELSE 0 END) as total_loss
-                    FROM us_trading_history
+                    FROM trading_history
                     WHERE sell_date >= date('now', '-30 days')
                 """
                 params = ()
@@ -834,7 +817,7 @@ class USDashboardDataGenerator:
                         SUM(CASE WHEN profit_rate <= 0 THEN 1 ELSE 0 END) as loss_count,
                         AVG(CASE WHEN profit_rate > 0 THEN profit_rate END) as avg_profit,
                         AVG(CASE WHEN profit_rate <= 0 THEN profit_rate END) as avg_loss
-                    FROM us_trading_history
+                    FROM trading_history
                     WHERE sell_date >= ?
                 """
                 params = [US_TRIGGER_TRACKING_START_DATE]
@@ -889,7 +872,7 @@ class USDashboardDataGenerator:
                             SUM(CASE WHEN COALESCE(was_traded, 0) = 0 THEN 1 ELSE 0 END) as watched_count,
                             AVG(return_30d) as avg_all_return,
                             AVG(CASE WHEN COALESCE(was_traded, 0) = 0 THEN return_30d END) as avg_watched_return
-                        FROM us_analysis_performance_tracker
+                        FROM analysis_performance_tracker
                         WHERE return_30d IS NOT NULL
                           AND risk_reward_ratio IS NOT NULL
                           AND risk_reward_ratio >= ? AND risk_reward_ratio < ?
@@ -916,7 +899,7 @@ class USDashboardDataGenerator:
                         ticker, company_name, trigger_type, analysis_price,
                         price_30d, return_30d, skip_reason,
                         analysis_date, decision
-                    FROM us_analysis_performance_tracker
+                    FROM analysis_performance_tracker
                     WHERE return_30d IS NOT NULL
                       AND COALESCE(was_traded, 0) = 0
                       AND return_30d > 0.1
@@ -947,7 +930,7 @@ class USDashboardDataGenerator:
                         ticker, company_name, trigger_type, analysis_price,
                         price_30d, return_30d, skip_reason,
                         analysis_date, decision
-                    FROM us_analysis_performance_tracker
+                    FROM analysis_performance_tracker
                     WHERE return_30d IS NOT NULL
                       AND COALESCE(was_traded, 0) = 0
                       AND return_30d < -0.1
@@ -1052,7 +1035,7 @@ class USDashboardDataGenerator:
             # Check if table exists
             cursor.execute("""
                 SELECT name FROM sqlite_master
-                WHERE type='table' AND name='us_analysis_performance_tracker'
+                WHERE type='table' AND name='analysis_performance_tracker'
             """)
             if not cursor.fetchone():
                 logger.warning("us_analysis_performance_tracker table not found")
@@ -1068,7 +1051,7 @@ class USDashboardDataGenerator:
                     AVG(CASE WHEN return_30d IS NOT NULL THEN return_30d END) as avg_30d_return,
                     SUM(CASE WHEN return_30d > 0 THEN 1 ELSE 0 END) * 1.0 /
                         NULLIF(SUM(CASE WHEN return_30d IS NOT NULL THEN 1 ELSE 0 END), 0) as win_rate_30d
-                FROM us_analysis_performance_tracker
+                FROM analysis_performance_tracker
                 WHERE trigger_type IS NOT NULL AND trigger_type != ''
                 GROUP BY trigger_type
                 ORDER BY total_tracked DESC
@@ -1094,7 +1077,7 @@ class USDashboardDataGenerator:
                         AVG(profit_rate) / 100.0 as avg_profit_rate,
                         SUM(CASE WHEN profit_rate > 0 THEN profit_rate ELSE 0 END) as total_profit,
                         SUM(CASE WHEN profit_rate < 0 THEN ABS(profit_rate) ELSE 0 END) as total_loss
-                    FROM us_trading_history
+                    FROM trading_history
                     WHERE sell_date IS NOT NULL AND sell_date >= ?
                 """
                 params = [US_TRIGGER_TRACKING_START_DATE]

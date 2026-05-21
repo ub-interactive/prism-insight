@@ -4,14 +4,14 @@ This file governs the repository rooted here.
 
 ## Project Summary
 
-PRISM-INSIGHT is an AI-powered Korean/US stock analysis and automated trading system built around:
+PRISM-INSIGHT is an AI-powered US stock analysis and automated trading system built around:
 
 - Python 3.10+
 - GPT-5 / Claude based analysis agents
 - SQLite storage
 - Telegram delivery
 - KIS trading APIs
-- KR and US market flows
+- US market flows
 
 Primary source material for project context lives in `CLAUDE.md` and supporting docs under `docs/`.
 
@@ -19,8 +19,7 @@ Primary source material for project context lives in `CLAUDE.md` and supporting 
 
 - `cores/`: main analysis engine, report generation, agent definitions, ChatGPT OAuth proxy
 - `cores/agents/`: specialized analysis, communication, and trading agents
-- `trading/`: Korean trading integration and account handling
-- `prism-us/`: US market mirror flows and trading support
+- `trading/`: US trading integration and account handling
 - `tracking/`: journal, memory, trading state helpers
 - `messaging/`: Redis and GCP Pub/Sub messaging
 - `tests/`: targeted regression tests
@@ -41,9 +40,8 @@ python3 -m playwright install chromium
 
 ```bash
 python stock_analysis_orchestrator.py --mode morning --no-telegram
-python prism-us/us_stock_analysis_orchestrator.py --mode morning
-python demo.py 005930
-python demo.py AAPL --market us
+python stock_analysis_orchestrator.py --mode morning
+python demo.py AAPL
 python weekly_insight_report.py --dry-run
 ```
 
@@ -51,9 +49,8 @@ python weekly_insight_report.py --dry-run
 
 ```bash
 pytest tests/test_trading_journal.py
-pytest tests/test_tracking_agent.py
 pytest tests/test_portfolio_reporter.py
-pytest tests/test_multi_account_domestic.py
+pytest tests/test_multi_account_us.py
 ```
 
 Avoid broad production-like runs unless the task requires them.

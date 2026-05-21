@@ -165,29 +165,9 @@ def _build_telegram_link(channel_id: Optional[str], message_id: int) -> str:
 
 
 def detect_market(message: str) -> str:
-    """Detect market from message content."""
-    # Korean stock patterns: 6-digit codes, Korean company names, KRW amounts
-    kr_patterns = [
-        r'(?<!\d)\d{6}(?!\d)',  # standalone 6-digit stock code (not inside longer numbers like dates)
-        r'[가-힣]+전자|[가-힣]+증권|[가-힣]+화학|[가-힣]+건설',  # Korean company name patterns
-        r'코스피|코스닥|KOSPI|KOSDAQ',
-        r'원\s|₩|KRW',
-    ]
-
-    # US stock patterns: ticker symbols, USD amounts
-    us_patterns = [
-        r'\b[A-Z]{1,5}\b.*\$',  # Ticker + dollar sign
-        r'NYSE|NASDAQ|S&P|나스닥',
-        r'\$\d+',  # Dollar amounts
-        r'\bAAPL\b|\bTSLA\b|\bAMZN\b|\bGOOG\b|\bMSFT\b|\bNVDA\b|\bMETA\b',  # Common US tickers
-    ]
-
-    kr_score = sum(1 for p in kr_patterns if re.search(p, message))
-    us_score = sum(1 for p in us_patterns if re.search(p, message))
-
-    if us_score > kr_score:
-        return 'us'
-    return 'kr'  # Default to kr
+    """US-only runtime market detection."""
+    _ = message
+    return "us"
 
 
 def detect_type(message: str) -> str:
@@ -305,25 +285,9 @@ def extract_stock_info(message: str) -> tuple:
     Returns:
         tuple: (stock_code, stock_name) or (None, None)
     """
-    # Korean stock: 6-digit code
-    kr_match = re.search(r'(\d{6})', message)
-
-    # Try to find Korean company name near the code
-    name_match = re.search(r'([가-힣]{2,10}(?:전자|증권|화학|건설|바이오|제약|은행|물산|SDI|SDS))', message)
-    if not name_match:
-        # Broader Korean name pattern
-        name_match = re.search(r'([가-힣]{2,8})\s*[\(\[]?\d{6}', message)
-
-    stock_code = kr_match.group(1) if kr_match else None
-    stock_name = name_match.group(1) if name_match else None
-
-    # US stock: ticker symbol
-    if not stock_code:
-        us_match = re.search(r'\b([A-Z]{1,5})\b\s*[\(\[]?\$', message)
-        if us_match:
-            stock_code = us_match.group(1)
-
-    return stock_code, stock_name
+    us_match = re.search(r"\b([A-Z]{1,5})\b\s*[\(\[]?\$?", message)
+    stock_code = us_match.group(1) if us_match else None
+    return stock_code, None
 
 
 async def notify(
@@ -416,7 +380,7 @@ async def _send_push(title: str, body: str, msg_type: str, market: str, lang: st
             prefs = device.get('preferences', {})
 
             # Check market preference
-            pref_markets = prefs.get('markets', ['kr', 'us'])
+            pref_markets = prefs.get('markets', ['us'])
             if market not in pref_markets:
                 continue
 

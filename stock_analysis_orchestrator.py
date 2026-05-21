@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Stock Analysis and Telegram Transmission Orchestrator
+US Stock Analysis and Telegram Transmission Orchestrator
 
 Overall Process:
 1. Execute time-based (morning/afternoon) trigger batch jobs
@@ -8,11 +8,17 @@ Overall Process:
 3. Convert reports to PDF
 4. Generate and send telegram channel summary messages
 5. Send generated PDF attachments
+6. Execute trading simulation
+
+Key Differences from Korean Version:
+- Uses ticker symbols (AAPL, MSFT) instead of 6-digit codes
+- Uses yfinance for market data
+- US market hours (09:30-16:00 EST)
+- Korean language default (ko)
 """
 from dotenv import load_dotenv
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
-import cores.openai_debug  # noqa: F401 — OpenAI 400 error request body logging
 import argparse
 import asyncio
 import json
@@ -23,33 +29,70 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from cores.openai_error_logging import log_openai_error
+# Add paths for imports
+PROJECT_ROOT = Path(__file__).parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
+from cores.model_config import get_configured_model, get_optional_reasoning_effort
+from cores.openai_error_logging import log_openai_error
 # Logger configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(f"orchestrator_{datetime.now().strftime('%Y%m%d')}.log")
+        logging.FileHandler(f"us_orchestrator_{datetime.now().strftime('%Y%m%d')}.log")
     ]
 )
 logger = logging.getLogger(__name__)
 
-# Environment configuration
-REPORTS_DIR = Path("reports")
-TELEGRAM_MSGS_DIR = Path("telegram_messages")
-PDF_REPORTS_DIR = Path("pdf_reports")
+
+def _import_proxy_safe():
+    """Import chatgpt_proxy from canonical cores package."""
+    import cores.chatgpt_proxy as proxy_mod
+    return proxy_mod
+
+US_MACRO_ANALYSIS_MODEL = get_configured_model("us_macro_analysis", "gpt-5.4-mini")
+US_TRANSLATION_MODEL = get_configured_model("us_translation", "gpt-5-nano")
+US_REPORT_FILENAME_MODEL = get_configured_model("us_report_filename", US_MACRO_ANALYSIS_MODEL)
+
+
+async def translate_telegram_message(message: str, model: str = "", from_lang: str = "ko", to_lang: str = "en") -> str:
+    """Fallback no-op translator for US-only runtime."""
+    _ = (model, from_lang, to_lang)
+    return message
+
+# Directory configuration
+US_REPORTS_DIR = PROJECT_ROOT / "reports"
+US_TELEGRAM_MSGS_DIR = PROJECT_ROOT / "telegram_messages"
+US_PDF_REPORTS_DIR = PROJECT_ROOT / "pdf_reports"
 
 # Create directories
-REPORTS_DIR.mkdir(exist_ok=True)
-TELEGRAM_MSGS_DIR.mkdir(exist_ok=True)
-PDF_REPORTS_DIR.mkdir(exist_ok=True)
-(TELEGRAM_MSGS_DIR / "sent").mkdir(exist_ok=True)
+US_REPORTS_DIR.mkdir(exist_ok=True)
+US_TELEGRAM_MSGS_DIR.mkdir(exist_ok=True)
+US_PDF_REPORTS_DIR.mkdir(exist_ok=True)
+(US_TELEGRAM_MSGS_DIR / "sent").mkdir(exist_ok=True)
 
 
-class StockAnalysisOrchestrator:
-    """Stock Analysis and Telegram Transmission Orchestrator"""
+# Trigger type translation map (English -> Korean)
+TRIGGER_TYPE_KO = {
+    "Volume Surge Top": "거래량 급증 상위주",  # Volume surge top stocks
+    "Gap Up Momentum Top": "갭 상승 모멘텀 상위주",  # Gap up momentum top stocks
+    "Value-to-Cap Ratio Top": "시총 대비 집중 자금 유입 상위주",  # Concentrated capital inflow vs market cap top stocks
+    "Intraday Rise Top": "일중 상승률 상위주",  # Intraday rise top stocks
+    "Closing Strength Top": "장 마감 강세 상위주",  # Closing strength top stocks
+    "Volume Surge Sideways": "거래량 급증 횡보주",  # Volume surge sideways stocks
+}
+
+
+def _model_slug(model_name: str) -> str:
+    """Create a safe filename suffix from model name."""
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", (model_name or "").strip())
+    return slug.strip("-") or "model"
+
+
+class USStockAnalysisOrchestrator:
+    """US Stock Analysis and Telegram Transmission Orchestrator"""
 
     def __init__(self, telegram_config=None):
         """
@@ -60,116 +103,12 @@ class StockAnalysisOrchestrator:
         """
         from telegram_config import TelegramConfig
 
-        self.selected_tickers = {}  # Store selected stock information
+        self.selected_tickers = {}
         self.telegram_config = telegram_config or TelegramConfig(use_telegram=True)
         self._broadcast_tasks = []  # Collect fire-and-forget broadcast tasks
 
     @staticmethod
-    def _parse_report_filename(filename_stem: str) -> dict:
-        """
-        Parse report filename to extract components.
-
-        Expected format: {ticker}_{company_name}_{date}_{mode}_gpt5.4-mini
-        Example: 005930_삼성전자_20250127_morning_gpt5.4-mini
-
-        Args:
-            filename_stem: Filename without extension
-
-        Returns:
-            dict with keys: ticker, company_name, date, mode, suffix, valid
-        """
-        result = {
-            'ticker': '',
-            'company_name': '',
-            'date': '',
-            'mode': '',
-            'suffix': '',
-            'valid': False
-        }
-
-        try:
-            parts = filename_stem.split('_')
-            if len(parts) < 4:
-                return result
-
-            # Find date position (8-digit number)
-            date_idx = -1
-            for i, part in enumerate(parts):
-                if len(part) == 8 and part.isdigit():
-                    date_idx = i
-                    break
-
-            if date_idx < 2:
-                return result
-
-            # Extract components
-            result['ticker'] = parts[0]
-            result['company_name'] = '_'.join(parts[1:date_idx])  # Handle company names with underscores
-            result['date'] = parts[date_idx]
-            result['mode'] = parts[date_idx + 1] if date_idx + 1 < len(parts) else ''
-            result['suffix'] = '_'.join(parts[date_idx + 2:]) if date_idx + 2 < len(parts) else ''
-            result['valid'] = True
-
-        except Exception as e:
-            logger.warning(f"Failed to parse filename '{filename_stem}': {str(e)}")
-
-        return result
-
-    async def _create_translated_filename(self, original_path: Path, target_lang: str) -> Path:
-        """
-        Create translated filename with English company name.
-
-        Args:
-            original_path: Original file path
-            target_lang: Target language code (e.g., "en")
-
-        Returns:
-            Path with translated filename
-        """
-        from cores.company_name_translator import translate_company_name
-
-        # Parse original filename
-        parsed = self._parse_report_filename(original_path.stem)
-
-        if not parsed['valid']:
-            # Fallback: just append language code
-            logger.warning(f"Could not parse filename, using fallback: {original_path.stem}")
-            return original_path.parent / f"{original_path.stem}_{target_lang}.md"
-
-        # Translate company name (only for English)
-        if not parsed['company_name']:
-            logger.warning(f"Empty company name in filename: {original_path.stem}")
-            # Try to get company name from pykrx
-            try:
-                from pykrx import stock as stock_api
-                parsed['company_name'] = stock_api.get_market_ticker_name(parsed['ticker']) or ""
-                logger.info(f"Retrieved company name from pykrx: {parsed['company_name']}")
-            except Exception:
-                pass
-
-        if target_lang == "en":
-            # Translate Korean company name to English for English channel
-            translated_name = await translate_company_name(parsed['company_name']) if parsed['company_name'] else ""
-        else:
-            # For other languages (ja, etc.), also translate to English for filename compatibility
-            # This ensures PDF filenames don't contain Korean characters in any broadcast channel
-            translated_name = await translate_company_name(parsed['company_name']) if parsed['company_name'] else ""
-
-        # Reconstruct filename
-        # Format: {ticker}_{translated_company}_{date}_{mode}_{suffix}_{lang}.md
-        new_stem_parts = [parsed['ticker'], translated_name, parsed['date'], parsed['mode']]
-        if parsed['suffix']:
-            new_stem_parts.append(parsed['suffix'])
-        new_stem_parts.append(target_lang)
-
-        new_stem = '_'.join(filter(None, new_stem_parts))
-        new_path = original_path.parent / f"{new_stem}.md"
-
-        logger.info(f"Translated filename: {original_path.name} → {new_path.name}")
-        return new_path
-
-    @staticmethod
-    def _extract_base64_images(markdown_text: str) -> tuple[str, dict]:
+    def _extract_base64_images(markdown_text: str) -> tuple:
         """
         Extract base64 images from markdown and replace with placeholders
 
@@ -228,51 +167,31 @@ class StockAnalysisOrchestrator:
                 restored_count += 1
                 logger.debug(f"Restored image (exact match): {placeholder}")
             else:
-                # Fallback: look for translated variations like [Image: ...] or ![...]
-                # Extract the image number from placeholder
-                import re
-                match = re.search(r'<<<__BASE64_IMAGE_(\d+)__>>>', placeholder)
-                if match:
-                    img_num = match.group(1)
-                    # Look for common translation patterns (both HTML and markdown)
-                    patterns = [
-                        rf'<img\s+[^>]*>',  # HTML img tag (translated or not)
-                        rf'\[Image[^\]]*\]',  # [Image: ...]
-                        rf'!\[[^\]]*\]\([^\)]*\)',  # ![alt](url) that's not base64
-                        rf'\[画像[^\]]*\]',  # Japanese: [画像...]
-                    ]
-
-                    replaced = False
-                    for pattern in patterns:
-                        # Find the Nth occurrence based on img_num
-                        matches = list(re.finditer(pattern, restored_text))
-                        if int(img_num) < len(matches):
-                            match_obj = matches[int(img_num)]
-                            # Replace this specific match
-                            before = restored_text[:match_obj.start()]
-                            after = restored_text[match_obj.end():]
-                            restored_text = before + original_image + after
-                            logger.info(f"Restored image {img_num} using fallback pattern: {pattern}")
-                            restored_count += 1
-                            replaced = True
-                            break
-
-                    if not replaced:
-                        missing_images.append((int(img_num), placeholder, original_image))
+                # Try without special characters (LLM might have modified the placeholder)
+                import re as regex
+                escaped_placeholder = regex.escape(placeholder)
+                # Also try variations without special chars
+                simple_key = placeholder.replace("<<<", "").replace(">>>", "").replace("__", "_")
+                if simple_key in restored_text:
+                    restored_text = restored_text.replace(simple_key, original_image)
+                    restored_count += 1
+                    logger.debug(f"Restored image (simple key): {simple_key}")
+                else:
+                    match = regex.search(r'<<<__BASE64_IMAGE_(\d+)__>>>', placeholder)
+                    img_num = int(match.group(1)) if match else -1
+                    if img_num >= 0:
+                        missing_images.append((img_num, placeholder, original_image))
                         logger.warning(f"Could not restore image {img_num}, placeholder not found: {placeholder}")
 
         # Re-insert missing images at proportional positions in translated text
         if missing_images:
             logger.info(f"Re-inserting {len(missing_images)} missing images by position")
-            # Sort by image number descending to insert from last to first (preserve positions)
             missing_images.sort(key=lambda x: x[0], reverse=True)
             total_images = len(images)
             text_len = len(restored_text)
             for img_num, placeholder, original_image in missing_images:
-                # Estimate position: image N out of total should be at ~(N+1)/(total+1) of text
                 ratio = (img_num + 1) / (total_images + 1)
                 insert_pos = int(text_len * ratio)
-                # Find nearest newline to avoid splitting a line
                 newline_pos = restored_text.rfind('\n', 0, insert_pos)
                 if newline_pos == -1:
                     newline_pos = insert_pos
@@ -288,9 +207,9 @@ class StockAnalysisOrchestrator:
 
     async def run_macro_intelligence(self, reference_date: str = None, language: str = "ko") -> dict:
         """
-        Run macro intelligence analysis for KR market.
+        Run macro intelligence analysis for US market.
 
-        Step 1: Prefetch index data (KOSPI/KOSDAQ OHLCV, sector_map) programmatically
+        Step 1: Prefetch index data (S&P 500/NASDAQ/VIX) programmatically
         Step 2: Compute market regime from actual price data (not LLM)
         Step 3: Run LLM agent with perplexity only for qualitative analysis
 
@@ -305,17 +224,17 @@ class StockAnalysisOrchestrator:
         if reference_date is None:
             reference_date = datetime.now().strftime("%Y%m%d")
 
-        logger.info(f"Starting macro intelligence analysis for KR market - date: {reference_date}")
+        logger.info(f"Starting macro intelligence analysis for US market - date: {reference_date}")
 
         try:
             # Step 1: Prefetch index data and compute regime programmatically
-            from cores.data_prefetch import prefetch_macro_intelligence_data
-            prefetched = prefetch_macro_intelligence_data(reference_date)
-            logger.info(f"Macro prefetch complete: {list(prefetched.keys())}")
+            from cores.data_prefetch import prefetch_us_macro_intelligence_data
+            prefetched = prefetch_us_macro_intelligence_data(reference_date)
+            logger.info(f"US macro prefetch complete: {list(prefetched.keys())}")
 
             if prefetched.get("computed_regime"):
                 computed = prefetched["computed_regime"]
-                logger.info(f"Pre-computed regime: {computed.get('market_regime')} "
+                logger.info(f"Pre-computed US regime: {computed.get('market_regime')} "
                            f"(confidence: {computed.get('regime_confidence')})")
 
             # Step 2: Run LLM agent with perplexity for qualitative analysis
@@ -323,32 +242,32 @@ class StockAnalysisOrchestrator:
             from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
             from cores.agents.macro_intelligence_agent import create_macro_intelligence_agent
 
-            macro_app = MCPApp(name="macro_intelligence")
+            macro_app = MCPApp(name="us_macro_intelligence")
 
             async with macro_app.run() as macro_run_context:
                 macro_logger = macro_run_context.logger
-                macro_logger.info("Macro intelligence agent starting (perplexity-only mode)...")
+                macro_logger.info("US macro intelligence agent starting (perplexity-only mode)...")
 
                 agent = create_macro_intelligence_agent(reference_date, language, prefetched_data=prefetched)
 
                 from mcp_agent.workflows.llm.augmented_llm import RequestParams
                 llm = await agent.attach_llm(OpenAIAugmentedLLM)
                 result = await llm.generate_str(
-                    message=f"{reference_date} 기준 한국 주식시장 거시경제 분석을 수행하고 JSON으로 출력하세요.",
+                    message=f"Execute US stock market macro analysis for {reference_date} and output JSON.",
                     request_params=RequestParams(
-                        model="gpt-5.4-mini",
-                        reasoning_effort="none",
+                        model=US_MACRO_ANALYSIS_MODEL,
                         maxTokens=16000,
                         parallel_tool_calls=True,
-                        use_history=True
+                        use_history=True,
+                        **get_optional_reasoning_effort(US_MACRO_ANALYSIS_MODEL, "none"),
                     )
                 )
 
-                macro_logger.info(f"Macro intelligence raw output: {len(result)} chars")
+                macro_logger.info(f"US macro intelligence raw output: {len(result)} chars")
 
                 # Save raw output for debugging
                 try:
-                    raw_output_path = f"macro_intelligence_kr_{reference_date}.json"
+                    raw_output_path = f"macro_intelligence_us_{reference_date}.json"
                     with open(raw_output_path, 'w', encoding='utf-8') as f:
                         f.write(result)
                     macro_logger.info(f"Raw output saved to: {raw_output_path}")
@@ -375,16 +294,16 @@ class StockAnalysisOrchestrator:
                             from json_repair import repair_json
                             macro_data = json_module.loads(repair_json(result))
                         except Exception:
-                            macro_logger.error("Failed to parse macro intelligence output as JSON")
+                            macro_logger.error("Failed to parse US macro intelligence output as JSON")
 
                 # Fallback: if LLM failed but we have computed regime, use that
                 if not macro_data and prefetched.get("computed_regime"):
                     macro_logger.warning("LLM output parsing failed, using computed regime only")
                     macro_data = {
                         "analysis_date": reference_date,
-                        "market": "KR",
+                        "market": "US",
                         **prefetched["computed_regime"],
-                        "regime_rationale": "Programmatically computed from KOSPI index data",
+                        "regime_rationale": "Programmatically computed from S&P 500 / VIX data",
                         "leading_sectors": [],
                         "lagging_sectors": [],
                         "risk_events": [],
@@ -394,137 +313,171 @@ class StockAnalysisOrchestrator:
                 elif not macro_data:
                     return None
 
-                # Merge sector_map from prefetch (stored separately, not in LLM output)
-                if prefetched.get("sector_map"):
-                    macro_data["sector_map"] = prefetched["sector_map"]
-
                 regime = macro_data.get("market_regime", "sideways")
-                macro_logger.info(f"Macro intelligence complete - regime: {regime}, "
+                macro_logger.info(f"US macro intelligence complete - regime: {regime}, "
                                  f"leading_sectors: {len(macro_data.get('leading_sectors', []))}, "
                                  f"risk_events: {len(macro_data.get('risk_events', []))}")
 
                 return macro_data
 
         except Exception as e:
-            log_openai_error(logger, e, "KR macro intelligence")
-            logger.error(f"Macro intelligence failed (graceful degradation): {str(e)}")
+            log_openai_error(logger, e, "US macro intelligence")
+            logger.error(f"US macro intelligence failed (graceful degradation): {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
             return None
 
-    async def run_trigger_batch(self, mode, macro_context: dict = None):
+    async def run_trigger_batch(self, mode: str, macro_context: dict = None, override_date: str = None):
         """
-        Execute trigger batch and save results (direct import version)
-
-        Uses direct import instead of subprocess to share KRX session,
-        reducing login attempts.
+        Execute US trigger batch and save results
 
         Args:
-            mode (str): 'morning' or 'afternoon'
-            macro_context (dict): Optional macro intelligence context
+            mode: 'morning' or 'afternoon'
 
         Returns:
-            list: List of selected stock codes
+            list: List of selected stock info dictionaries
         """
-        logger.info(f"Starting trigger batch execution: {mode}")
+        logger.info(f"Starting US trigger batch execution: {mode}")
         try:
-            # Direct import instead of subprocess to share KRX session
             from trigger_batch import run_batch
 
-            # Results file path
-            results_file = f"trigger_results_{mode}_{datetime.now().strftime('%Y%m%d')}.json"
+            # Results file path (use PRISM_US_DIR for consistent path with telegram_summary_agent)
+            effective_date = override_date if override_date else datetime.now().strftime("%Y%m%d")
+            results_file = str(PROJECT_ROOT / f"trigger_results_us_{mode}_{effective_date}.json")
 
-            # Run batch directly (synchronous call in async context)
-            # run_batch is CPU-bound, so running it directly is acceptable
+            # Run batch
             loop = asyncio.get_event_loop()
             results = await loop.run_in_executor(
                 None,
-                lambda: run_batch(mode, "INFO", results_file, macro_context=macro_context)
+                lambda: run_batch(mode, "INFO", results_file, macro_context=macro_context, override_date=override_date)
             )
 
             if not results:
-                logger.warning("Batch returned empty results")
+                logger.warning("US batch returned empty results")
                 return []
 
             # Read results file for full data with metadata
             if os.path.exists(results_file):
                 with open(results_file, 'r', encoding='utf-8') as f:
                     full_results = json.load(f)
-                # Save results
                 self.selected_tickers[mode] = full_results
 
-            # Extract stock codes from results
+            # Extract stock info from results
             tickers = []
-            ticker_codes = set()  # For duplicate checking
+            ticker_set = set()
 
-            # results is dict like {"Volume Surge Top Stocks": DataFrame, ...}
             for trigger_type, stocks_df in results.items():
-                if hasattr(stocks_df, 'index'):  # It's a DataFrame
+                if hasattr(stocks_df, 'index'):
                     for ticker in stocks_df.index:
-                        if ticker not in ticker_codes:
-                            ticker_codes.add(ticker)
-                            # Get stock name (with fallback to pykrx API)
-                            name = ""
-                            # Support both Korean and English column names
-                            name_col = None
-                            if "Company Name" in stocks_df.columns:
-                                name_col = "Company Name"
-                            elif "종목명" in stocks_df.columns:
-                                name_col = "종목명"
+                        if ticker not in ticker_set:
+                            ticker_set.add(ticker)
 
-                            if name_col:
-                                name = stocks_df.loc[ticker, name_col]
-                            # Fallback: use pykrx API if name is empty
-                            if not name:
-                                try:
-                                    from pykrx import stock as stock_api
-                                    name = stock_api.get_market_ticker_name(ticker) or ""
-                                except Exception:
-                                    pass
+                            # Get company name
+                            name = ""
+                            if "CompanyName" in stocks_df.columns:
+                                name = stocks_df.loc[ticker, "CompanyName"]
 
                             # Get risk_reward_ratio if available
                             rr_ratio = 0
-                            if "Risk/Reward Ratio" in stocks_df.columns or "손익비" in stocks_df.columns:
-                                col_name = "Risk/Reward Ratio" if "Risk/Reward Ratio" in stocks_df.columns else "손익비"
-                                rr_ratio = float(stocks_df.loc[ticker, col_name])
+                            if "risk_reward_ratio" in stocks_df.columns:
+                                rr_ratio = float(stocks_df.loc[ticker, "risk_reward_ratio"])
 
                             tickers.append({
-                                'code': ticker,
-                                'name': name,
+                                'ticker': ticker,
+                                'name': name or ticker,
                                 'trigger_type': trigger_type,
                                 'trigger_mode': mode,
                                 'risk_reward_ratio': rr_ratio
                             })
 
-            logger.info(f"Number of selected stocks: {len(tickers)}")
+            logger.info(f"Number of selected US stocks: {len(tickers)}")
             return tickers
 
         except Exception as e:
-            logger.error(f"Error during trigger batch execution: {str(e)}")
+            logger.error(f"Error during US trigger batch execution: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
             return []
 
-    async def convert_to_pdf(self, report_paths):
+    async def generate_reports(self, tickers: list, mode: str, timeout: int = None, language: str = "ko", macro_context: dict = None) -> list:
+        """
+        Generate reports serially for all US stocks.
+
+        Args:
+            tickers: List of stocks to analyze
+            mode: Execution mode
+            timeout: Timeout (seconds)
+            language: Analysis language (default: "en")
+
+        Returns:
+            list: List of successful report paths
+        """
+        logger.info(f"Starting US report generation for {len(tickers)} stocks (serial processing)")
+
+        successful_reports = []
+
+        for idx, ticker_info in enumerate(tickers, 1):
+            if isinstance(ticker_info, dict):
+                ticker = ticker_info.get('ticker')
+                company_name = ticker_info.get('name', ticker)
+            else:
+                ticker = ticker_info
+                company_name = ticker
+
+            logger.info(f"[{idx}/{len(tickers)}] Starting US stock analysis: {company_name}({ticker})")
+
+            reference_date = datetime.now().strftime("%Y%m%d")
+            output_file = str(
+                US_REPORTS_DIR / f"{ticker}_{company_name}_{reference_date}_{mode}_{_model_slug(US_REPORT_FILENAME_MODEL)}.md"
+            )
+
+            try:
+                from cores.analysis import analyze_us_stock
+
+                logger.info(f"[{idx}/{len(tickers)}] Starting analyze_us_stock function call")
+                report = await analyze_us_stock(
+                    ticker=ticker,
+                    company_name=company_name,
+                    reference_date=reference_date,
+                    language=language,
+                    macro_context=macro_context
+                )
+
+                if report and len(report.strip()) > 0:
+                    with open(output_file, "w", encoding="utf-8") as f:
+                        f.write(report)
+                    logger.info(f"[{idx}/{len(tickers)}] Report generation complete: {company_name}({ticker}) - {len(report)} characters")
+                    successful_reports.append(output_file)
+                else:
+                    logger.error(f"[{idx}/{len(tickers)}] Report generation failed: {company_name}({ticker}) - empty content")
+
+            except Exception as e:
+                logger.error(f"[{idx}/{len(tickers)}] Error during analysis: {company_name}({ticker}) - {str(e)}")
+                import traceback
+                logger.error(traceback.format_exc())
+
+        logger.info(f"US report generation complete: {len(successful_reports)}/{len(tickers)} successful")
+        return successful_reports
+
+    async def convert_to_pdf(self, report_paths: list) -> list:
         """
         Convert markdown reports to PDF
 
         Args:
-            report_paths (list): List of markdown report file paths
+            report_paths: List of markdown report file paths
 
         Returns:
             list: List of generated PDF file paths
         """
-        logger.info(f"Starting PDF conversion for {len(report_paths)} reports")
+        logger.info(f"Starting PDF conversion for {len(report_paths)} US reports")
         pdf_paths = []
 
-        # Import PDF converter module
         from pdf_converter import markdown_to_pdf
 
         for report_path in report_paths:
             try:
                 report_file = Path(report_path)
-                pdf_file = PDF_REPORTS_DIR / f"{report_file.stem}.pdf"
+                pdf_file = US_PDF_REPORTS_DIR / f"{report_file.stem}.pdf"
 
                 # Convert markdown to PDF
                 markdown_to_pdf(report_path, pdf_file, 'playwright', add_theme=True, enable_watermark=False)
@@ -537,37 +490,33 @@ class StockAnalysisOrchestrator:
 
         return pdf_paths
 
-    async def generate_telegram_messages(self, report_pdf_paths, language: str = "ko"):
+    async def generate_telegram_messages(self, report_pdf_paths: list, language: str = "ko") -> list:
         """
-        Generate telegram messages
+        Generate telegram messages for US stocks
 
         Args:
-            report_pdf_paths (list): List of report file (pdf) paths
-            language (str): Message language ("ko" or "en")
+            report_pdf_paths: List of report file (pdf) paths
+            language: Message language (default: "ko")
 
         Returns:
             list: List of generated telegram message file paths
         """
-        logger.info(f"Starting telegram message generation for {len(report_pdf_paths)} reports (language: {language})")
+        logger.info(f"Starting US telegram message generation for {len(report_pdf_paths)} reports (language: {language})")
 
-        # Import telegram summary generator module
-        from telegram_summary_agent import TelegramSummaryGenerator
+        from us_telegram_summary_agent import USTelegramSummaryGenerator
 
-        # Initialize summary generator
-        generator = TelegramSummaryGenerator()
+        generator = USTelegramSummaryGenerator()
 
         message_paths = []
         for report_pdf_path in report_pdf_paths:
             try:
-                # Generate telegram message
-                await generator.process_report(str(report_pdf_path), str(TELEGRAM_MSGS_DIR), to_lang=language)
+                await generator.process_report(str(report_pdf_path), str(US_TELEGRAM_MSGS_DIR), language=language)
 
-                # Estimate generated message file path
                 report_file = Path(report_pdf_path)
                 ticker = report_file.stem.split('_')[0]
                 company_name = report_file.stem.split('_')[1]
 
-                message_path = TELEGRAM_MSGS_DIR / f"{ticker}_{company_name}_telegram.txt"
+                message_path = US_TELEGRAM_MSGS_DIR / f"{ticker}_{company_name}_telegram.txt"
 
                 if message_path.exists():
                     logger.info(f"Telegram message generation complete: {message_path}")
@@ -580,29 +529,27 @@ class StockAnalysisOrchestrator:
 
         return message_paths
 
-    async def send_telegram_messages(self, message_paths, pdf_paths, report_paths=None):
+    async def send_telegram_messages(self, message_paths: list, pdf_paths: list, report_paths: list = None):
         """
         Send telegram messages and PDF files
 
         Args:
-            message_paths (list): List of telegram message file paths
-            pdf_paths (list): List of PDF file paths
-            report_paths (list): List of markdown report file paths (for translation)
+            message_paths: List of telegram message file paths
+            pdf_paths: List of PDF file paths
+            report_paths: List of markdown report file paths (for translation)
         """
-        # Skip if telegram is disabled
         if not self.telegram_config.use_telegram:
-            logger.info(f"Telegram disabled - skipping message and PDF transmission")
+            logger.info(f"Telegram disabled - skipping US message and PDF transmission")
             return
 
-        logger.info(f"Starting telegram message transmission for {len(message_paths)} messages")
+        logger.info(f"Starting US telegram message transmission for {len(message_paths)} messages")
 
-        # Use telegram configuration
+        # Use main channel (Korean) by default - same as Korean stock version
         chat_id = self.telegram_config.channel_id
         if not chat_id:
-            logger.error("Telegram channel ID is not configured.")
+            logger.error("Telegram channel ID is not configured for US stocks.")
             return
 
-        # Initialize telegram bot agent
         from telegram_bot_agent import TelegramBotAgent
 
         try:
@@ -624,22 +571,20 @@ class StockAnalysisOrchestrator:
 
             # Send messages to main channel (this moves files to sent folder)
             await bot_agent.process_messages_directory(
-                str(TELEGRAM_MSGS_DIR),
+                str(US_TELEGRAM_MSGS_DIR),
                 chat_id,
-                str(TELEGRAM_MSGS_DIR / "sent"),
+                str(US_TELEGRAM_MSGS_DIR / "sent"),
                 msg_type="analysis"
             )
 
             # Send PDF files to main channel
             for pdf_path in pdf_paths:
-                logger.info(f"Sending PDF file: {pdf_path}")
-                success = await bot_agent.send_document(chat_id, str(pdf_path), msg_type="pdf")
+                logger.info(f"Sending US PDF file: {pdf_path}")
+                success = await bot_agent.send_document(chat_id, str(pdf_path), msg_type="pdf", market="us")
                 if success:
                     logger.info(f"PDF file transmission successful: {pdf_path}")
                 else:
                     logger.error(f"PDF file transmission failed: {pdf_path}")
-
-                # Transmission interval
                 await asyncio.sleep(1)
 
             # Send translated PDFs to broadcast channels asynchronously (non-blocking)
@@ -651,7 +596,7 @@ class StockAnalysisOrchestrator:
         except Exception as e:
             logger.error(f"Error during telegram message transmission: {str(e)}")
 
-    async def _send_translated_messages(self, bot_agent, message_contents):
+    async def _send_translated_messages(self, bot_agent, message_contents: list):
         """
         Send translated telegram messages to broadcast channels (non-blocking, fire-and-forget)
         Languages are processed in parallel for faster delivery.
@@ -661,29 +606,27 @@ class StockAnalysisOrchestrator:
             message_contents: List of original message content strings (pre-read from files)
         """
         try:
-            from cores.agents.telegram_translator_agent import translate_telegram_message
-
             async def _translate_and_send_lang(lang, channel_id):
                 for original_message in message_contents:
                     try:
-                        logger.info(f"Translating telegram message to {lang}")
+                        logger.info(f"Translating US telegram message to {lang}")
                         translated_message = await translate_telegram_message(
                             original_message,
-                            model="gpt-5-nano",
+                            model=US_TRANSLATION_MODEL,
                             from_lang="ko",
                             to_lang=lang
                         )
                         success = await bot_agent.send_message(channel_id, translated_message, msg_type="analysis")
                         if success:
-                            logger.info(f"Telegram message sent successfully to {lang} channel")
+                            logger.info(f"US telegram message sent successfully to {lang} channel")
                         else:
-                            logger.error(f"Failed to send telegram message to {lang} channel")
+                            logger.error(f"Failed to send US telegram message to {lang} channel")
                         await asyncio.sleep(1)
                     except Exception as e:
-                        logger.error(f"Error translating/sending message to {lang}: {str(e)}")
+                        logger.error(f"Error translating/sending US message to {lang}: {str(e)}")
                         from telegram_config import is_openai_quota_error, send_openai_quota_alert
                         if is_openai_quota_error(e):
-                            await send_openai_quota_alert(self.telegram_config, market="KR")
+                            await send_openai_quota_alert(self.telegram_config, market="US")
                             return
 
             lang_tasks = []
@@ -692,7 +635,7 @@ class StockAnalysisOrchestrator:
                 if not channel_id:
                     logger.warning(f"No channel ID configured for language: {lang}")
                     continue
-                logger.info(f"Dispatching parallel translation for {lang} channel")
+                logger.info(f"Dispatching parallel translation for US {lang} channel")
                 lang_tasks.append(_translate_and_send_lang(lang, channel_id))
 
             if lang_tasks:
@@ -701,7 +644,7 @@ class StockAnalysisOrchestrator:
         except Exception as e:
             logger.error(f"Error in _send_translated_messages: {str(e)}")
 
-    async def _send_translated_pdfs(self, bot_agent, report_paths):
+    async def _send_translated_pdfs(self, bot_agent, report_paths: list):
         """
         Send translated PDF reports to broadcast channels (asynchronous, runs in background)
         Languages are processed in parallel for faster delivery.
@@ -711,58 +654,56 @@ class StockAnalysisOrchestrator:
             report_paths: List of original markdown report file paths
         """
         try:
-            from cores.agents.telegram_translator_agent import translate_telegram_message
-
             async def _translate_pdfs_for_lang(lang, channel_id):
                 for report_path in report_paths:
                     try:
-                        logger.info(f"Translating markdown report {report_path} to {lang}")
+                        logger.info(f"Translating US markdown report {report_path} to {lang}")
 
                         with open(report_path, 'r', encoding='utf-8') as f:
                             original_report = f.read()
 
                         text_for_translation, images = self._extract_base64_images(original_report)
-                        logger.info(f"Prepared report for translation: {len(text_for_translation)} chars (extracted {len(images)} images)")
+                        logger.info(f"Prepared US report for translation: {len(text_for_translation)} chars (extracted {len(images)} images)")
 
                         translated_report = await translate_telegram_message(
                             text_for_translation,
-                            model="gpt-5-nano",
+                            model=US_TRANSLATION_MODEL,
                             from_lang="ko",
                             to_lang=lang
                         )
 
                         translated_report = self._restore_base64_images(translated_report, images)
-                        logger.info(f"Restored images to translated report: {len(translated_report)} chars")
+                        logger.info(f"Restored images to translated US report: {len(translated_report)} chars")
 
                         report_file = Path(report_path)
-                        translated_report_path = await self._create_translated_filename(report_file, lang)
+                        translated_report_path = report_file.parent / f"{report_file.stem}_{lang}.md"
 
                         with open(translated_report_path, 'w', encoding='utf-8') as f:
                             f.write(translated_report)
 
-                        logger.info(f"Translated report saved: {translated_report_path}")
+                        logger.info(f"Translated US report saved: {translated_report_path}")
 
                         translated_pdf_paths = await self.convert_to_pdf([str(translated_report_path)])
 
                         if translated_pdf_paths and len(translated_pdf_paths) > 0:
                             translated_pdf_path = translated_pdf_paths[0]
-                            logger.info(f"Sending translated PDF {translated_pdf_path} to {lang} channel")
-                            success = await bot_agent.send_document(channel_id, str(translated_pdf_path), msg_type="pdf")
+                            logger.info(f"Sending translated US PDF {translated_pdf_path} to {lang} channel")
+                            success = await bot_agent.send_document(channel_id, str(translated_pdf_path), msg_type="pdf", market="us")
 
                             if success:
-                                logger.info(f"Translated PDF sent successfully to {lang} channel")
+                                logger.info(f"Translated US PDF sent successfully to {lang} channel")
                             else:
-                                logger.error(f"Failed to send translated PDF to {lang} channel")
+                                logger.error(f"Failed to send translated US PDF to {lang} channel")
 
                             await asyncio.sleep(1)
                         else:
-                            logger.error(f"Failed to convert translated report to PDF: {translated_report_path}")
+                            logger.error(f"Failed to convert translated US report to PDF: {translated_report_path}")
 
                     except Exception as e:
-                        logger.error(f"Error processing report {report_path} for {lang}: {str(e)}")
+                        logger.error(f"Error processing US report {report_path} for {lang}: {str(e)}")
                         from telegram_config import is_openai_quota_error, send_openai_quota_alert
                         if is_openai_quota_error(e):
-                            await send_openai_quota_alert(self.telegram_config, market="KR")
+                            await send_openai_quota_alert(self.telegram_config, market="US")
                             return
 
             # Process languages sequentially to limit memory usage
@@ -772,86 +713,68 @@ class StockAnalysisOrchestrator:
                 if not channel_id:
                     logger.warning(f"No channel ID configured for language: {lang}")
                     continue
-                logger.info(f"Processing PDF translation for {lang} channel (sequential)")
+                logger.info(f"Processing PDF translation for US {lang} channel (sequential)")
                 try:
                     await _translate_pdfs_for_lang(lang, channel_id)
                 except Exception as lang_err:
-                    logger.error(f"PDF translation failed for {lang}: {lang_err}")
+                    logger.error(f"US PDF translation failed for {lang}: {lang_err}")
 
         except Exception as e:
             logger.error(f"Error in _send_translated_pdfs: {str(e)}")
 
-    async def send_trigger_alert(self, mode, trigger_results_file, language: str = "ko"):
+    async def send_trigger_alert(self, mode: str, trigger_results_file: str, language: str = "ko"):
         """
-        Send trigger execution result information to telegram channel immediately
+        Send trigger execution result to telegram channel immediately
 
         Args:
             mode: 'morning' or 'afternoon'
             trigger_results_file: Path to trigger results JSON file
-            language: Message language ("ko" or "en")
+            language: Message language (default: "ko")
         """
-        # Log and return if telegram is disabled
         if not self.telegram_config.use_telegram:
-            logger.info(f"Telegram disabled - skipping Prism Signal alert transmission (mode: {mode})")
+            logger.info(f"Telegram disabled - skipping US Prism Signal alert (mode: {mode})")
             return False
 
-        logger.info(f"Starting Prism Signal alert transmission - mode: {mode}, language: {language}")
+        logger.info(f"Starting US Prism Signal alert transmission - mode: {mode}, language: {language}")
 
         try:
-            # Read JSON file
             with open(trigger_results_file, 'r', encoding='utf-8') as f:
                 results = json.load(f)
 
-            # Extract metadata
             metadata = results.get("metadata", {})
             trade_date = metadata.get("trade_date", datetime.now().strftime("%Y%m%d"))
 
-            # Extract trigger stock information - handle direct list case
             all_results = {}
             for key, value in results.items():
                 if key != "metadata" and isinstance(value, list):
-                    # When value is directly a stock list
                     all_results[key] = value
 
             if not all_results:
-                logger.warning(f"No trigger results found.")
+                logger.warning(f"No US trigger results found.")
                 return False
 
             # Include metadata for hybrid selection info in alert message
             all_results["metadata"] = metadata
 
-            # Generate telegram message
-            message = self._create_trigger_alert_message(mode, all_results, trade_date)
+            # Generate message based on language (no translation needed - direct templates)
+            message = self._create_trigger_alert_message(mode, all_results, trade_date, language)
 
-            # Translate message if English is requested
-            if language == "en":
-                try:
-                    logger.info("Translating trigger alert message to English")
-                    from cores.agents.telegram_translator_agent import translate_telegram_message
-                    message = await translate_telegram_message(message, model="gpt-5-nano")
-                    logger.info("Translation complete")
-                except Exception as e:
-                    logger.error(f"Translation failed: {str(e)}. Using original Korean message.")
-
-            # Use telegram configuration
+            # Use main channel (Korean) by default
             chat_id = self.telegram_config.channel_id
             if not chat_id:
-                logger.error("Telegram channel ID is not configured.")
+                logger.error("Telegram channel ID is not configured for US stocks.")
                 return False
 
-            # Initialize telegram bot agent
             from telegram_bot_agent import TelegramBotAgent
 
             try:
                 bot_agent = TelegramBotAgent()
-
-                # Send message to main channel
                 success = await bot_agent.send_message(chat_id, message, msg_type="trigger")
 
                 if success:
-                    logger.info("Prism Signal alert transmission successful")
+                    logger.info("US Prism Signal alert transmission successful")
                 else:
-                    logger.error("Prism Signal alert transmission failed")
+                    logger.error("US Prism Signal alert transmission failed")
 
                 # Send to broadcast channels asynchronously (non-blocking)
                 if self.telegram_config.broadcast_languages:
@@ -862,11 +785,11 @@ class StockAnalysisOrchestrator:
                 return success
 
             except Exception as e:
-                logger.error(f"Error during telegram bot initialization or message transmission: {str(e)}")
+                logger.error(f"Error during telegram bot initialization: {str(e)}")
                 return False
 
         except Exception as e:
-            logger.error(f"Error during Prism Signal alert generation: {str(e)}")
+            logger.error(f"Error during US Prism Signal alert generation: {str(e)}")
             return False
 
     async def _send_translated_trigger_alert(self, bot_agent, original_message: str, mode: str):
@@ -880,27 +803,25 @@ class StockAnalysisOrchestrator:
             mode: 'morning' or 'afternoon'
         """
         try:
-            from cores.agents.telegram_translator_agent import translate_telegram_message
-
             async def _translate_and_send_lang(lang, channel_id):
                 try:
-                    logger.info(f"Translating trigger alert to {lang}")
+                    logger.info(f"Translating US trigger alert to {lang}")
                     translated_message = await translate_telegram_message(
                         original_message,
-                        model="gpt-5-nano",
+                        model=US_TRANSLATION_MODEL,
                         from_lang="ko",
                         to_lang=lang
                     )
                     success = await bot_agent.send_message(channel_id, translated_message, msg_type="trigger")
                     if success:
-                        logger.info(f"Trigger alert sent successfully to {lang} channel")
+                        logger.info(f"US trigger alert sent successfully to {lang} channel")
                     else:
-                        logger.error(f"Failed to send trigger alert to {lang} channel")
+                        logger.error(f"Failed to send US trigger alert to {lang} channel")
                 except Exception as e:
-                    logger.error(f"Error sending translated trigger alert to {lang}: {str(e)}")
+                    logger.error(f"Error sending translated US trigger alert to {lang}: {str(e)}")
                     from telegram_config import is_openai_quota_error, send_openai_quota_alert
                     if is_openai_quota_error(e):
-                        await send_openai_quota_alert(self.telegram_config, market="KR")
+                        await send_openai_quota_alert(self.telegram_config, market="US")
                         return
 
             lang_tasks = []
@@ -917,11 +838,16 @@ class StockAnalysisOrchestrator:
         except Exception as e:
             logger.error(f"Error in _send_translated_trigger_alert: {str(e)}")
 
-    def _create_trigger_alert_message(self, mode, results, trade_date):
+    def _create_trigger_alert_message(self, mode: str, results: dict, trade_date: str, language: str = "ko") -> str:
         """
-        Generate telegram alert message based on trigger results
+        Generate telegram alert message based on US trigger results
+
+        Args:
+            mode: 'morning' or 'afternoon'
+            results: Trigger results dictionary (includes 'metadata' key with hybrid selection info)
+            trade_date: Trade date in YYYYMMDD format
+            language: Message language ('ko' or 'en')
         """
-        # Convert date format
         formatted_date = f"{trade_date[:4]}.{trade_date[4:6]}.{trade_date[6:8]}"
 
         # Extract metadata for hybrid selection info
@@ -931,258 +857,247 @@ class StockAnalysisOrchestrator:
         topdown_count = metadata.get("topdown_count", 0)
         bottomup_count = metadata.get("bottomup_count", 0)
 
+        # Regime display names
         REGIME_KO = {
             "strong_bull": "강세장", "moderate_bull": "온건 강세",
             "sideways": "횡보장", "moderate_bear": "온건 약세", "strong_bear": "약세장",
         }
+        REGIME_EN = {
+            "strong_bull": "Strong Bull", "moderate_bull": "Moderate Bull",
+            "sideways": "Sideways", "moderate_bear": "Moderate Bear", "strong_bear": "Strong Bear",
+        }
         CHANNEL_KO = {"top-down": "탑다운 (주도섹터)", "bottom-up": "바텀업 (개별종목)"}
+        CHANNEL_EN = {"top-down": "Top-Down (Leading Sector)", "bottom-up": "Bottom-Up (Individual)"}
 
-        # Set title based on mode
+        # Language-specific templates
         if mode == "morning":
-            title = "🔔 오전 프리즘 시그널 얼럿"
-            time_desc = "장 시작 후 10분 시점"
+            title = "🔔 US Stock Morning Prism Signal Alert"
+            time_desc = "10 minutes after market open"
+        elif mode == "midday":
+            title = "🔔 US Stock Midday Prism Signal Alert"
+            time_desc = "at 12:30 PM market time"
         else:
-            title = "🔔 오후 프리즘 시그널 얼럿"
-            time_desc = "오후 분석"
+            title = "🔔 US Stock Afternoon Prism Signal Alert"
+            time_desc = "after market close"
+        header = f"{title}\n📅 {formatted_date} Stocks detected {time_desc}\n"
+        volume_label = "Volume Increase"
+        gap_label = "Gap Up"
+        footer = "📋 Detailed analysis report will be available in 10-30 minutes\n※ This is for investment reference only. Investment decisions are your responsibility."
+        channel_map = CHANNEL_EN
+        regime_map = REGIME_EN
+        score_label = "Score"
+        rr_label = "R/R"
+        sl_label = "SL"
 
-        # Message header
-        message = f"{title}\n"
-        message += f"📅 {formatted_date} {time_desc} 포착된 관심종목\n"
+        message = header
 
         # Hybrid selection summary (regime + strategy)
         if market_regime and "hybrid" in selection_strategy:
-            regime_display = REGIME_KO.get(market_regime, market_regime)
-            message += f"🧭 시장국면: {regime_display} | 선정: 탑다운 {topdown_count}종목 + 바텀업 {bottomup_count}종목\n"
+            regime_display = regime_map.get(market_regime, market_regime)
+            message += f"🧭 Regime: {regime_display} | Selection: Top-Down {topdown_count} + Bottom-Up {bottomup_count}\n"
 
         message += "\n"
 
-        # Add stock information by trigger
         for trigger_type, stocks in results.items():
             if trigger_type == "metadata":
                 continue
 
-            # Set emoji based on trigger type
             emoji = self._get_trigger_emoji(trigger_type)
+            display_trigger_type = TRIGGER_TYPE_KO.get(trigger_type, trigger_type) if language == "ko" else trigger_type
+            message += f"{emoji} {display_trigger_type}\n"
 
-            message += f"{emoji} *{trigger_type}*\n"
-
-            # Add each stock information
             for stock in stocks:
-                code = stock.get("code", "")
-                name = stock.get("name", "")
+                ticker = stock.get("ticker", stock.get("code", ""))
+                name = stock.get("name", ticker)
                 current_price = stock.get("current_price", 0)
                 change_rate = stock.get("change_rate", 0)
 
                 # Arrow based on change rate
                 arrow = "⬆️" if change_rate > 0 else "⬇️" if change_rate < 0 else "➖"
 
-                # Basic information
-                message += f"· *{name}* ({code})\n"
-                message += f"  {current_price:,.0f}원 {arrow} {abs(change_rate):.2f}%\n"
+                message += f"· {name} ({ticker})\n"
+                message += f"  ${current_price:.2f} {arrow} {abs(change_rate):.2f}%\n"
 
                 # Selection channel tag
                 selection_channel = stock.get("selection_channel")
                 if selection_channel:
-                    channel_display = CHANNEL_KO.get(selection_channel, selection_channel)
+                    channel_display = channel_map.get(selection_channel, selection_channel)
                     message += f"  📌 {channel_display}\n"
 
-                # Additional information based on trigger type
+                # Trigger-specific data
                 if "volume_increase" in stock and ("Volume" in trigger_type or "거래량" in trigger_type):
                     volume_increase = stock.get("volume_increase", 0)
-                    message += f"  거래량 증가율: {volume_increase:.2f}%\n"
-
-                elif "gap_rate" in stock and ("Gap" in trigger_type or "갭 상승" in trigger_type):
+                    message += f"  {volume_label}: {volume_increase:.2f}%\n"
+                elif "gap_rate" in stock and ("Gap" in trigger_type or "갭" in trigger_type):
                     gap_rate = stock.get("gap_rate", 0)
-                    message += f"  갭 상승률: {gap_rate:.2f}%\n"
-
-                elif "trade_value_ratio" in stock and ("Market Cap" in trigger_type or "시총 대비" in trigger_type):
-                    trade_value_ratio = stock.get("trade_value_ratio", 0)
-                    market_cap = stock.get("market_cap", 0) / 100000000  # Convert to hundred million won units
-                    message += f"  거래대금/시총 비율: {trade_value_ratio:.2f}%\n"
-                    message += f"  시가총액: {market_cap:.2f}억원\n"
-
-                elif "closing_strength" in stock and ("Closing Strength" in trigger_type or "마감 강도" in trigger_type):
-                    closing_strength = stock.get("closing_strength", 0) * 100
-                    message += f"  마감 강도: {closing_strength:.2f}%\n"
+                    message += f"  {gap_label}: {gap_rate:.2f}%\n"
 
                 # Hybrid scoring details (score, R/R, stop-loss)
                 details = []
                 final_score = stock.get("final_score")
                 if final_score is not None:
-                    details.append(f"점수: {final_score:.2f}")
+                    details.append(f"{score_label}: {final_score:.2f}")
                 rr_ratio = stock.get("risk_reward_ratio")
                 if rr_ratio is not None:
-                    details.append(f"R/R: {rr_ratio:.1f}")
+                    details.append(f"{rr_label}: {rr_ratio:.1f}")
                 sl_pct = stock.get("stop_loss_pct")
                 if sl_pct is not None:
-                    details.append(f"손절: -{sl_pct:.1f}%")
+                    details.append(f"{sl_label}: -{sl_pct:.1f}%")
                 if details:
                     message += f"  📊 {' | '.join(details)}\n"
 
                 message += "\n"
 
-        # Footer message
-        message += "💡 상세 분석 보고서는 약 10-30분 내 제공 예정\n"
-        message += "⚠️ 본 정보는 투자 참고용이며, 투자 결정과 책임은 투자자에게 있습니다."
+        message += footer
 
         return message
 
-    def _get_trigger_emoji(self, trigger_type):
-        """
-        Return emoji matching trigger type
-        """
-        if "Volume" in trigger_type or "거래량" in trigger_type:
+    def _get_trigger_emoji(self, trigger_type: str) -> str:
+        """Return emoji matching trigger type"""
+        # Support both Korean and English trigger type names
+        if "Volume" in trigger_type or "거래량" in trigger_type:  # Volume
             return "📊"
-        elif "Gap" in trigger_type or "갭 상승" in trigger_type:
+        elif "Gap" in trigger_type or "갭" in trigger_type:  # Gap
             return "📈"
-        elif "Market Cap" in trigger_type or "시총 대비" in trigger_type:
+        elif "Value" in trigger_type or "Cap" in trigger_type or "시총" in trigger_type:  # Market cap
             return "💰"
-        elif "Gain" in trigger_type or "상승률" in trigger_type:
+        elif "Rise" in trigger_type or "Intraday" in trigger_type or "상승" in trigger_type:  # Rise
             return "🚀"
-        elif "Closing Strength" in trigger_type or "마감 강도" in trigger_type:
+        elif "Closing" in trigger_type or "Strength" in trigger_type or "마감" in trigger_type:  # Closing
             return "🔨"
-        elif "Sideways" in trigger_type or "횡보" in trigger_type:
+        elif "Sideways" in trigger_type or "횡보" in trigger_type:  # Sideways
             return "↔️"
         else:
             return "🔎"
 
-    async def run_full_pipeline(self, mode, language: str = "en"):
+    async def run_full_pipeline(self, mode: str, language: str = "ko", override_date: str = None):
         """
-        Execute full pipeline
+        Execute full US pipeline
 
         Args:
-            mode (str): 'morning' or 'afternoon'
-            language (str): Analysis language ("en")
+            mode: 'morning' or 'afternoon'
+            language: Analysis language (default: "en")
         """
-        logger.info(f"Starting full pipeline - mode: {mode}")
+        logger.info(f"Starting US full pipeline - mode: {mode}")
+        tracking_success = True
 
         try:
-            # 0. Run macro intelligence (market regime, sector data)
+            # 0. Run macro intelligence (US market regime, sector data)
+            effective_date = override_date if override_date else datetime.now().strftime("%Y%m%d")
             macro_context = await self.run_macro_intelligence(
-                reference_date=datetime.now().strftime("%Y%m%d"),
+                reference_date=effective_date,
                 language=language
             )
             if macro_context:
-                logger.info(f"Macro intelligence: regime={macro_context.get('market_regime')}, "
+                logger.info(f"US macro intelligence: regime={macro_context.get('market_regime')}, "
                            f"sectors={len(macro_context.get('leading_sectors', []))}")
             else:
-                logger.warning("Macro intelligence unavailable - proceeding without macro context")
+                logger.warning("US macro intelligence unavailable - proceeding without macro context")
 
-            # 1. Execute trigger batch - changed to async method (improved asyncio resource management)
-            results_file = f"trigger_results_{mode}_{datetime.now().strftime('%Y%m%d')}.json"
-            tickers = await self.run_trigger_batch(mode, macro_context=macro_context)
+            # 1. Execute trigger batch
+            results_file = str(PROJECT_ROOT / f"trigger_results_us_{mode}_{effective_date}.json")
+            tickers = await self.run_trigger_batch(mode, macro_context=macro_context, override_date=override_date)
 
             if not tickers:
-                logger.warning("No stocks selected. Terminating process.")
+                logger.warning("No US stocks selected. Terminating process.")
                 return
 
             # 1-1. Send trigger results to telegram immediately
             if os.path.exists(results_file):
-                logger.info(f"Trigger results file confirmed: {results_file}")
+                logger.info(f"US trigger results file confirmed: {results_file}")
                 alert_sent = await self.send_trigger_alert(mode, results_file, language)
                 if alert_sent:
-                    logger.info("Prism Signal alert transmission complete")
+                    logger.info("US Prism Signal alert transmission complete")
                 else:
-                    logger.warning("Prism Signal alert transmission failed")
+                    logger.warning("US Prism Signal alert transmission failed")
             else:
-                logger.warning(f"Trigger results file not found: {results_file}")
+                logger.warning(f"US trigger results file not found: {results_file}")
 
-            # 2. Generate reports - important: await added here!
+            # 2. Generate reports
             report_paths = await self.generate_reports(tickers, mode, timeout=600, language=language, macro_context=macro_context)
             if not report_paths:
-                logger.warning("No reports generated. Terminating process.")
+                logger.warning("No US reports generated. Terminating process.")
                 return
 
-            # Archive ingest (fire-and-forget, does not block pipeline)
+            # 3. Archive ingest (fire-and-forget, does not block pipeline)
             try:
                 from cores.archive.ingest import ingest_reports_async  # type: ignore[import]
-                asyncio.create_task(ingest_reports_async(report_paths, market="kr"))
+                asyncio.create_task(ingest_reports_async(report_paths, market="us"))
             except Exception as _e:
                 logger.warning(f"Archive ingest hook skipped: {_e}")
 
-            # 3. PDF conversion
+            # 4. PDF conversion
             pdf_paths = await self.convert_to_pdf(report_paths)
 
-            # 4-5. Generate and send telegram messages (only when telegram is enabled)
+            # 4-5. Generate and send telegram messages
             if self.telegram_config.use_telegram:
-                logger.info("Telegram enabled - proceeding with message generation and transmission steps")
+                logger.info("Telegram enabled - proceeding with US message generation and transmission")
 
-                # 4. Generate telegram messages
                 message_paths = await self.generate_telegram_messages(pdf_paths, language)
-
-                # 5. Send telegram messages and PDFs
                 await self.send_telegram_messages(message_paths, pdf_paths, report_paths)
             else:
-                logger.info("Telegram disabled - skipping message generation and transmission steps")
+                logger.info("Telegram disabled - skipping US message generation and transmission")
 
             # 6. Tracking system batch (runs concurrently with broadcast I/O tasks via async)
             if pdf_paths:
                 try:
-                    logger.info("Starting stock tracking system batch execution")
+                    logger.info("Starting US stock tracking system batch execution")
 
-                    # Import tracking agent
-                    from stock_tracking_enhanced_agent import EnhancedStockTrackingAgent as StockTrackingAgent
-                    from stock_tracking_agent import app as tracking_app
+                    from us_stock_tracking_agent import USStockTrackingAgent, app as tracking_app
 
-                    # Validate telegram configuration
                     if self.telegram_config.use_telegram:
-                        # Validate required settings when telegram is enabled
                         try:
                             self.telegram_config.validate_or_raise()
                         except ValueError as ve:
                             logger.error(f"Telegram configuration error: {str(ve)}")
-                            logger.error("Skipping tracking system batch.")
+                            logger.error("Skipping US tracking system batch.")
                             return
 
-                    # Log telegram configuration status
                     self.telegram_config.log_status()
 
-                    # Use MCPApp context manager
                     async with tracking_app.run():
-                        # Pass telegram configuration to agent
-                        tracking_agent = StockTrackingAgent(
+                        tracking_agent = USStockTrackingAgent(
                             telegram_token=self.telegram_config.bot_token if self.telegram_config.use_telegram else None
                         )
 
-                        # Pass report paths, telegram configuration, and language
+                        # Use main channel (Korean) by default - same as Korean stock version
                         chat_id = self.telegram_config.channel_id if self.telegram_config.use_telegram else None
 
-                        # Pass trigger results file for trigger_type tracking
-                        trigger_results_file = f"trigger_results_{mode}_{datetime.now().strftime('%Y%m%d')}.json"
+                        trigger_results_file = str(PROJECT_ROOT / f"trigger_results_us_{mode}_{effective_date}.json")
 
-                        # Extract sector names from macro_context for trading agent
-                        kr_sector_names = None
-                        if macro_context and macro_context.get("sector_map"):
-                            kr_sector_names = sorted(set(macro_context["sector_map"].values()))
-
+                        # US uses fixed GICS sectors (fallback in trading_agents.py)
                         tracking_success = await tracking_agent.run(
-                            pdf_paths, chat_id, language, self.telegram_config,
-                            trigger_results_file=trigger_results_file,
-                            sector_names=kr_sector_names
+                            pdf_paths, chat_id, language,
+                            telegram_config=self.telegram_config,
+                            trigger_results_file=trigger_results_file
                         )
 
                         if tracking_success:
-                            logger.info("Tracking system batch execution complete")
+                            logger.info("US tracking system batch execution complete")
                         else:
-                            logger.error("Tracking system batch execution failed")
+                            logger.error("US tracking system batch execution failed")
 
                 except Exception as e:
-                    logger.error(f"Error during tracking system batch execution: {str(e)}")
+                    tracking_success = False
+                    logger.error(f"Error during US tracking system batch execution: {str(e)}")
                     import traceback
                     logger.error(traceback.format_exc())
             else:
-                logger.warning("No reports generated, not executing tracking system batch.")
+                logger.warning("No US reports generated, not executing tracking system batch.")
 
-            logger.info(f"Full pipeline complete - mode: {mode}")
+            if tracking_success:
+                logger.info(f"US full pipeline complete - mode: {mode}")
+            else:
+                logger.warning(f"US full pipeline completed with tracking errors - mode: {mode}")
 
         except Exception as e:
-            logger.error(f"Error during pipeline execution: {str(e)}")
+            logger.error(f"Error during US pipeline execution: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
             # Send Telegram alert for OpenAI quota errors
             from telegram_config import is_openai_quota_error, send_openai_quota_alert
             if is_openai_quota_error(e):
-                await send_openai_quota_alert(self.telegram_config, market="KR")
+                await send_openai_quota_alert(self.telegram_config, market="US")
 
         finally:
             # Always wait for background broadcast tasks, even on error/early return
@@ -1195,102 +1110,33 @@ class StockAnalysisOrchestrator:
                 self._broadcast_tasks.clear()
                 logger.info("All broadcast translation tasks completed")
 
-    async def generate_reports(self, tickers, mode, timeout: int = None, language: str = "ko", macro_context: dict = None) -> list:
-        """
-        Generate reports serially for all stocks.
-        Process one stock at a time to prevent OpenAI rate limit issues.
-
-        Args:
-            tickers: List of stocks to analyze
-            mode: Execution mode
-            timeout: Timeout (seconds)
-            language: Analysis language ("en")
-
-        Returns:
-            list: List of successful report paths
-        """
-
-        logger.info(f"Starting report generation for {len(tickers)} stocks (serial processing)")
-
-        successful_reports = []
-
-        # Process each stock sequentially
-        for idx, ticker_info in enumerate(tickers, 1):
-            # If ticker_info is a dict
-            if isinstance(ticker_info, dict):
-                ticker = ticker_info.get('code')
-                # Use 'or' to handle both None and empty string cases
-                company_name = ticker_info.get('name') or f"Stock_{ticker}"
-            else:
-                ticker = ticker_info
-                company_name = f"Stock_{ticker}"
-
-            logger.info(f"[{idx}/{len(tickers)}] Starting stock analysis: {company_name}({ticker})")
-
-            # Set output file path
-            reference_date = datetime.now().strftime("%Y%m%d")
-            output_file = str(REPORTS_DIR / f"{ticker}_{company_name}_{reference_date}_{mode}_gpt5.4-mini.md")
-
-            try:
-                # Import function directly from main.py
-                from cores.main import analyze_stock
-
-                # Use await directly since already in async environment
-                logger.info(f"[{idx}/{len(tickers)}] Starting analyze_stock function call")
-                report = await analyze_stock(
-                    company_code=ticker,
-                    company_name=company_name,
-                    reference_date=reference_date,
-                    language=language,
-                    macro_context=macro_context
-                )
-
-                # Save result
-                if report and len(report.strip()) > 0:
-                    with open(output_file, "w", encoding="utf-8") as f:
-                        f.write(report)
-                    logger.info(f"[{idx}/{len(tickers)}] Report generation complete: {company_name}({ticker}) - {len(report)} characters")
-                    successful_reports.append(output_file)
-                else:
-                    logger.error(f"[{idx}/{len(tickers)}] Report generation failed: {company_name}({ticker}) - empty content")
-
-            except Exception as e:
-                logger.error(f"[{idx}/{len(tickers)}] Error during analysis: {company_name}({ticker}) - {str(e)}")
-                import traceback
-                logger.error(traceback.format_exc())
-
-
-        logger.info(f"Report generation complete: {len(successful_reports)}/{len(tickers)} successful")
-
-        return successful_reports
 
 async def main():
-    """
-    Main function - command line interface
-    """
-    parser = argparse.ArgumentParser(description="Stock analysis and telegram transmission orchestrator")
-    parser.add_argument("--mode", choices=["morning", "afternoon", "both"], default="both",
-                        help="Execution mode (morning, afternoon, both)")
+    """Main function - command line interface"""
+    parser = argparse.ArgumentParser(description="US stock analysis and telegram transmission orchestrator")
+    parser.add_argument("--mode", choices=["morning", "midday", "afternoon", "both"], default="both",
+                        help="Execution mode (morning, midday, afternoon, both)")
     parser.add_argument("--language", choices=["en"], default="en",
                         help="Analysis language (en: English)")
     parser.add_argument("--broadcast-languages", type=str, default="",
                         help="Additional languages for parallel telegram channel broadcasting (comma-separated, e.g., 'en,ja')")
     parser.add_argument("--no-telegram", action="store_true",
-                        help="Disable telegram message transmission. "
-                             "Use when testing without telegram configuration or running locally.")
+                        help="Disable telegram message transmission")
     parser.add_argument("--no-proxy", action="store_true",
                         help="Disable ChatGPT OAuth proxy (use standard OpenAI API key)")
+    parser.add_argument("--force", action="store_true",
+                        help="Force execution even on market holidays (for testing)")
+    parser.add_argument("--date", type=str, default=None,
+                        help="Override trade date (YYYYMMDD format, for testing)")
 
     args = parser.parse_args()
 
     # Parse broadcast languages
     broadcast_languages = [lang.strip() for lang in args.broadcast_languages.split(",") if lang.strip()]
 
-    # Create telegram configuration
     from telegram_config import TelegramConfig
     telegram_config = TelegramConfig(use_telegram=not args.no_telegram, broadcast_languages=broadcast_languages)
 
-    # Validate telegram configuration (only when enabled)
     if telegram_config.use_telegram:
         try:
             telegram_config.validate_or_raise()
@@ -1299,61 +1145,75 @@ async def main():
             logger.error("Terminating program.")
             sys.exit(1)
 
-    # Log telegram configuration status
     telegram_config.log_status()
 
     # ChatGPT OAuth proxy setup
     proxy_started = False
+    stop_proxy = None
     if not args.no_proxy and os.getenv("PRISM_OPENAI_AUTH_MODE") == "chatgpt_oauth":
         try:
-            from cores.chatgpt_proxy import inject_env, start_proxy, stop_proxy
+            _proxy_mod = _import_proxy_safe()
+            inject_env = _proxy_mod.inject_env
+            start_proxy = _proxy_mod.start_proxy
+            clear_env = _proxy_mod.clear_env
+            stop_proxy = _proxy_mod.stop_proxy
+
             inject_env()
             proxy_started = await start_proxy()
             if not proxy_started:
                 logger.warning("ChatGPT OAuth proxy failed to start, falling back to standard API")
-                from cores.chatgpt_proxy import clear_env
                 clear_env()
         except Exception as e:
             logger.warning("ChatGPT OAuth proxy setup error: %s, falling back to standard API", e)
+            try:
+                _proxy_mod.clear_env()
+            except Exception:
+                pass
 
-    orchestrator = StockAnalysisOrchestrator(telegram_config=telegram_config)
+    orchestrator = USStockAnalysisOrchestrator(telegram_config=telegram_config)
 
     if args.mode == "morning" or args.mode == "both":
-        await orchestrator.run_full_pipeline("morning", language=args.language)
+        await orchestrator.run_full_pipeline("morning", language=args.language, override_date=args.date)
+
+    if args.mode == "midday":
+        await orchestrator.run_full_pipeline("midday", language=args.language, override_date=args.date)
 
     if args.mode == "afternoon" or args.mode == "both":
-        await orchestrator.run_full_pipeline("afternoon", language=args.language)
+        await orchestrator.run_full_pipeline("afternoon", language=args.language, override_date=args.date)
 
     # Stop proxy if started
-    if proxy_started:
+    if proxy_started and stop_proxy is not None:
         try:
-            from cores.chatgpt_proxy import stop_proxy
             await stop_proxy()
         except Exception:
             pass
 
-if __name__ == "__main__":
-    # Check market holiday
-    from check_market_day import is_market_day
 
-    if not is_market_day():
-        current_date = datetime.now().date()  # Use datetime.now()
-        logger.info(f"Today ({current_date}) is a stock market holiday. Not executing batch job.")
+if __name__ == "__main__":
+    # Check for --force flag before market day check
+    force_execution = "--force" in sys.argv
+
+    # Check US market holiday (skip if --force is used)
+    from check_market_day import is_us_market_day
+
+    if not force_execution and not is_us_market_day():
+        current_date = datetime.now().date()
+        logger.info(f"Today ({current_date}) is a US stock market holiday. Not executing batch job.")
         sys.exit(0)
+
+    if force_execution:
+        logger.warning("Force execution enabled - ignoring market holiday check")
 
     # Start timer thread and execute main function only on business days
     import threading
 
-    # Timer function to terminate process after 120 minutes
     def exit_after_timeout():
         import time
-        import os
         import signal
-        time.sleep(7200)  # Wait 120 minutes
+        time.sleep(7200)  # 120 minutes
         logger.warning("120-minute timeout reached: forcefully terminating process")
         os.kill(os.getpid(), signal.SIGTERM)
 
-    # Start timer as background thread
     timer_thread = threading.Thread(target=exit_after_timeout, daemon=True)
     timer_thread.start()
 

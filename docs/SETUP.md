@@ -170,12 +170,13 @@ execution_engine: asyncio
 
 mcp:
   servers:
-    kospi_kosdaq:
+    yahoo_finance:
       command: "python3"
-      args: ["-m", "kospi_kosdaq_stock_server"]
-      env:
-        KAKAO_ID: "your_kakao_email@example.com"
-        KAKAO_PW: "your_kakao_password"
+      args: ["-m", "yahoo_finance_mcp"]
+
+    sec_edgar:
+      command: "python3"
+      args: ["-m", "sec_edgar_mcp"]
 
     firecrawl: firecrawl-mcp
     perplexity: npx -y @perplexity-ai/mcp-server
@@ -187,9 +188,7 @@ openai:
   reasoning_effort: medium
 ```
 
-> **Note**: Kakao credentials are required for Korean market data (KRX Data Marketplace authentication).
->
-> **2-Step Verification**: If enabled on your Kakao account, you'll need to confirm in the app for each analysis. To disable: Kakao App > Settings > Kakao Account > Account Security > 2-Step Verification 'Off'.
+> **Note**: Configure only US-market MCP servers for this repository.
 
 ### Step 6: Install Playwright (PDF Generation)
 
@@ -358,13 +357,13 @@ utils/setup_crontab.sh
 
 See [utils/CRONTAB_SETUP.md](../utils/CRONTAB_SETUP.md) for details.
 
-### US Stock Market Module
+### Morning Analysis
 
-For US market analysis (NYSE, NASDAQ):
+Run analysis from the canonical root entry point:
 
 ```bash
-# Run US analysis
-python prism-us/us_stock_analysis_orchestrator.py --mode morning --no-telegram
+# Run analysis
+python stock_analysis_orchestrator.py --mode morning --no-telegram
 ```
 
 ### Event-Driven Trading Signals

@@ -8,7 +8,7 @@ from cores.openai_error_logging import log_openai_error
 try:
     from cores.model_config import get_configured_model, get_optional_reasoning_effort
 except Exception:
-    # Fallback for dynamic import contexts (e.g., prism-us direct module loading).
+    # Fallback for dynamic import contexts.
     import importlib.util
     from pathlib import Path
 

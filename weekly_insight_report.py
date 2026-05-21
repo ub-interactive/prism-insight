@@ -73,8 +73,8 @@ def _get_primary_account_key(market: str) -> str | None:
 
 
 def _get_weekly_trades(cursor, week_start_str: str) -> str:
-    """Get weekly trade summary for KR and US markets."""
-    kr_account_key = _get_primary_account_key("kr")
+    """Get weekly trade summary for US market."""
+    kr_account_key = None
     us_account_key = _get_primary_account_key("us")
     kr_sells = _safe_query_all(cursor, """
         SELECT ticker, company_name, buy_price, sell_price, profit_rate, holding_days
@@ -86,11 +86,11 @@ def _get_weekly_trades(cursor, week_start_str: str) -> str:
     """, (week_start_str, kr_account_key)) if kr_account_key else []
     us_sells = _safe_query_all(cursor, """
         SELECT ticker, company_name, buy_price, sell_price, profit_rate, holding_days
-        FROM us_trading_history WHERE sell_date >= ? AND account_key = ? ORDER BY sell_date DESC
+        FROM trading_history WHERE sell_date >= ? AND account_key = ? ORDER BY sell_date DESC
     """, (week_start_str, us_account_key)) if us_account_key else []
     us_buys = _safe_query_all(cursor, """
         SELECT ticker, company_name, buy_price, buy_date, current_price
-        FROM us_stock_holdings WHERE buy_date >= ? AND account_key = ?
+        FROM stock_holdings WHERE buy_date >= ? AND account_key = ?
     """, (week_start_str, us_account_key)) if us_account_key else []
 
     if not (kr_sells or kr_buys or us_sells or us_buys):
@@ -130,7 +130,7 @@ def _get_sell_evaluation(cursor, week_start_str: str) -> str | None:
 
     Returns None if no sells this week (section should be omitted).
     """
-    kr_account_key = _get_primary_account_key("kr")
+    kr_account_key = None
     us_account_key = _get_primary_account_key("us")
     kr_sells = _safe_query_all(cursor, """
         SELECT ticker, company_name, sell_price
@@ -138,7 +138,7 @@ def _get_sell_evaluation(cursor, week_start_str: str) -> str | None:
     """, (week_start_str, kr_account_key)) if kr_account_key else []
     us_sells = _safe_query_all(cursor, """
         SELECT ticker, company_name, sell_price
-        FROM us_trading_history WHERE sell_date >= ? AND account_key = ?
+        FROM trading_history WHERE sell_date >= ? AND account_key = ?
     """, (week_start_str, us_account_key)) if us_account_key else []
 
     if not kr_sells and not us_sells:
@@ -146,7 +146,7 @@ def _get_sell_evaluation(cursor, week_start_str: str) -> str | None:
 
     lines = []
 
-    # KR: batch lookup via pykrx (single call for all tickers)
+    # KR section is disabled in US-only runtime
     if kr_sells:
         try:
             from krx_data_client import get_nearest_business_day_in_a_week, get_market_ohlcv_by_ticker
@@ -328,7 +328,7 @@ async def generate_weekly_report(db_path: str = DB_PATH) -> str:
     try:
         query = """
             SELECT COUNT(*), AVG(return_30d * 100)
-            FROM us_analysis_performance_tracker
+            FROM analysis_performance_tracker
             WHERE return_30d IS NOT NULL
               AND COALESCE(was_traded, 0) = 0
               AND return_30d < -0.05
@@ -339,7 +339,7 @@ async def generate_weekly_report(db_path: str = DB_PATH) -> str:
 
         query = """
             SELECT COUNT(*), MAX(return_30d * 100)
-            FROM us_analysis_performance_tracker
+            FROM analysis_performance_tracker
             WHERE return_30d IS NOT NULL
               AND COALESCE(was_traded, 0) = 0
               AND return_30d > 0.10
@@ -353,7 +353,7 @@ async def generate_weekly_report(db_path: str = DB_PATH) -> str:
                 trigger_type,
                 SUM(CASE WHEN return_30d IS NOT NULL THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN return_30d > 0 THEN 1 ELSE 0 END) as wins
-            FROM us_analysis_performance_tracker
+            FROM analysis_performance_tracker
             WHERE trigger_type IS NOT NULL
             GROUP BY trigger_type
             HAVING completed >= 3
@@ -493,17 +493,11 @@ async def send_to_telegram(message: str):
 
 
 async def _send_broadcast(message: str, broadcast_languages: list):
-    """Send translated report to broadcast language channels."""
+    """Send report to broadcast language channels."""
     if not broadcast_languages:
         return
 
     try:
-        import sys
-        cores_path = str(Path(__file__).parent / "cores")
-        if cores_path not in sys.path:
-            sys.path.insert(0, cores_path)
-
-        from agents.telegram_translator_agent import translate_telegram_message
         from telegram import Bot
 
         token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -521,11 +515,7 @@ async def _send_broadcast(message: str, broadcast_languages: list):
                     logger.warning(f"No channel ID for language: {lang} (TELEGRAM_CHANNEL_ID_{lang_upper})")
                     continue
 
-                logger.info(f"Translating weekly report to {lang}")
-                translated = await translate_telegram_message(
-                    message, model="gpt-5-nano", from_lang="ko", to_lang=lang
-                )
-                await bot.send_message(chat_id=channel_id, text=translated, parse_mode="HTML")
+                await bot.send_message(chat_id=channel_id, text=message, parse_mode="HTML")
                 logger.info(f"Weekly report sent to {lang} channel")
 
             except Exception as e:

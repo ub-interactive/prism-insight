@@ -119,15 +119,18 @@ Avoid broad production-like runs unless the task requires them.
 ### Environment
 
 - Python 3.12, Node.js 22.x are available.
-- `PATH` must include `/home/ubuntu/.local/bin` (where pip installs CLI tools like `playwright`, `ruff`, `pytest`).
+- `uv`/`uvx` must be installed (MCP servers use them). Install via `curl -LsSf https://astral.sh/uv/install.sh | sh`.
+- `PATH` must include `/home/ubuntu/.local/bin` (where pip installs CLI tools like `playwright`, `pytest`).
 - Config files: copy `*.example` files if the non-example counterparts are missing (`mcp_agent.config.yaml` is tracked; `.env` and `trading/config/kis_devlp.yaml` are not).
+- `pytest-asyncio` is needed for async tests (not in `requirements.txt` but required to run the full test suite).
 
 ### Running services
 
 - The application is a **batch/cron-driven pipeline**, not a long-running server. There is no `dev server` to start.
 - `python weekly_insight_report.py --dry-run` is the fastest smoke test (no API keys needed).
-- `python demo.py AAPL` runs the full analysis pipeline; it requires `OPENAI_API_KEY` in `mcp_agent.secrets.yaml` (or `.env` after config refactor) to succeed past data prefetch.
-- Tests: `pytest tests/` — ignore `test_gcp_pubsub_signal.py`, `test_redis_signal_pubsub.py`, `test_integration_pipeline.py`, and `test_journal_schema_smoke.py` (these need external services or specific DB state).
+- `python trigger_batch.py morning INFO` runs surge/momentum stock detection using yfinance (no API keys needed).
+- `python demo.py AAPL` runs the full analysis pipeline; it requires `OPENAI_API_KEY` in `.env` to succeed past data prefetch.
+- Tests: `pytest tests/ --ignore=tests/test_journal_schema_smoke.py` — the `test_journal_schema_smoke.py` test has a collection error due to import chain side effects; all other tests pass (101 passed, 46 skipped for tests requiring external services).
 
 ### Linting
 

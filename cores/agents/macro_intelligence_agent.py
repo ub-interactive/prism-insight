@@ -1,7 +1,7 @@
 from mcp_agent.agents.agent import Agent
 
 
-def create_macro_intelligence_agent(reference_date, language="ko", prefetched_data: dict = None):
+def create_macro_intelligence_agent(reference_date, language="en", prefetched_data: dict = None):
     """Create macro intelligence agent for US market
 
     The agent receives pre-computed regime and index data from programmatic prefetch,
@@ -9,13 +9,14 @@ def create_macro_intelligence_agent(reference_date, language="ko", prefetched_da
 
     Args:
         reference_date: Analysis reference date (YYYYMMDD)
-        language: Language code ("ko" or "en")
+        language: Legacy language argument retained for callers.
         prefetched_data: Dict with computed_regime, sp500_ohlcv_md, nasdaq_ohlcv_md, vix_ohlcv_md
 
     Returns:
         Agent: US macro intelligence agent
     """
 
+    _ = language
     # Build context from prefetched data (language-agnostic)
     regime_context = ""
     index_data_context = ""
@@ -66,8 +67,7 @@ perplexity data provides overwhelming contradictory evidence.
     _default_simple_ma = prefetched_data.get('computed_regime', {}).get('simple_ma_regime', 'sideways') if prefetched_data else 'sideways'
     _index_summary_json = _format_us_index_summary(prefetched_data)
 
-    report_prose_guidance = (
-        """## report_prose Guidelines
+    report_prose_guidance = """## report_prose Guidelines
 
 Write the `report_prose` field as a professional 3–5 paragraph narrative in formal English covering:
 1. Current market regime and its rationale
@@ -76,19 +76,6 @@ Write the `report_prose` field as a professional 3–5 paragraph narrative in fo
 4. Recommended posture for risk-aware observers given the regime (informational framing; not individualized advice).
 
 This prose is inserted verbatim into downstream stock-analysis reports."""
-        if language == "en"
-        else """## report_prose Guidelines
-
-The `report_prose` field MUST be professional 3–5 paragraph narrative prose in formal polite Korean (합쇼체: endings such as ~습니다, ~있습니다, ~됩니다).
-
-Cover these themes while keeping factual discipline:
-1. Confidence in programmatic regime tagging plus rationale for trusting or nuancing it,
-2. Leadership vs laggard sector stories anchored in perplexity evidence,
-3. Material risk scenarios with plausible transmission pathways,
-4. Informational framing for how risk-aware observers contextualize exposures (no personalized solicitation).
-
-Keep JSON keys ASCII; short English ticker or index references inside sentences are acceptable."""
-    )
 
     instruction = f"""You are a US stock market macro intelligence analyst.
 Follow the instructions below to collect data, then output ONLY valid JSON. Do not include any text outside the JSON.
@@ -111,7 +98,7 @@ Based on perplexity AND the pre-computed index/regime artefacts above:
 2. Identify leading vs lagging sectors grounded in perplexity text.
 3. Surface risk-event objects + beneficiary thematic bridges.
 4. Populate regime_rationale (1–2 sentences) anchored to BOTH programmatic regime and perplexity story.
-5. Populate report_prose per language rules below.
+5. Populate report_prose following the English guidelines below.
 
 ---
 
@@ -148,7 +135,7 @@ Industry subclusters (Semiconductors, Software…) may appear inside reason stri
   "beneficiary_themes": [
     {{"theme": "...", "beneficiary_sectors": ["Software"], "duration": "medium_term"}}
   ],
-  "report_prose": "3-5 paragraphs per language guideline"
+  "report_prose": "Three to five paragraphs of formal English per guidelines below."
 }}}}
 ```
 

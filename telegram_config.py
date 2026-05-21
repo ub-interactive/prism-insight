@@ -2,6 +2,10 @@
 """
 Telegram configuration and utility module
 
+Telegram outbound messaging is disabled unless explicitly opted in via
+``PRISM_ENABLE_TELEGRAM`` (truthy env) or an explicit CLI ``--telegram`` flag
+wired through ``TelegramConfig(use_telegram=True|False|None)``.
+
 Encapsulates telegram usage settings following SOLID principles
 and minimizes redundant conditional processing.
 """
@@ -10,6 +14,31 @@ import os
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+_TRUTHY_ENV = frozenset({"1", "true", "yes", "on"})
+
+
+def telegram_opt_in_requested() -> bool:
+    """Return True when env PRISM_ENABLE_TELEGRAM is set to a truthy value."""
+
+    return os.getenv("PRISM_ENABLE_TELEGRAM", "").strip().lower() in _TRUTHY_ENV
+
+
+def resolve_telegram_flag(explicit: Optional[bool]) -> bool:
+    """Combine CLI/env overrides into a single on/off toggle.
+
+    - explicit True → enabled
+    - explicit False → disabled
+    - None → follow PRISM_ENABLE_TELEGRAM (default off when unset)
+
+    Args:
+        explicit: Caller intent (typically from argparse), or ``None`` for env-only resolution.
+    """
+    if explicit is True:
+        return True
+    if explicit is False:
+        return False
+    return telegram_opt_in_requested()
 
 
 class TelegramConfig:
@@ -20,17 +49,17 @@ class TelegramConfig:
     Also manages multi-language channel IDs.
     """
 
-    def __init__(self, use_telegram: bool = True, channel_id: Optional[str] = None, bot_token: Optional[str] = None, broadcast_languages: list = None):
+    def __init__(self, use_telegram: Optional[bool] = None, channel_id: Optional[str] = None, bot_token: Optional[str] = None, broadcast_languages: list = None):
         """
-        Initialize telegram configuration
+        Initialize telegram configuration.
 
         Args:
-            use_telegram: Whether to use telegram (default: True)
+            use_telegram: Explicit True/False, or ``None`` to follow PRISM_ENABLE_TELEGRAM (default off).
             channel_id: Telegram channel ID (auto-loaded from environment variables if not provided)
             bot_token: Telegram bot token (auto-loaded from environment variables if not provided)
             broadcast_languages: List of languages to broadcast in parallel (e.g., ['en', 'ja'])
         """
-        self._use_telegram = use_telegram
+        self._use_telegram = resolve_telegram_flag(use_telegram)
         self._channel_id = channel_id
         self._bot_token = bot_token
         self._broadcast_languages = broadcast_languages or []
@@ -135,13 +164,13 @@ class TelegramConfig:
         if not self._channel_id:
             raise ValueError(
                 "Telegram channel ID is not configured. "
-                "Set environment variable TELEGRAM_CHANNEL_ID or use --no-telegram option."
+                "Set TELEGRAM_CHANNEL_ID or disable Telegram with PRISM_ENABLE_TELEGRAM unset / --no-telegram."
             )
 
         if not self._bot_token:
             raise ValueError(
                 "Telegram bot token is not configured. "
-                "Set environment variable TELEGRAM_BOT_TOKEN or use --no-telegram option."
+                "Set TELEGRAM_BOT_TOKEN or disable Telegram with PRISM_ENABLE_TELEGRAM unset / --no-telegram."
             )
 
         logger.info(f"Telegram configuration validated (channel: {self._channel_id[:10]}...)")
@@ -149,11 +178,12 @@ class TelegramConfig:
     def log_status(self) -> None:
         """Log current telegram configuration status"""
         if self._use_telegram:
-            logger.info(f"✅ Telegram messaging enabled")
-            logger.info(f"   - Channel ID: {self._channel_id[:10] if self._channel_id else 'None'}...")
-            logger.info(f"   - Bot token: {'Configured' if self._bot_token else 'Not configured'}")
+            logger.info("Telegram messaging enabled for this configuration")
+            cid = self._channel_id[:10] if self._channel_id else "None"
+            logger.info(f"   - Channel ID prefix: {cid}...")
+            logger.info(f"   - Bot token: {'configured' if self._bot_token else 'missing'}")
         else:
-            logger.info("❌ Telegram messaging disabled")
+            logger.info("Telegram messaging disabled for this configuration")
     
     def __repr__(self) -> str:
         return (
@@ -198,10 +228,10 @@ async def send_openai_quota_alert(telegram_config: "TelegramConfig", market: str
         bot = Bot(token=telegram_config.bot_token, request=request)
 
         alert_message = (
-            f"🚨 [{market}] OpenAI API 크레딧 소진 알림\n\n"
-            f"OpenAI API 크레딧이 소진되어 분석 파이프라인이 중단되었습니다.\n\n"
-            f"• 오류: insufficient_quota (HTTP 429)\n"
-            f"• 조치 필요: OpenAI Platform → Billing에서 크레딧 충전 또는 Organization Budget 상향\n"
+            f"🚨 [{market}] OpenAI quota exhausted\n\n"
+            f"The analysis pipeline stopped because the OpenAI API reported insufficient quota.\n\n"
+            f"• Error: insufficient_quota (HTTP 429)\n"
+            f"• Action: Top up credits or raise the org budget in OpenAI Platform → Billing\n"
             f"• https://platform.openai.com/settings/organization/billing"
         )
 

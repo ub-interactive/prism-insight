@@ -1,8 +1,8 @@
 """
 Firebase Bridge for PRISM-Mobile
 
-Saves message metadata to Firestore and sends FCM push notifications
-when Telegram messages are sent. Failure never affects Telegram delivery.
+Saves message metadata to Firestore and sends FCM push notifications when
+configured. Failures are logged and ignored so core batch jobs keep running.
 
 IMPORTANT: This module is opt-in and disabled by default.
 Set FIREBASE_BRIDGE_ENABLED=true in .env to activate.
@@ -79,89 +79,9 @@ def _initialize():
         return False
 
 
-# Channel username for constructing telegram links (configurable via env)
-TELEGRAM_CHANNEL_USERNAME = os.environ.get('TELEGRAM_CHANNEL_USERNAME', 'stock_ai_agent')
-
-# Multi-channel username mapping: JSON dict of chat_id -> public username
-# e.g. TELEGRAM_CHANNEL_USERNAMES='{"-1001234567890":"stock_ai_agent","-1009876543210":"prism_insight_global_en"}'
-# Also supports per-language env vars: TELEGRAM_CHANNEL_USERNAME_EN, TELEGRAM_CHANNEL_USERNAME_JA, etc.
-_channel_usernames_cache = None
-
-
-def _get_channel_lang(channel_id: Optional[str]) -> str:
-    """Resolve Telegram chat_id to language code.
-
-    Returns 'ko' for the default channel, or the language suffix (lowercased)
-    for TELEGRAM_CHANNEL_ID_{LANG} matches.
-    """
-    if not channel_id:
-        return 'ko'
-
-    default_channel = os.environ.get('TELEGRAM_CHANNEL_ID', '')
-    if channel_id == default_channel:
-        return 'ko'
-
-    for key, value in os.environ.items():
-        if key.startswith('TELEGRAM_CHANNEL_ID_') and value == channel_id:
-            return key[len('TELEGRAM_CHANNEL_ID_'):].lower()  # e.g. 'en', 'ja'
-
-    return 'ko'
-
-
-def _get_channel_username(channel_id: Optional[str]) -> Optional[str]:
-    """Resolve Telegram chat_id to public channel username for deep links.
-
-    Lookup order:
-    1. TELEGRAM_CHANNEL_USERNAMES JSON mapping (chat_id -> username)
-    2. TELEGRAM_CHANNEL_ID_{LANG} / TELEGRAM_CHANNEL_USERNAME_{LANG} pairs
-    3. Fallback to TELEGRAM_CHANNEL_USERNAME (default)
-
-    Returns None if no username is found (e.g. private channels).
-    """
-    if not channel_id:
-        return TELEGRAM_CHANNEL_USERNAME
-
-    global _channel_usernames_cache
-    if _channel_usernames_cache is None:
-        raw = os.environ.get('TELEGRAM_CHANNEL_USERNAMES', '{}')
-        try:
-            _channel_usernames_cache = json.loads(raw)
-        except (json.JSONDecodeError, TypeError):
-            _channel_usernames_cache = {}
-
-    # 1. Direct chat_id -> username mapping
-    if channel_id in _channel_usernames_cache:
-        return _channel_usernames_cache[channel_id]
-
-    # 2. Scan TELEGRAM_CHANNEL_ID_{LANG} env vars
-    for key, value in os.environ.items():
-        if key.startswith('TELEGRAM_CHANNEL_ID_') and value == channel_id:
-            lang_suffix = key[len('TELEGRAM_CHANNEL_ID_'):]  # e.g. 'EN', 'JA'
-            username = os.environ.get(f'TELEGRAM_CHANNEL_USERNAME_{lang_suffix}', '')
-            if username:
-                _channel_usernames_cache[channel_id] = username
-                return username
-
-    # 3. Fallback
-    return TELEGRAM_CHANNEL_USERNAME
-
-
-def _build_telegram_link(channel_id: Optional[str], message_id: int) -> str:
-    """Build telegram deep link, supporting both public and private channels.
-
-    Public channels:  https://t.me/{username}/{message_id}
-    Private channels: https://t.me/c/{channel_id_stripped}/{message_id}
-    """
-    username = _get_channel_username(channel_id)
-    if username:
-        return f"https://t.me/{username}/{message_id}"
-
-    # Private channel fallback: strip -100 prefix
-    if channel_id and channel_id.startswith('-100'):
-        stripped = channel_id[4:]
-        return f"https://t.me/c/{stripped}/{message_id}"
-
-    return ''
+def _notification_lang() -> str:
+    """Prefer explicit FCM routing language; defaults to ``en`` for the US workflow."""
+    return (os.environ.get("PRISM_FCM_DEFAULT_LANG") or "en").lower()
 
 
 def detect_market(message: str) -> str:
@@ -173,56 +93,46 @@ def detect_market(message: str) -> str:
 def detect_type(message: str) -> str:
     """Detect message type from content.
 
-    Priority order matters: portfolio > pdf > trigger > analysis.
-    Trigger alerts may contain '매수'/'buy' as signal direction keywords,
-    so trigger detection must come BEFORE the general analysis check.
-    '포트폴리오 관점' (perspective section in buy messages) must NOT match
-    portfolio — only dedicated portfolio status/summary messages should match.
+    Priority order: portfolio summary > embedded PDF cues > prism/trigger wording >
+    generic analysis language > standalone ``report`` phrasing > default trigger.
+
+    Directional verbs like ``buy`` appear in both scans and chatter, so prism/trigger
+    keywords are evaluated **before** the broad ``analysis`` bucket whenever possible.
     """
     msg_lower = message.lower()
 
-    # Portfolio detection FIRST — use specific phrases to avoid false positives.
-    # '포트폴리오 관점' (portfolio perspective in buy/sell messages) must NOT match here.
     if any(kw in msg_lower for kw in [
-        '포트폴리오 현황', '포트폴리오 요약', '포트폴리오 리포트',
-        '보유 종목', '잔고',
         'portfolio summary', 'portfolio status', 'portfolio report', 'holdings',
+        'positions overview', 'account snapshot',
     ]):
         return 'portfolio'
 
-    # PDF report detection
-    if any(kw in msg_lower for kw in ['.pdf', 'pdf 리포트', 'pdf report']):
+    if any(kw in msg_lower for kw in ['.pdf', 'pdf report']):
         return 'pdf'
 
-    # Trigger/signal detection BEFORE analysis — trigger alerts contain '매수'/'buy'
-    # as signal direction which would otherwise be misclassified as analysis.
     if any(kw in msg_lower for kw in [
-        '트리거', 'trigger', '신호 알림', 'signal alert',
-        '급등', '급락', 'surge',
+        'trigger', 'signal alert', 'prism signal', 'morning prism', 'afternoon prism',
+        'scanner hit', 'surge detection', 'volume surge alert',
     ]):
         return 'trigger'
 
-    # Analysis detection (expanded keywords for both KR and EN)
     if any(kw in msg_lower for kw in [
-        '분석', 'analysis', '전망', '요약', 'summary',
-        '리뷰', '시장', '매수', '매도', '보류',
-        'buy', 'sell', 'hold', 'review', 'outlook',
+        'analysis', 'summary', 'outlook', 'review', 'market note',
+        'buy', 'sell', 'hold', 'long thesis', 'short thesis',
     ]):
         return 'analysis'
 
-    # Broad report/리포트 as fallback (after portfolio and analysis checked)
-    if any(kw in msg_lower for kw in ['리포트', 'report', '보고서']):
+    if any(kw in msg_lower for kw in ['research note', 'report']):
         return 'pdf'
 
-    # Default: trigger (trading signal)
     return 'trigger'
 
 
 def _clean_filename(text: str) -> str:
     """Clean a raw filename into a human-readable title.
 
-    'pdfreports/012450_Hanwha_Aerospace_20260210_afternoon.pdf'
-    → '012450 Hanwha Aerospace 20260210 afternoon'
+    'pdfreports/AAPL_Apple Inc_20260210_afternoon.pdf'
+    → 'AAPL Apple Inc 20260210 afternoon'
     """
     # Extract filename from path
     name = text.split('/')[-1]
@@ -302,21 +212,22 @@ async def notify(
     """
     Save message metadata to Firestore and send FCM push.
 
-    This function NEVER raises exceptions - all errors are logged and ignored
-    to ensure Telegram delivery is never affected.
+    This function NEVER raises exceptions—for errors are logged and ignored.
 
     Args:
-        message: The telegram message text
+        message: Human-readable plaintext that originated the notification
         market: Market identifier (`us` only). Auto-detected if None.
         msg_type: Message type. Auto-detected if None.
-        telegram_message_id: Telegram message ID for deep link
-        channel_id: Telegram channel ID (for reference)
-        has_pdf: Whether this message has an associated PDF
-        pdf_telegram_link: Direct link to PDF in Telegram
+        telegram_message_id: Legacy positional argument (ignored; deep links unused)
+        channel_id: Legacy routing hint (stored when provided)
+        has_pdf: Whether this message references an associated PDF asset
+        pdf_telegram_link: Legacy positional argument for deep links (usually empty)
     """
     try:
         if not _initialize():
             return
+
+        _ = telegram_message_id
 
         # Auto-detect if not provided
         if not market:
@@ -328,13 +239,9 @@ async def notify(
         preview = extract_preview(message)
         stock_code, stock_name = extract_stock_info(message)
 
-        # Resolve language from channel
-        lang = _get_channel_lang(channel_id)
-
-        # Build telegram link (public or private channel)
+        lang = _notification_lang()
         telegram_link = ''
-        if telegram_message_id:
-            telegram_link = _build_telegram_link(channel_id, telegram_message_id)
+        pdf_link = pdf_telegram_link or ''
 
         # Save to Firestore
         from google.cloud.firestore import SERVER_TIMESTAMP
@@ -350,7 +257,7 @@ async def notify(
             'stock_code': stock_code,
             'stock_name': stock_name,
             'has_pdf': has_pdf,
-            'pdf_telegram_link': pdf_telegram_link,
+            'pdf_telegram_link': pdf_link,
             'created_at': SERVER_TIMESTAMP,
         }
 
@@ -358,7 +265,7 @@ async def notify(
         logger.info(f"Firebase: Saved {msg_type}/{market} message to Firestore")
 
         # Send FCM push notification
-        await _send_push(title, preview, msg_type, market, lang, telegram_link, pdf_telegram_link or '')
+        await _send_push(title, preview, msg_type, market, lang, telegram_link, pdf_link)
 
     except Exception as e:
         logger.warning(f"Firebase Bridge notify failed (ignored): {e}")

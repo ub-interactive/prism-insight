@@ -9,7 +9,6 @@ Main Features:
 1. Generate trading scenarios based on analysis reports
 2. Manage stock purchases/sales (maximum 10 slots)
 3. Track trading history and returns
-4. Share results through Telegram channel
 
 Key Differences from Korean Version:
 - Uses ticker symbols (AAPL, MSFT) instead of 6-digit codes
@@ -38,9 +37,6 @@ from typing import List, Dict, Any, Tuple, Optional
 PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT))
 from cores.openai_error_logging import log_openai_error
-
-from telegram import Bot
-from telegram.error import TelegramError
 
 # Logging configuration
 logging.basicConfig(
@@ -75,17 +71,10 @@ from tracking.journal import USJournalManager
 
 US_TRADING_DECISION_MODEL = get_configured_model("us_trading_decision", "gpt-5.5")
 US_SELL_DECISION_MODEL = get_configured_model("us_sell_decision", "gpt-5.5")
-US_TRANSLATION_MODEL = get_configured_model("us_translation", "gpt-5-nano")
 from trading import kis_auth as ka
 
 # Create MCPApp instance
 app = MCPApp(name="us_stock_tracking")
-
-
-async def translate_telegram_message(message: str, model: str = "", from_lang: str = "ko", to_lang: str = "en") -> str:
-    """Fallback no-op translator for US-only runtime."""
-    _ = (model, from_lang, to_lang)
-    return message
 
 
 # =============================================================================
@@ -372,21 +361,18 @@ class USStockTrackingAgent:
     def __init__(
         self,
         db_path: str = "stock_tracking_db.sqlite",
-        telegram_token: str = None,
-        enable_journal: bool = False
+        enable_journal: bool = False,
     ):
         """
         Initialize US Stock Tracking Agent.
 
         Args:
             db_path: SQLite database file path
-            telegram_token: Telegram bot token
             enable_journal: Whether to enable trading journal feature
         """
         self.max_slots = self.MAX_SLOTS
         self.message_queue = []
         self._msg_types = []  # msg_type for each message in queue
-        self._broadcast_task = None  # Track broadcast translation task
         self.trading_agent = None
         self.sell_decision_agent = None
         self.db_path = db_path
@@ -400,12 +386,6 @@ class USStockTrackingAgent:
         # Journal and compression managers (initialized in initialize())
         self.journal_manager = None
         self.compression_manager = None
-
-        # Set Telegram bot token
-        self.telegram_token = telegram_token or os.environ.get("TELEGRAM_BOT_TOKEN")
-        self.telegram_bot = None
-        if self.telegram_token:
-            self.telegram_bot = Bot(token=self.telegram_token)
 
     async def initialize(self, language: str = "ko", sector_names: list = None):
         """
@@ -503,7 +483,7 @@ class USStockTrackingAgent:
         """
         Normalize decision string for comparison.
 
-        The agent emits `decision` as enter/no_entry ascii (legacy synonyms like 진입 still normalized downstream).
+        The agent emits `decision` as enter/no_entry ascii. Normalize common English synonyms only.
 
         Args:
             decision: Raw decision string from agent
@@ -515,10 +495,10 @@ class USStockTrackingAgent:
             return "no_entry"
         d = decision.lower().strip()
         # Handle various entry formats
-        if d in ("enter", "entry", "진입", "yes", "buy"):
+        if d in ("enter", "entry", "yes", "buy"):
             return "entry"
         # Handle various no-entry formats
-        elif d in ("no entry", "no_entry", "no-entry", "미진입", "no", "skip", "pass"):
+        elif d in ("no entry", "no_entry", "no-entry", "no", "skip", "pass"):
             return "no_entry"
         return d
 
@@ -891,12 +871,12 @@ class USStockTrackingAgent:
                     if primary_resistance or secondary_resistance:
                         message += f"  📈 Resistance:\n"
                         if secondary_resistance:
-                            message += f"    • 2차: ${secondary_resistance:,.2f}\n"
+                            message += f"    • Tier 2: ${secondary_resistance:,.2f}\n"
                         if primary_resistance:
-                            message += f"    • 1차: ${primary_resistance:,.2f}\n"
+                            message += f"    • Tier 1: ${primary_resistance:,.2f}\n"
 
                     # Current price display
-                    message += f"  ━━ 현재가: ${current_price:,.2f} ━━\n"
+                    message += f"  ━━ Spot: ${current_price:,.2f} ━━\n"
 
                     # Support levels
                     primary_support = parse_price_value(key_levels.get('primary_support', 0))
@@ -904,9 +884,9 @@ class USStockTrackingAgent:
                     if primary_support or secondary_support:
                         message += f"  📉 Support:\n"
                         if primary_support:
-                            message += f"    • 1차: ${primary_support:,.2f}\n"
+                            message += f"    • Tier 1: ${primary_support:,.2f}\n"
                         if secondary_support:
-                            message += f"    • 2차: ${secondary_support:,.2f}\n"
+                            message += f"    • Tier 2: ${secondary_support:,.2f}\n"
 
                     # Volume baseline
                     volume_baseline = key_levels.get('volume_baseline', '')
@@ -921,11 +901,11 @@ class USStockTrackingAgent:
                     message += "🔔 Sell Signals:\n"
                     for i, trigger in enumerate(sell_triggers, 1):
                         # Select emoji based on condition type
-                        if any(kw in trigger.lower() for kw in ["익절", "목표", "저항", "profit", "target", "resistance"]):
+                        if any(kw in trigger.lower() for kw in ["profit", "target", "resistance", "take"]):
                             emoji = "✅"
                         elif any(kw in trigger.lower() for kw in ["stop", "support", "down"]):
                             emoji = "⛔"
-                        elif any(kw in trigger.lower() for kw in ["시간", "횡보", "time", "sideways"]):
+                        elif any(kw in trigger.lower() for kw in ["time", "sideways", "review"]):
                             emoji = "⏰"
                         else:
                             emoji = "•"
@@ -936,7 +916,7 @@ class USStockTrackingAgent:
                 # 3. Hold Conditions
                 hold_conditions = trading_scenarios.get('hold_conditions', [])
                 if hold_conditions:
-                    message += "✋ 보유 지속 조건:\n"
+                    message += "✋ Hold conditions:\n"
                     for condition in hold_conditions:
                         message += f"  • {condition}\n"
                     message += "\n"
@@ -944,7 +924,7 @@ class USStockTrackingAgent:
                 # 4. Portfolio Context
                 portfolio_context = trading_scenarios.get('portfolio_context', '')
                 if portfolio_context:
-                    message += f"💼 포트폴리오 관점:\n  {portfolio_context}\n"
+                    message += f"💼 Portfolio context:\n  {portfolio_context}\n"
 
             self._msg_types.append("analysis")
             self.message_queue.append(message)
@@ -1080,27 +1060,31 @@ class USStockTrackingAgent:
 
             self.conn.commit()
 
-            # Translate market regime labels to Korean for display
-            _regime_labels_ko = {
-                "parabolic": "폭주 강세장",
-                "strong_bull": "강한 강세장", "moderate_bull": "보통 강세장",
-                "sideways": "횡보장", "moderate_bear": "보통 약세장", "strong_bear": "강한 약세장"
+            # Readable market regime labels for investor-facing summaries
+            _regime_labels = {
+                "parabolic": "Parabolic Bull",
+                "strong_bull": "Strong Bull",
+                "moderate_bull": "Moderate Bull",
+                "sideways": "Sideways",
+                "moderate_bear": "Moderate Bear",
+                "strong_bear": "Strong Bear",
             }
             market_condition_display = market_condition
-            for eng, ko in _regime_labels_ko.items():
+            for eng, label in _regime_labels.items():
                 if market_condition_display.startswith(eng):
-                    market_condition_display = market_condition_display.replace(eng, ko, 1)
+                    market_condition_display = market_condition_display.replace(eng, label, 1)
                     break
 
-            # Generate no-entry message (same format as Korean enhanced version)
-            skip_message = f"⚠️ 매수 보류: {company_name}({ticker})\n" \
-                           f"현재가: ${current_price:,.2f}\n" \
-                           f"매수 Score: {buy_score}/10\n" \
-                           f"결정: Skip\n" \
-                           f"시장 상황: {market_condition_display}\n" \
-                           f"산업군: {sector}\n" \
-                           f"보류 사유: {skip_reason}\n" \
-                           f"분석 의견: {rationale if rationale else '정보 없음'}"
+            skip_message = (
+                f"⚠️ Entry skipped: {company_name}({ticker})\n"
+                f"Spot: ${current_price:,.2f}\n"
+                f"Buy score: {buy_score}/10\n"
+                f"Decision: Skip\n"
+                f"Market: {market_condition_display}\n"
+                f"Sector: {sector}\n"
+                f"Reason: {skip_reason}\n"
+                f"View: {rationale if rationale else 'N/A'}"
+            )
 
             # Add trigger win rate
             trigger_win_rate = self._get_trigger_win_rate(trigger_type)
@@ -1420,7 +1404,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
         analysis_summary: Dict[str, Any],
         current_price: float = 0
     ):
-        """Process DB updates and Telegram notifications based on portfolio_adjustment"""
+        """Process DB updates and queued notifications (logs / Firebase) based on portfolio_adjustment"""
         try:
             if not portfolio_adjustment.get("needed", False):
                 return
@@ -1950,8 +1934,10 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
             self.cursor.execute("SELECT COUNT(*) FROM trading_history WHERE account_key = ? AND profit_rate > 0", (self._account_scope()[0],))
             successful_trades = self.cursor.fetchone()[0] or 0
 
-            # Generate message (Korean as default - same as Korean stock version)
-            message = f"📊 프리즘 US 시뮬레이터 | 실시간 포트폴리오 ({datetime.now().strftime('%Y-%m-%d %H:%M')})\n\n"
+            # Generate consolidated portfolio snapshot for logs / Firebase
+            message = (
+                f"📊 PRISM US Simulator | Live portfolio ({datetime.now().strftime('%Y-%m-%d %H:%M')})\n\n"
+            )
 
             # 1. Portfolio summary
             message += f"🔸 Current Holdings: {len(holdings) if holdings else 0}/{self.max_slots}\n"
@@ -1970,8 +1956,14 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                     best = max(profit_rates, key=lambda x: x[2])
                     worst = min(profit_rates, key=lambda x: x[2])
 
-                    message += f"✅ 최고 수익: {best[1]}({best[0]}) {'+' if best[2] > 0 else ''}{best[2]:.2f}%\n"
-                    message += f"⚠️ 최저 수익: {worst[1]}({worst[0]}) {'+' if worst[2] > 0 else ''}{worst[2]:.2f}%\n"
+                    message += (
+                        f"✅ Best P&L: {best[1]}({best[0]}) "
+                        f"{'+' if best[2] > 0 else ''}{best[2]:.2f}%\n"
+                    )
+                    message += (
+                        f"⚠️ Worst P&L: {worst[1]}({worst[0]}) "
+                        f"{'+' if worst[2] > 0 else ''}{worst[2]:.2f}%\n"
+                    )
 
             message += "\n"
 
@@ -1990,14 +1982,14 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                     stop_loss = stock.get('stop_loss', 0)
                     scenario_str = stock.get('scenario', '{}')
 
-                    # Extract sector information from scenario
-                    sector = "알 수 없음"
+                    # Extract sector information from scenario JSON when present.
+                    sector = "Unknown"
                     try:
                         if isinstance(scenario_str, str):
                             scenario_data = json.loads(scenario_str)
-                            sector = scenario_data.get('sector', '알 수 없음')
-                    except:
-                        sector = stock.get('sector', '알 수 없음')
+                            sector = scenario_data.get('sector', 'Unknown')
+                    except Exception:
+                        sector = stock.get('sector', 'Unknown')
 
                     # Update sector count
                     sector_counts[sector] = sector_counts.get(sector, 0) + 1
@@ -2011,29 +2003,31 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                     message += f"- {company_name}({ticker}) [{sector}]\n"
                     message += f"  Buy: ${buy_price:.2f} / Current: ${current_price:.2f}\n"
                     message += f"  Target: ${target_price:.2f} / Stop: ${stop_loss:.2f}\n"
-                    message += f"  수익률: {arrow} {profit_rate:.2f}% / 보유기간: {days_passed}일\n\n"
+                    message += (
+                        f"  P&L: {arrow} {profit_rate:.2f}% / Holding days: {days_passed}\n\n"
+                    )
 
                 # Add sector distribution
                 message += f"🔸 Sector Distribution:\n"
                 for sector, count in sector_counts.items():
                     percentage = (count / len(holdings)) * 100
-                    message += f"- {sector}: {count}개 ({percentage:.1f}%)\n"
+                    message += f"- {sector}: {count} names ({percentage:.1f}%)\n"
                 message += "\n"
             else:
                 message += "No holdings.\n\n"
 
             # 3. Trading history statistics
-            message += f"🔸 매매 이력 통계\n"
-            message += f"- 총 거래 건수: {total_trades}건\n"
-            message += f"- 수익 거래: {successful_trades}건\n"
-            message += f"- 손실 거래: {total_trades - successful_trades}건\n"
+            message += "🔸 Trading history\n"
+            message += f"- Total trades: {total_trades}\n"
+            message += f"- Winning trades: {successful_trades}\n"
+            message += f"- Losing trades: {total_trades - successful_trades}\n"
 
             if total_trades > 0:
-                message += f"- 승률: {(successful_trades / total_trades * 100):.2f}%\n"
+                message += f"- Win rate: {(successful_trades / total_trades * 100):.2f}%\n"
             else:
-                message += f"- 승률: 0.00%\n"
+                message += "- Win rate: 0.00%\n"
 
-            message += f"- 누적 수익률: {total_profit:.2f}%\n\n"
+            message += f"- Cumulative P&L (sum of trade %) : {total_profit:.2f}%\n\n"
 
             # 4. Enhanced Disclaimer
             message += "📝 Important Notice:\n"
@@ -2215,7 +2209,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                                             company_name=company_name,
                                             price=current_price,
                                             scenario=scenario,
-                                            source="AI분석",
+                                            source="ai_analysis",
                                             trade_result=trade_result,
                                             market="US"
                                         )
@@ -2229,7 +2223,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                                             company_name=company_name,
                                             price=current_price,
                                             scenario=scenario,
-                                            source="AI분석",
+                                            source="ai_analysis",
                                             trade_result=trade_result,
                                             market="US"
                                         )
@@ -2287,251 +2281,49 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
             logger.error(traceback.format_exc())
             return 0, 0
 
-    async def _notify_firebase(self, message: str, chat_id: str, message_id: int = None, msg_type=None):
-        """Send Firebase Bridge notification for Prism Mobile push (never affects Telegram delivery)."""
+    async def _notify_firebase(self, message: str, message_id: int = None, msg_type=None):
+        """Best-effort Firebase Bridge notification for Prism Mobile (optional; see FIREBASE_BRIDGE_ENABLED)."""
         try:
             from firebase_bridge import notify
             await notify(
                 message=message,
                 market="us",
                 telegram_message_id=message_id,
-                channel_id=chat_id,
+                channel_id=None,
                 msg_type=msg_type,
             )
         except Exception as e:
             logger.debug(f"Firebase bridge: {e}")
 
-    def _schedule_firebase(self, message: str, chat_id: str, message_id: int = None, msg_type=None):
-        """Schedule Firebase notification as non-blocking task. Returns the task."""
-        return asyncio.create_task(self._notify_firebase(message, chat_id, message_id, msg_type=msg_type))
-
-    async def send_telegram_message(self, chat_id: str, language: str = "ko") -> bool:
-        """
-        Send message via Telegram.
-
-        Args:
-            chat_id: Telegram channel ID (no sending if None)
-            language: Message language ("ko" or "en")
-
-        Returns:
-            bool: Send success status
-        """
+    async def _flush_tracking_notifications(self) -> None:
+        """Append portfolio summary, log queued digests, and optionally mirror to Firebase Bridge."""
         try:
-            # Skip Telegram sending if chat_id is None
-            if not chat_id:
-                logger.info("No Telegram channel ID. Skipping message send")
-
-                # Log message output
-                for message in self.message_queue:
-                    logger.info(f"[Message (not sent)] {message[:100]}...")
-
-                # Initialize message queue
-                self.message_queue = []
-                self._msg_types = []
-                return True  # Consider intentional skip as success
-
-            # If Telegram bot not initialized, only output logs
-            if not self.telegram_bot:
-                logger.warning("Telegram bot not initialized. Please check token")
-
-                # Only output messages without actual sending
-                for message in self.message_queue:
-                    logger.info(f"[Telegram message (bot not initialized)] {message[:100]}...")
-
-                # Initialize message queue
-                self.message_queue = []
-                self._msg_types = []
-                return False
-
-            # Generate summary report
             summary = await self.generate_report_summary()
             self._msg_types.append("portfolio")
             self.message_queue.append(summary)
 
-            # Translate messages if English is requested
-            if language == "en":
-                logger.info(f"Translating {len(self.message_queue)} US messages to English")
-                try:
-                    # Note: translate_telegram_message is pre-loaded at module level
-                    # from main project's cores/agents/telegram_translator_agent.py
-                    translated_queue = []
-                    for idx, message in enumerate(self.message_queue, 1):
-                        logger.info(f"Translating US message {idx}/{len(self.message_queue)}")
-                        translated = await translate_telegram_message(message, model=US_TRANSLATION_MODEL)
-                        translated_queue.append(translated)
-                    self.message_queue = translated_queue
-                    logger.info("All US messages translated successfully")
-                except Exception as e:
-                    logger.error(f"Translation failed: {str(e)}. Using original Korean messages.")
-
-            # Send each message (Firebase notifications are non-blocking)
-            success = True
-            firebase_tasks = []
+            firebase_tasks: list[asyncio.Task] = []
             for idx, message in enumerate(self.message_queue):
                 msg_type = self._msg_types[idx] if idx < len(self._msg_types) else None
-                logger.info(f"Sending US Telegram message: {chat_id}")
-                try:
-                    # Telegram message length limit (4096 characters)
-                    MAX_MESSAGE_LENGTH = 4096
+                preview = message if len(message) <= 2400 else (message[:2400] + "\n...(truncated for logs)")
+                logger.info(
+                    "US tracking digest [%s] (%d chars):\n%s",
+                    msg_type or "unknown",
+                    len(message),
+                    preview,
+                )
+                firebase_tasks.append(
+                    asyncio.create_task(self._notify_firebase(message, message_id=None, msg_type=msg_type))
+                )
 
-                    if len(message) <= MAX_MESSAGE_LENGTH:
-                        # Send short message at once
-                        result = await self.telegram_bot.send_message(
-                            chat_id=chat_id,
-                            text=message
-                        )
-                        firebase_tasks.append(self._schedule_firebase(message, chat_id, result.message_id, msg_type=msg_type))
-                    else:
-                        # Split long message
-                        parts = []
-                        current_part = ""
-
-                        for line in message.split('\n'):
-                            if len(current_part) + len(line) + 1 <= MAX_MESSAGE_LENGTH:
-                                current_part += line + '\n'
-                            else:
-                                if current_part:
-                                    parts.append(current_part.rstrip())
-                                current_part = line + '\n'
-
-                        if current_part:
-                            parts.append(current_part.rstrip())
-
-                        # Send split messages
-                        first_msg_id = None
-                        for i, part in enumerate(parts, 1):
-                            result = await self.telegram_bot.send_message(
-                                chat_id=chat_id,
-                                text=f"[{i}/{len(parts)}]\n{part}"
-                            )
-                            if i == 1:
-                                first_msg_id = result.message_id
-                            await asyncio.sleep(0.5)  # Short delay between split messages
-
-                        # Notify with full original message, link to first part
-                        firebase_tasks.append(self._schedule_firebase(message, chat_id, first_msg_id, msg_type=msg_type))
-
-                    logger.info(f"US Telegram message sent: {chat_id}")
-                except TelegramError as e:
-                    logger.error(f"US Telegram message send failed: {e}")
-                    success = False
-
-                # Delay to prevent API rate limiting
-                await asyncio.sleep(1)
-
-            # Gather Firebase notifications (non-blocking for Telegram delivery)
             if firebase_tasks:
                 await asyncio.gather(*firebase_tasks, return_exceptions=True)
-
-            # Send to broadcast channels if configured (awaited in run() finally block)
-            if hasattr(self, 'telegram_config') and self.telegram_config and self.telegram_config.broadcast_languages:
-                self._broadcast_task = asyncio.create_task(self._send_to_translation_channels(self.message_queue.copy(), self._msg_types.copy()))
-                logger.info("US broadcast channel translation dispatched")
-
-            # Clear message queue
-            self.message_queue = []
-            self._msg_types = []
-
-            return success
-
         except Exception as e:
-            logger.error(f"Error sending US Telegram message: {str(e)}")
+            logger.error(f"Failed to flush tracking notifications: {str(e)}")
             logger.error(traceback.format_exc())
-            return False
-
-    async def _send_to_translation_channels(self, messages: List[str], msg_types: Optional[list] = None):
-        """
-        Send messages to translation channels
-
-        Args:
-            messages: List of original Korean messages
-            msg_types: msg_type for each message in the list
-        """
-        try:
-            # Note: translate_telegram_message is pre-loaded at module level
-            # from main project's cores/agents/telegram_translator_agent.py
-
-            for lang in self.telegram_config.broadcast_languages:
-                try:
-                    # Get channel ID for this language
-                    channel_id = self.telegram_config.get_broadcast_channel_id(lang)
-                    if not channel_id:
-                        logger.warning(f"No channel ID configured for language: {lang}")
-                        continue
-
-                    logger.info(f"Sending US tracking messages to {lang} channel")
-
-                    # Translate and send each message (Firebase non-blocking)
-                    firebase_tasks = []
-                    for msg_idx, message in enumerate(messages):
-                        msg_type = msg_types[msg_idx] if msg_types and msg_idx < len(msg_types) else None
-                        try:
-                            # Translate message
-                            logger.info(f"Translating US tracking message to {lang}")
-                            translated_message = await translate_telegram_message(
-                                message,
-                                    model=US_TRANSLATION_MODEL,
-                                from_lang="ko",
-                                to_lang=lang
-                            )
-
-                            # Send translated message
-                            MAX_MESSAGE_LENGTH = 4096
-
-                            if len(translated_message) <= MAX_MESSAGE_LENGTH:
-                                result = await self.telegram_bot.send_message(
-                                    chat_id=channel_id,
-                                    text=translated_message
-                                )
-                                firebase_tasks.append(self._schedule_firebase(translated_message, channel_id, result.message_id, msg_type=msg_type))
-                            else:
-                                # Split long messages
-                                parts = []
-                                current_part = ""
-
-                                for line in translated_message.split('\n'):
-                                    if len(current_part) + len(line) + 1 <= MAX_MESSAGE_LENGTH:
-                                        current_part += line + '\n'
-                                    else:
-                                        if current_part:
-                                            parts.append(current_part.rstrip())
-                                        current_part = line + '\n'
-
-                                if current_part:
-                                    parts.append(current_part.rstrip())
-
-                                first_msg_id = None
-                                for i, part in enumerate(parts, 1):
-                                    result = await self.telegram_bot.send_message(
-                                        chat_id=channel_id,
-                                        text=f"[{i}/{len(parts)}]\n{part}"
-                                    )
-                                    if i == 1:
-                                        first_msg_id = result.message_id
-                                    await asyncio.sleep(0.5)
-
-                                firebase_tasks.append(self._schedule_firebase(translated_message, channel_id, first_msg_id, msg_type=msg_type))
-
-                            logger.info(f"US tracking message sent successfully to {lang} channel")
-
-                            await asyncio.sleep(1)
-
-                        except Exception as e:
-                            logger.error(f"Error translating/sending US message to {lang}: {str(e)}")
-                            from telegram_config import is_openai_quota_error, send_openai_quota_alert
-                            if is_openai_quota_error(e):
-                                await send_openai_quota_alert(self.telegram_config, market="US")
-                                return
-
-                    # Gather Firebase notifications for this language
-                    if firebase_tasks:
-                        await asyncio.gather(*firebase_tasks, return_exceptions=True)
-
-                except Exception as e:
-                    logger.error(f"Error processing language {lang}: {str(e)}")
-
-        except Exception as e:
-            logger.error(f"Error in _send_to_translation_channels: {str(e)}")
+        finally:
+            self.message_queue.clear()
+            self._msg_types.clear()
 
     def get_compression_stats(self) -> Dict[str, Any]:
         """
@@ -2658,27 +2450,28 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
         except Exception:
             return ""
 
-    async def run(self, pdf_report_paths: List[str], chat_id: str = None,
-                  language: str = "ko", telegram_config=None, trigger_results_file: str = None,
-                  sector_names: list = None) -> bool:
+    async def run(
+        self,
+        pdf_report_paths: List[str],
+        language: str = "en",
+        *,
+        trigger_results_file: str = None,
+        sector_names: list = None,
+    ) -> bool:
         """
         Main execution function for US stock tracking system.
 
         Args:
             pdf_report_paths: List of analysis report file paths
-            chat_id: Telegram channel ID (optional)
-            language: Message language (default: "ko")
-            telegram_config: TelegramConfig object for multi-language support
+            language: Locale hint forwarded to downstream agents (US pipeline defaults to English)
             trigger_results_file: Path to trigger results JSON file
+            sector_names: Optional explicit sector whitelist for scenario agents
 
         Returns:
             bool: Execution success status
         """
         try:
             logger.info("Starting US tracking system batch execution")
-
-            # Store telegram_config for use in send_telegram_message
-            self.telegram_config = telegram_config
 
             # Load trigger type mapping
             self.trigger_info_map = {}
@@ -2709,32 +2502,12 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
 
             try:
                 # Process reports
-                buy_count, sell_count = await self.process_reports(pdf_report_paths)
-
-                # Send Telegram message
-                if chat_id:
-                    message_sent = await self.send_telegram_message(chat_id, language)
-                    if message_sent:
-                        logger.info("US Telegram message sent successfully")
-                    else:
-                        logger.warning("US Telegram message send failed")
-                else:
-                    logger.info("Telegram channel ID not provided, skipping message send")
-                    await self.send_telegram_message(None, language)
+                _, _ = await self.process_reports(pdf_report_paths)
+                await self._flush_tracking_notifications()
 
                 logger.info("US tracking system batch execution complete")
                 return True
             finally:
-                # Wait for broadcast translation task before cleanup
-                if self._broadcast_task:
-                    try:
-                        logger.info("Waiting for US tracking broadcast translation to complete...")
-                        await self._broadcast_task
-                        logger.info("US tracking broadcast translation completed")
-                    except Exception as e:
-                        logger.error(f"US tracking broadcast translation failed: {e}")
-                    self._broadcast_task = None
-
                 # Ensure connection is always closed
                 if self.conn:
                     self.conn.close()
@@ -2759,9 +2532,7 @@ async def main():
 
     parser = argparse.ArgumentParser(description="US Stock tracking and trading agent")
     parser.add_argument("--reports", nargs="+", help="List of analysis report file paths")
-    parser.add_argument("--chat-id", help="Telegram channel ID")
-    parser.add_argument("--telegram-token", help="Telegram bot token")
-    parser.add_argument("--language", default="ko", help="Language (default: ko)")
+    parser.add_argument("--language", default="en", help="Agent locale hint (default: en)")
     parser.add_argument(
         "--enable-journal",
         action="store_true",
@@ -2776,10 +2547,9 @@ async def main():
 
     async with app.run():
         agent = USStockTrackingAgent(
-            telegram_token=args.telegram_token,
-            enable_journal=args.enable_journal
+            enable_journal=args.enable_journal,
         )
-        success = await agent.run(args.reports, args.chat_id, args.language)
+        success = await agent.run(args.reports, language=args.language)
         return success
 
 

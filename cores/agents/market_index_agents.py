@@ -9,34 +9,10 @@ from mcp_agent.agents.agent import Agent
 
 
 def _market_report_locale(language: str, reference_date: str, ref_year: str, ref_month: str, ref_day: str) -> str:
-    """Report heading strings and prose rules; full prompt body stays English elsewhere."""
-    if language == "ko":
-        return f"""
-## Report Structure (MUST use markdown heading format)
-- Title line MUST begin after two newline characters: `\\\\n\\\\n`
-- Mandatory main heading: "### 4. 시장 분석"
-- First subsection headline MUST begin with: #### 당일 시장 움직임 요인 분석
-- Additional subsections follow the enumerated outline below. You may localize subsection `####` labels to fluent Korean equivalents that preserve meaning; numbering priority must stay unchanged.
-  1. **Day/driver recap** — causal chain for `{reference_date}` across S&P 500, NASDAQ, Dow
-  2. **Tape snapshot** — headline index deltas, indicator tableau, implicit fear gauge read-through
-  3. **Trend & momentum synthesis**
-  4. **Technical price ladder** — major supports / resistances
-  5. **Macro & global overlays** — cite numeric sources inline using `[number]` markers tied to perplexity artefacts
-  6. **Pattern & cycle fingerprints**
-  7. **Strategic implication lens** — scenario planning (not individualized advice)
+    """English markdown contract; callers may still pass legacy language codes."""
+    _ = language
 
-## Writing Style
-- Blend accessibility for discretionary retail audiences with diligence institutional readers expect.
-- Anchor statistics + calendar dates crisply and neutrally; express index levels in USD context.
-- Write all explanatory narrative in formal polite Korean (합쇼체) while respecting the verbatim heading directives above.
-
-## Report Format (VERY IMPORTANT)
-- Emphasize **bold** selectively for KPIs/regime tags
-- Table-wrap dense numeric panels when helpful vs paragraphs
-- Market tone may be summarized through coarse grades (e.g. bullish / neutral / bearish labeling — use Korean phrasing naturally when prose is Korean, or discrete 1–10 scale — pick one taxonomy per report and stay coherent)
-"""
-
-    return f"""
+    base = f"""
 ## Report Structure (MUST use markdown heading format)
 - Insert 2 newline characters at the start of the report (`\\n\\n`)
 - Title: "### 4. Market Analysis"
@@ -95,13 +71,14 @@ def _market_report_locale(language: str, reference_date: str, ref_year: str, ref
 - Present market situation assessments with clear grades/scores (e.g., bullish/neutral/bearish or 1-10 scale)
 - Present macroeconomic information with source numbers ([1], [2] format)
 """
+    return base
 
 
 def create_market_index_analysis_agent(
     reference_date: str,
     max_years_ago: str,
     max_years: int,
-    language: str = "ko",
+    language: str = "en",
     prefetched_indices: str = None
 ):
     """Create US market index analysis agent
@@ -110,7 +87,7 @@ def create_market_index_analysis_agent(
         reference_date: Analysis reference date (YYYYMMDD)
         max_years_ago: Analysis start date (YYYYMMDD)
         max_years: Analysis period (years)
-        language: Language code (default: "ko")
+        language: Legacy language argument retained for callers (English narratives only).
 
     Returns:
         Agent: Market index analysis agent

@@ -32,7 +32,7 @@ def get_agent_directory(
     ticker: str,
     reference_date: str,
     base_sections: List[str],
-    language: str = "ko",
+    language: str = "en",
     prefetched_data: dict | None = None,
 ):
     urls = get_data_urls(ticker)

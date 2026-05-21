@@ -260,8 +260,7 @@ $US_MEMORY_COMPRESSION_TIME * * 0 cd $PROJECT_DIR && $PYTHON_PATH compress_tradi
 # Optional: Uncomment to enable additional features
 # =============================================================================
 
-# US Portfolio report after market close
-# 45 6 * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH trading/portfolio_telegram_reporter.py >> $LOG_DIR/us_portfolio_\$(date +\%Y\%m\%d).log 2>&1
+# (Legacy Telegram portfolio cron removed — ingest logs from stock_tracking_agent instead.)
 
 EOF
 }

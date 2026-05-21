@@ -133,7 +133,7 @@ python examples/messaging/gcp_pubsub_subscriber_example.py
   "sector": "반도체",
   "rationale": "AI 반도체 수요 증가",
   "buy_score": 8,
-  "source": "AI분석",
+  "source": "ai_analysis",
   "trade_success": true,
   "trade_message": "매수 완료"
 }
@@ -151,7 +151,7 @@ python examples/messaging/gcp_pubsub_subscriber_example.py
   "buy_price": 82000,
   "profit_rate": 9.76,
   "sell_reason": "목표가 달성",
-  "source": "AI분석",
+  "source": "ai_analysis",
   "trade_success": true,
   "trade_message": "매도 완료"
 }

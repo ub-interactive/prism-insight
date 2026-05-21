@@ -92,7 +92,7 @@ Avoid broad production-like runs unless the task requires them.
 - `cores/analysis.py`: sequential orchestration and section integration
 - `cores/agents/*.py`: prompt logic and agent responsibilities
 - `stock_tracking_agent.py`: trading loop, sell decisions, optional journal flow
-- `telegram_ai_bot.py`: user consultation flows and conversation context
+- `telegram_ai_bot.py`: **stubbed** (legacy interactive Telegram UX removed in this codebase variant)
 
 ## Before Finishing
 

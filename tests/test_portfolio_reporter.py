@@ -37,6 +37,7 @@ async def test_portfolio_reporter():
     print("Environment variable check:")
     print(f"TELEGRAM_BOT_TOKEN: {'✅ Set' if telegram_token else '❌ Not set'}")
     print(f"TELEGRAM_CHANNEL_ID: {'✅ Set' if chat_id else '❌ Not set'}")
+    print(f"PRISM_ENABLE_TELEGRAM: {'✅ Set' if os.environ.get('PRISM_ENABLE_TELEGRAM') else '❌ Not set (required gate)'}")
     print()
 
     print("YAML configuration check:")
@@ -44,6 +45,11 @@ async def test_portfolio_reporter():
     print(f"Auto trading: {_cfg['auto_trading']}")
     print(f"Config file path: {CONFIG_FILE}")
     print()
+
+    if not os.environ.get("PRISM_ENABLE_TELEGRAM"):
+        print("❌ PRISM_ENABLE_TELEGRAM missing — Telegram portfolio reporter is gated off by default.")
+        print("export PRISM_ENABLE_TELEGRAM=1")
+        return False
 
     if not telegram_token or not chat_id:
         print("❌ Required environment variables are not set.")

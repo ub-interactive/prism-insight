@@ -51,12 +51,12 @@ class LanguageConfig:
             "executive_summary": "Executive Summary"
         }
 
-    def get_telegram_template(self) -> Dict[str, str]:
+    def get_message_template(self) -> Dict[str, str]:
         """
-        Get Telegram message templates in the specified language
+        Get short-form notification / digest templates in the configured language.
 
         Returns:
-            Dictionary of Telegram message templates
+            Dictionary of reusable message templates (alerts, portfolio blocks, disclaimers).
         """
         return {
             # Alert titles
@@ -154,7 +154,7 @@ class LanguageConfig:
         """
         try:
             date_obj = datetime.strptime(date_str, "%Y%m%d")
-            templates = self.get_telegram_template()
+            templates = self.get_message_template()
             return date_obj.strftime(templates["date_format"])
         except:
             return date_str

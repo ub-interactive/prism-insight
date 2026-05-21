@@ -53,15 +53,13 @@ def test_trigger_to_agents_flow_smoke():
 async def test_orchestrator_trigger_batch_mock():
     from stock_analysis_orchestrator import USStockAnalysisOrchestrator
 
-    with patch("telegram_config.TelegramConfig") as mock_config:
-        mock_config.return_value.use_telegram = False
-        orchestrator = USStockAnalysisOrchestrator()
+    orchestrator = USStockAnalysisOrchestrator()
 
-        with patch.object(orchestrator, "run_trigger_batch", new_callable=AsyncMock) as mock_batch:
-            mock_batch.return_value = [
-                {"ticker": "AAPL", "company_name": "Apple Inc.", "trigger_type": "Volume Surge Top"}
-            ]
-            result = await orchestrator.run_trigger_batch("morning")
+    with patch.object(orchestrator, "run_trigger_batch", new_callable=AsyncMock) as mock_batch:
+        mock_batch.return_value = [
+            {"ticker": "AAPL", "company_name": "Apple Inc.", "trigger_type": "Volume Surge Top"}
+        ]
+        result = await orchestrator.run_trigger_batch("morning")
 
     assert len(result) == 1
     assert result[0]["ticker"] == "AAPL"

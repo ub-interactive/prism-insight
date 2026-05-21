@@ -21,6 +21,13 @@ from mcp_agent.workflows.llm.augmented_llm_anthropic import AnthropicAugmentedLL
 # Logger setup
 logger = logging.getLogger(__name__)
 
+# Prepended to Claude agent instructions: user-visible replies stay English for this codebase.
+_TELEGRAM_REPLY_EN_DIRECTIVE = """## Output language (mandatory)
+Compose the final user-visible reply in clear professional English. Do not use Markdown fences or headings
+in the reply; use plain conversational Telegram text with emoji only when it helps readability.
+
+"""
+
 # ============================================================================
 # Global MCPApp management (prevent process accumulation)
 # ============================================================================
@@ -46,7 +53,7 @@ async def get_or_create_global_mcp_app() -> MCPApp:
     async with _app_lock:
         if _global_mcp_app is None or not _app_initialized:
             logger.info("Starting global MCPApp initialization")
-            _global_mcp_app = MCPApp(name="telegram_ai_bot_global")
+            _global_mcp_app = MCPApp(name="prism_report_global")
             await _global_mcp_app.initialize()
             _app_initialized = True
             logger.info(f"Global MCPApp initialization complete (Session ID: {_global_mcp_app.session_id})")
@@ -173,7 +180,7 @@ def save_us_report(ticker: str, company_name: str, content: str) -> Path:
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
 
-    logger.info(f"US 보고서 저장 완료: {filepath}")
+    logger.info(f"US markdown report saved: {filepath}")
     return filepath
 
 
@@ -224,7 +231,7 @@ def generate_us_report_response_sync(ticker: str, company_name: str) -> str:
         project_root = os.path.dirname(os.path.abspath(__file__))
         # Run US analysis in separate process
         cmd = [
-            sys.executable,  # 현재 Python 인터프리터
+            sys.executable,  # current Python interpreter
             "-c",
             f"""
 import asyncio
@@ -247,7 +254,7 @@ async def run():
             ticker="{ticker}",
             company_name="{company_name}",
             reference_date=ref_date,
-            language="ko"
+            language="en"
         )
         # Use delimiters to mark start and end of result output
         print("RESULT_START")
@@ -300,32 +307,32 @@ if __name__ == "__main__":
                 # Check if there's error log in stderr
                 if process.stderr:
                     logger.error(f"US external process error output: {process.stderr[:500]}")
-                return f"US 주식 분석 결과를 찾을 수 없습니다. 로그를 확인하세요."
+                return "US analysis output could not be located. Check logs for subprocess output."
         except json.JSONDecodeError as e:
-            logger.error(f"US 외부 프로세스 출력 파싱 실패: {e}")
-            logger.error(f"출력 내용: {output[:1000]}")
-            return f"US 주식 분석 결과 파싱 중 오류가 발생했습니다. 로그를 확인하세요."
+            logger.error(f"US subprocess JSON parse failure: {e}")
+            logger.error(f"Stdout snippet: {output[:1000]}")
+            return "Failed to parse US analysis subprocess output. See logs."
 
     except subprocess.TimeoutExpired:
-        logger.error(f"US 외부 프로세스 타임아웃: {ticker}")
-        return f"US 주식 분석 시간이 초과되었습니다. 다시 시도해주세요."
+        logger.error(f"US analysis subprocess timed out: {ticker}")
+        return "US stock analysis timed out. Try again shortly."
     except Exception as e:
-        logger.error(f"US 동기식 보고서 생성 중 오류: {str(e)}")
+        logger.error(f"US sync report generation error: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        return f"US 주식 보고서 생성 중 오류가 발생했습니다: {str(e)}"
+        return f"US report generation error: {str(e)}"
 
 
 def save_pdf_report(stock_code: str, company_name: str, md_path: Path) -> Path:
-    """마크다운 파일을 PDF로 변환하여 저장
+    """Convert markdown into a themed PDF artifact.
 
     Args:
-        stock_code: 종목 코드
-        company_name: 회사명
-        md_path: 마크다운 파일 경로
+        stock_code: Filename prefix legacy stock identifier
+        company_name: Company slug for filenames (spaces become underscores downstream)
+        md_path: Markdown report path on disk
 
     Returns:
-        Path: 생성된 PDF 파일 경로
+        Path: Generated PDF destination
     """
     from pdf_converter import markdown_to_pdf
 
@@ -335,19 +342,19 @@ def save_pdf_report(stock_code: str, company_name: str, md_path: Path) -> Path:
 
     try:
         markdown_to_pdf(str(md_path), str(pdf_path), 'playwright', add_theme=True)
-        logger.info(f"PDF 보고서 생성 완료: {pdf_path}")
+        logger.info(f"PDF rendered: {pdf_path}")
     except Exception as e:
-        logger.error(f"PDF 변환 중 오류: {e}")
+        logger.error(f"PDF rendering failed: {e}")
         raise
 
     return pdf_path
 
 
 def get_cached_report(stock_code: str) -> tuple:
-    """캐시된 보고서 검색
+    """Return cached markdown/PDF artifact metadata when fresh enough.
 
     Returns:
-        tuple: (is_cached, content, md_path, pdf_path)
+        tuple: (is_cached, content, md_path, pdf_path).
     """
     # Find all report files starting with stock code
     report_files = list(REPORTS_DIR.glob(f"{stock_code}_*.md"))
@@ -382,7 +389,7 @@ def get_cached_report(stock_code: str) -> tuple:
 
 
 def save_report(stock_code: str, company_name: str, content: str) -> Path:
-    """보고서를 파일로 저장"""
+    """Persist markdown report blob to REPORTS_DIR."""
     reference_date = datetime.now().strftime("%Y%m%d")
     filename = f"{stock_code}_{company_name}_{reference_date}_analysis.md"
     filepath = REPORTS_DIR / filename
@@ -394,22 +401,20 @@ def save_report(stock_code: str, company_name: str, content: str) -> Path:
 
 
 def convert_to_html(markdown_content: str) -> str:
-    """마크다운을 HTML로 변환"""
+    """Wrap markdown → HTML boilerplate."""
     try:
-        # 마크다운을 HTML로 변환
         html_content = markdown.markdown(
             markdown_content,
             extensions=['markdown.extensions.fenced_code', 'markdown.extensions.tables']
         )
 
-        # HTML 템플릿에 내용 삽입
         return f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>주식 분석 보고서</title>
+            <title>Equity research note</title>
             <style>
                 body {{
                     font-family: 'Pretendard', -apple-system, system-ui, sans-serif;
@@ -453,12 +458,12 @@ def convert_to_html(markdown_content: str) -> str:
         </html>
         """
     except Exception as e:
-        logger.error(f"HTML 변환 중 오류: {str(e)}")
-        return f"<p>보고서 변환 중 오류가 발생했습니다: {str(e)}</p>"
+        logger.error(f"HTML conversion failed: {str(e)}")
+        return f"<p>Unable to convert report markup: {str(e)}</p>"
 
 
 def save_html_report_from_content(stock_code: str, company_name: str, html_content: str) -> Path:
-    """HTML 내용을 파일로 저장"""
+    """Write HTML string to canonical html_reports folder."""
     reference_date = datetime.now().strftime("%Y%m%d")
     filename = f"{stock_code}_{company_name}_{reference_date}_analysis.html"
     filepath = HTML_REPORTS_DIR / filename
@@ -470,32 +475,31 @@ def save_html_report_from_content(stock_code: str, company_name: str, html_conte
 
 
 def save_html_report(stock_code: str, company_name: str, markdown_content: str) -> Path:
-    """마크다운 보고서를 HTML로 변환하여 저장"""
+    """Render markdown blob to themed HTML artifact."""
     html_content = convert_to_html(markdown_content)
     return save_html_report_from_content(stock_code, company_name, html_content)
 
 
 def generate_report_response_sync(stock_code: str, company_name: str) -> str:
     """
-    종목 상세 보고서를 동기 방식으로 생성 (백그라운드 스레드에서 호출됨)
+    Generate a KR market detailed report synchronously (legacy callers / background threads).
     """
-    # subprocess 로그 파일 경로 설정
+    # Persist subprocess logs beside the orchestrator logs for RCA.
     log_dir = Path(os.path.dirname(os.path.abspath(__file__))) / "logs" / "subprocess"
     log_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = log_dir / f"report_{stock_code}_{timestamp}.log"
 
     try:
-        logger.info(f"동기식 보고서 생성 시작: {stock_code} ({company_name})")
-        logger.info(f"Subprocess 로그 파일: {log_file}")
+        logger.info(f"Legacy sync report subprocess starting: {stock_code} ({company_name})")
+        logger.info(f"Subprocess transcript: {log_file}")
 
-        # 현재 날짜를 YYYYMMDD 형식으로 변환
+        # Reference date anchors analyze_stock payloads
         reference_date = datetime.now().strftime("%Y%m%d")
 
-        # 별도의 프로세스로 분석 수행
-        # 이 방법은 새로운 Python 프로세스를 생성하여 분석을 수행하므로 이벤트 루프 충돌 없음
+        # Spawn disposable interpreter subprocess to dodge event-loop clashes.
         cmd = [
-            sys.executable,  # 현재 Python 인터프리터
+            sys.executable,  # current Python interpreter
             "-c",
             f"""
 import asyncio
@@ -504,33 +508,31 @@ import sys
 import logging
 from datetime import datetime
 
-# subprocess 내부 로깅 설정
+# Child-process logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler(sys.stderr)]
 )
 subprocess_logger = logging.getLogger("subprocess_report")
-subprocess_logger.info("Subprocess 시작: {stock_code} ({company_name})")
+subprocess_logger.info("Subprocess boot: {stock_code} ({company_name})")
 
 from cores.analysis import analyze_stock
 
 async def run():
     try:
-        subprocess_logger.info("analyze_stock 호출 시작")
+        subprocess_logger.info("calling analyze_stock()")
         result = await analyze_stock(
             company_code="{stock_code}",
             company_name="{company_name}",
             reference_date="{reference_date}"
         )
-        subprocess_logger.info(f"analyze_stock 완료: {{len(result) if result else 0}} 글자")
-        # 구분자를 사용하여 결과 출력의 시작과 끝을 표시
+        subprocess_logger.info(f"analyze_stock finished chars={{len(result) if result else 0}}")
         print("RESULT_START")
         print(json.dumps({{"success": True, "result": result}}))
         print("RESULT_END")
     except Exception as e:
-        subprocess_logger.error(f"analyze_stock 오류: {{str(e)}}", exc_info=True)
-        # 구분자를 사용하여 에러 출력의 시작과 끝을 표시
+        subprocess_logger.error(f"analyze_stock crashed: {{str(e)}}", exc_info=True)
         print("RESULT_START")
         print(json.dumps({{"success": False, "error": str(e)}}))
         print("RESULT_END")
@@ -621,587 +623,363 @@ if __name__ == "__main__":
             logger.error(f"Output content: {stdout[:1000] if stdout else '(empty)'}")
             return f"Error occurred while parsing analysis result. Log file: {log_file}"
     except Exception as e:
-        logger.error(f"동기식 보고서 생성 중 오류: {str(e)}")
+        logger.error(f"sync report generation failed: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        return f"보고서 생성 중 오류가 발생했습니다: {str(e)}"
-
-import re
+        return f"Report generation failed: {str(e)}"
 
 def clean_model_response(response):
-    # 마지막 평가 문장 패턴
-    final_analysis_pattern = r'이제 수집한 정보를 바탕으로.*평가를 해보겠습니다\.'
-
-    # 중간 과정 및 도구 호출 관련 정보 제거
-    # 1. '[Calling tool' 포함 라인 제거
-    lines = response.split('\n')
-    cleaned_lines = [line for line in lines if '[Calling tool' not in line]
-    temp_response = '\n'.join(cleaned_lines)
-
-    # 2. 마지막 평가 문장이 있다면, 그 이후 내용만 유지
-    final_statement_match = re.search(final_analysis_pattern, temp_response)
-    if final_statement_match:
-        final_statement_pos = final_statement_match.end()
-        cleaned_response = temp_response[final_statement_pos:].strip()
-    else:
-        # 패턴을 찾지 못한 경우 그냥 도구 호출만 제거된 버전 사용
-        cleaned_response = temp_response
-
-    # 앞부분 빈 줄 제거
-    cleaned_response = cleaned_response.lstrip()
-
-    return cleaned_response
+    """Strip known tool chatter while keeping the conversational answer intact."""
+    lines = response.split("\n")
+    cleaned_lines = [line for line in lines if "[Calling tool" not in line]
+    return "\n".join(cleaned_lines).lstrip()
 
 async def generate_follow_up_response(ticker, ticker_name, conversation_context, user_question, tone):
     """
-    추가 질문에 대한 AI 응답 생성 (Agent 방식 사용)
-    
-    ⚠️ 전역 MCPApp 사용으로 프로세스 누적 방지
-    
+    Generate an AI reply for follow-up chat in an equities evaluation thread (agent pattern).
+
+    Uses the shared global MCPApp to avoid spawning duplicate processes.
+
     Args:
-        ticker (str): 종목 코드
-        ticker_name (str): 종목명
-        conversation_context (str): 이전 대화 컨텍스트
-        user_question (str): 사용자의 새 질문
-        tone (str): 응답 톤
-    
+        ticker (str): Symbol / listing code.
+        ticker_name (str): Issuer label.
+        conversation_context (str): Prior transcript context.
+        user_question (str): Latest user message.
+        tone (str): Requested conversational tone.
+
     Returns:
-        str: AI 응답
+        str: Model reply ready for Telegram.
     """
     try:
-        # 전역 MCPApp 사용 (매번 새로 생성하지 않음!)
         app = await get_or_create_global_mcp_app()
         app_logger = app.logger
 
-        # 현재 날짜 정보 가져오기
         current_date = datetime.now().strftime('%Y%m%d')
 
-        # 에이전트 생성
         agent = Agent(
             name="followup_agent",
-            instruction=f"""당신은 텔레그램 채팅에서 주식 평가 후속 질문에 답변하는 전문가입니다.
-                        
-                        ## 기본 정보
-                        - 현재 날짜: {current_date}
-                        - 종목 코드: {ticker}
-                        - 종목 이름: {ticker_name}
-                        - 대화 스타일: {tone}
-                        
-                        ## 이전 대화 컨텍스트
-                        {conversation_context}
-                        
-                        ## 사용자의 새로운 질문
-                        {user_question}
-                        
-                        ## 응답 가이드라인
-                        1. 이전 대화에서 제공한 정보와 일관성을 유지하세요
-                        2. 필요한 경우 추가 데이터를 조회할 수 있습니다:
-                           - get_stock_ohlcv: 최신 주가 데이터 조회
-                           - get_stock_trading_volume: 투자자별 거래 데이터
-                           - perplexity_ask: 최신 뉴스나 정보 검색
-                        3. 사용자가 요청한 스타일({tone})을 유지하세요
-                        4. 텔레그램 메시지 형식으로 자연스럽게 작성하세요
-                        5. 이모티콘을 적극 활용하세요 (📈 📉 💰 🔥 💎 🚀 등)
-                        6. 마크다운 형식은 사용하지 마세요
-                        7. 2000자 이내로 작성하세요
-                        8. 이전 대화의 맥락을 고려하여 답변하세요
-                        
-                        ## 주의사항
-                        - 사용자의 질문이 이전 대화와 관련이 있다면, 그 맥락을 참고하여 답변
-                        - 새로운 정보가 필요한 경우에만 도구를 사용
-                        - 도구 호출 과정을 사용자에게 노출하지 마세요
-                        """,
+            instruction=f"""{_TELEGRAM_REPLY_EN_DIRECTIVE}You answer additional questions that extend an equities evaluation thread delivered over Telegram.
+
+## Reference metadata
+- Today's date (YYYYMMDD): {current_date}
+- Instrument code: {ticker}
+- Company / label: {ticker_name}
+- Requested tone/style: {tone}
+
+## Prior conversation (context)
+{conversation_context}
+
+## Latest user question
+{user_question}
+
+## Behaviour
+1. Stay consistent with facts you already disclosed earlier in the thread.
+2. Use tools only when fresh data is needed:
+   - OHLC snapshots, flow prints, perplexity summaries—follow whatever MCP tooling is wired to this profile.
+3. Mirror the stylistic vibe implied by "{tone}".
+4. Write like a natural Telegram DM: short paragraphs, expressive emoji when it fits the tone.
+5. Never format the answer as Markdown.
+6. Stay under roughly 2000 characters unless the user explicitly requests more depth.
+7. Honour the conversational thread—do not ignore prior commitments.
+
+## Guardrails
+- Do not narrate tool internals or "[Calling tool …]" text to the user.
+- If new data is required, call tools quietly and fold only the conclusions into the reply.
+""",
             server_names=["perplexity", "yahoo_finance"]
         )
 
-        # LLM 연결
         llm = await agent.attach_llm(AnthropicAugmentedLLM)
 
-        # 응답 생성
         response = await llm.generate_str(
-            message=f"""사용자의 추가 질문에 대해 답변해주세요.
-                    
-                    이전 대화를 참고하되, 사용자의 새 질문에 집중하여 답변하세요.
-                    필요한 경우 최신 데이터를 조회하여 정확한 정보를 제공하세요.
-                    """,
+            message="""Draft the follow-up reply now.
+Prioritize answering the user's latest question while staying coherent with earlier context.
+Call tools whenever up-to-date market evidence is missing.""",
             request_params=RequestParams(
                 model="claude-sonnet-4-6",
                 maxTokens=2000
             )
         )
-        app_logger.info(f"추가 질문 응답 생성 결과: {str(response)[:100]}...")
+        app_logger.info(f"Follow-up draft preview: {str(response)[:100]}...")
 
         return clean_model_response(response)
 
     except Exception as e:
-        logger.error(f"추가 응답 생성 중 오류: {str(e)}")
+        logger.error(f"Follow-up handler error: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
         
-        # 오류 발생 시 전역 app 재시작 시도
+        # Attempt isolated MCP restart after catastrophic failures.
         try:
-            logger.warning("오류 발생으로 인한 전역 MCPApp 재시작 시도")
+            logger.warning("Triggering MCPApp reset after handler error")
             await reset_global_mcp_app()
         except Exception as reset_error:
-            logger.error(f"MCPApp 재시작 실패: {reset_error}")
+            logger.error(f"MCPApp reset failure: {reset_error}")
         
-        return "죄송합니다. 응답 생성 중 오류가 발생했습니다. 다시 시도해주세요."
+        return "Sorry, we couldn't finish that reply. Please try again."
 
 
 async def generate_evaluation_response(ticker, ticker_name, avg_price, period, tone, background, report_path=None, memory_context: str = ""):
     """
-    종목 평가 AI 응답 생성
+    Produce the conversational holdings-evaluation reply (agent pattern).
 
-    ⚠️ 전역 MCPApp 사용으로 프로세스 누적 방지
+    Uses the shared global MCPApp to avoid spawning duplicate processes.
 
     Args:
-        ticker (str): 종목 코드
-        ticker_name (str): 종목 이름
-        avg_price (float): 평균 매수가
-        period (int): 보유 기간 (개월)
-        tone (str): 원하는 피드백 스타일/톤
-        background (str): 매매 배경/히스토리
-        report_path (str, optional): 보고서 파일 경로
-        memory_context (str, optional): 사용자 기억 컨텍스트
+        ticker (str): Symbol / listing code.
+        ticker_name (str): Issuer label.
+        avg_price (float): User-supplied average cost basis (currency clarified in-thread when ambiguous).
+        period (int): Months held (user-supplied).
+        tone (str): Desired feedback style / voice.
+        background (str): Optional trade-context narrative from the user.
+        report_path (str, optional): Local markdown dossier path if cached.
+        memory_context (str, optional): Persisted diary / persona fragments.
 
     Returns:
-        str: AI 응답
+        str: Model reply ready for Telegram.
     """
     try:
-        # 전역 MCPApp 사용 (매번 새로 생성하지 않음!)
         app = await get_or_create_global_mcp_app()
         app_logger = app.logger
 
-        # 현재 날짜 정보 가져오기
         current_date = datetime.now().strftime('%Y%m%d')
 
-        # 배경 정보 추가 (있는 경우)
-        background_text = f"\n- 매매 배경/히스토리: {background}" if background else ""
+        background_text = f"\n- User trade context / background narrative: {background}" if background else ""
 
-        # 사용자 기억 컨텍스트 추가
         memory_section = ""
         if memory_context:
             memory_section = f"""
 
-                        ## 사용자 과거 기록 (참고용)
-                        다음은 이 사용자가 과거에 기록한 투자 일기와 평가 내역입니다.
-                        현재 평가에 참고하되, 이 기록에 너무 의존하지 마세요:
+                        ## User diary / memory archive (reference only)
+                        The snippet below captures this user's prior journal & evaluation notes.
+                        Treat it as soft context—do not overfit if it contradicts fresh data:
 
                         {memory_context}
                         """
 
-        # 에이전트 생성
         agent = Agent(
             name="evaluation_agent",
-            instruction=f"""당신은 텔레그램 채팅에서 주식 평가를 제공하는 전문가입니다. 형식적인 마크다운 대신 자연스러운 채팅 방식으로 응답하세요.
+            instruction=f"""{_TELEGRAM_REPLY_EN_DIRECTIVE}You evaluate retail equity positions inside Prism's conversational bot.
 
-                        ## 기본 정보
-                        - 현재 날짜: {current_date} (YYYYMMDD형식. 년(4자리) + 월(2자리) + 일(2자리))
-                        - 종목 코드: {ticker}
-                        - 종목 이름: {ticker_name}
-                        - 평균 매수가: {avg_price}원
-                        - 보유 기간: {period}개월
-                        - 원하는 피드백 스타일: {tone} {background_text}
-                        
-                        ## 데이터 수집 및 분석 단계
-                            1. get_current_time 툴을 사용하여 현재 날짜를 가져오세요.
-                            2. get_stock_ohlcv 툴을 사용하여 종목({ticker})의 현재 날짜 기준 최신 3개월치 주가 데이터 및 거래량을 조회하세요. 특히 tool call(time-get_current_time)에서 가져온 년도를 꼭 참고하세요.
-                               - fromdate, todate 포맷은 YYYYMMDD입니다. 그리고 todate가 현재날짜고, fromdate가 과거날짜입니다.
-                               - 최신 종가와 전일 대비 변동률, 거래량 추이를 반드시 파악하세요.
-                               - 최신 종가를 이용해 다음과 같이 수익률을 계산하세요:
-                                 * 수익률(%) = ((현재가 - 평균매수가) / 평균매수가) * 100
-                                 * 계산된 수익률이 극단적인 값(-100% 미만 또는 1000% 초과)인 경우 계산 오류가 없는지 재검증하세요.
-                                 * 매수평단가가 0이거나 비정상적으로 낮은 값인 경우 사용자에게 확인 요청
-                               
-                               
-                            3. get_stock_trading_volume 툴을 사용하여 현재 날짜 기준 최신 3개월치 투자자별 거래 데이터를 분석하세요. 특히 tool call(time-get_current_time)에서 가져온 년도를 꼭 참고하세요.
-                               - fromdate, todate 포맷은 YYYYMMDD입니다. 그리고 todate가 현재날짜고, fromdate가 과거날짜입니다.
-                               - 기관, 외국인, 개인 등 투자자별 매수/매도 패턴을 파악하고 해석하세요.
-                            
-                            4. perplexity_ask 툴을 사용하여 다음 정보를 검색하세요. 최대한 1개의 쿼리로 통합해서 현재 날짜를 기준으로 검색해주세요. 특히 tool call(time-get_current_time)에서 가져온 년도를 꼭 참고하세요.
-                               - "종목코드 {ticker}의 정확한 회사 {ticker_name}에 대한 최근 뉴스 및 실적 분석 (유사 이름의 다른 회사와 혼동하지 말 것. 정확히 이 종목코드 {ticker}에 해당하는 {ticker_name} 회사만 검색."
-                               - "{ticker_name}(종목코드: {ticker}) 소속 업종 동향 및 전망"
-                               - "글로벌과 국내 증시 현황 및 전망"
-                               - "최근 급등 원인(테마 등)"
-                               
-                            5. 필요에 따라 추가 데이터를 수집하세요.
-                            6. 수집된 모든 정보를 종합적으로 분석하여 종목 평가에 활용하세요.
-                        
-                        ## 스타일 적응형 가이드
-                        사용자가 요청한 피드백 스타일("{tone}")을 최대한 정확하게 구현하세요. 다음 프레임워크를 사용하여 어떤 스타일도 적응적으로 구현할 수 있습니다:
-                        
-                        1. **스타일 속성 분석**:
-                           사용자의 "{tone}" 요청을 다음 속성 측면에서 분석하세요:
-                           - 격식성 (격식 <--> 비격식)
-                           - 직접성 (간접 <--> 직설적)
-                           - 감정 표현 (절제 <--> 과장)
-                           - 전문성 (일상어 <--> 전문용어)
-                           - 태도 (중립 <--> 주관적)
-                        
-                        2. **키워드 기반 스타일 적용**:
-                           - "친구", "동료", "형", "동생" → 친근하고 격식 없는 말투
-                           - "전문가", "분석가", "정확히" → 데이터 중심, 격식 있는 분석
-                           - "직설적", "솔직", "거침없이" → 매우 솔직한 평가
-                           - "취한", "술자리", "흥분" → 감정적이고 과장된 표현
-                           - "꼰대", "귀족노조", "연륜" → 교훈적이고 경험 강조
-                           - "간결", "짧게" → 핵심만 압축적으로
-                           - "자세히", "상세히" → 모든 근거와 분석 단계 설명
-                        
-                        3. **스타일 조합 및 맞춤화**:
-                           사용자의 요청에 여러 키워드가 포함된 경우 적절히 조합하세요.
-                           예: "30년지기 친구 + 취한 상태" = 매우 친근하고 과장된 말투와 강한 주관적 조언
-                        
-                        4. **알 수 없는 스타일 대응**:
-                           생소한 스타일 요청이 들어오면:
-                           - 요청된 스타일의 핵심 특성을 추론
-                           - 언어적 특징, 문장 구조, 어휘 선택 등에서 스타일을 반영
-                           - 해당 스타일에 맞는 고유한 표현과 문장 패턴 창조
-                        
-                        ### 투자 상황별 조언 스타일
-                        
-                        1. 수익 포지션 (현재가 > 평균매수가):
-                           - 더 적극적이고 구체적인 매매 전략 제시
-                           - 예: "이익 실현 구간을 명확히 잡아 절반은 익절하고, 절반은 더 끌고가는 전략도 괜찮을 것 같아"
-                           - 다음 목표가와 손절선 구체적 제시
-                           - 현 상승세의 지속 가능성 분석에 초점
-                        
-                        2. 손실 포지션 (현재가 < 평균매수가):
-                           - 감정적 공감과 함께 객관적 분석 제공
-                           - 예: "지금 답답한 마음 이해해. 하지만 기업 펀더멘털을 보면..."
-                           - 회복 가능성 또는 손절 필요성에 대한 명확한 의견 제시
-                           - 평균단가 낮추기나 손절 등 구체적 대안 제시
-                        
-                        3. 단기 투자 (보유기간 < 3개월):
-                           - 기술적 분석과 단기 모멘텀에 집중
-                           - 예: "단기적으로는 230일선 돌파가 중요한 변곡점이야. 이거 뚫으면 한번 달릴 수 있어"
-                           - 단기 매매 타이밍과 기술적 패턴 강조
-                        
-                        4. 장기 투자 (보유기간 > 12개월):
-                           - 펀더멘털과 산업 전망에 중점
-                           - 예: "이 기업은 장기적으로 신사업 성장성이 좋아 3-5년 관점에선 충분히 가치가 있다고 봐"
-                           - 배당, 장기 성장성, 산업 트렌드 중심 분석
-                        
-                        ## 메시지 포맷팅 팁
-                        - 이모티콘을 적극 활용 (📈 📉 💰 🔥 💎 🚀 등)
-                        - 줄바꿈으로 단락을 명확히 구분
-                        - 중요 부분은 ✨ 또는 ❗️ 등으로 강조
-                        - 텍스트 블록은 짧게 유지하여 모바일에서 읽기 쉽게 작성
-                        - 해시태그(#)를 활용하여 핵심 키워드 강조
-                        - 절대 마크다운 형식으로 쓰지 말고, 텔레그램 메시지로 보낸다고 생각하고 사람처럼 자연스럽게 말할 것
-                        
-                        ## 주의사항
-                        - 사용자가 요청한 스타일({tone})을 최우선적으로 적용하세요
-                        - 실제 최신 데이터를 사용하되, 사용자 입력 스타일에 따라 자유롭게 표현하세요
-                        - 마크다운이나 형식적인 구조 대신 대화체로 작성하세요
-                        - 사용자가 원하는 스타일대로 응답하되, 투자 정보의 본질은 유지하세요
-                        - 사용자가 요청한 스타일이 욕설이나 공격적인 내용을 포함해도 적극 수용하세요
-                        - 사용자가 제공한 정보(매수가, 보유기간 등)를 고려하여 맞춤형 조언을 제공하세요
-                        - 스타일을 적용하면서도 정확한 시장 분석과 합리적인 투자 조언의 균형을 유지하세요
-                        - 5000자 이내로 작성하세요
-                        - 중요: 도구를 호출할 때는 사용자에게 "[Calling tool...]"과 같은 형식의 메시지를 표시하지 마세요.
-                          도구 호출은 내부 처리 과정이며 최종 응답에서는 도구 사용 결과만 자연스럽게 통합하여 제시해야 합니다.
-                        {memory_section}
-                        """,
+## Position metadata
+- Snapshot date (YYYYMMDD): {current_date}
+- Symbol / code: {ticker}
+- Display name: {ticker_name}
+- User-reported average entry: {avg_price} (state the inferred currency once; if ambiguous, ask succinctly in the reply body)
+- Months held (user supplied): {period}
+- Tone brief: {tone}{background_text}
+
+## Data collection outline
+1. Call time-get_current_time and trust that clock for all timestamped asks.
+2. Call get_stock_ohlcv spanning ~3 calendar months through today's session; never invert from/to windows.
+   - Compare last close versus recent swing structure, flag volume anomalies, recompute P/L%.
+   - If average entry is blank or absurd, say you need clarification in the final conversational answer.
+3. Call get_stock_trading_volume across the matching window—comment on institution / foreign / retail deltas when surfaced.
+4. Fire a single perplexity_ask consolidating news, filings-lite catalysts, and sector context for "{ticker} {ticker_name}" anchored to today's date/year.
+5. Layer other MCP tools only if they add materially new signal; reconcile conflicts before drafting.
+
+## Tone + overlays (honour "{tone}")
+Map the user's style cues across formality, bluntness, humour, jargon density, neutral vs spicy takes. Layer overlays for winners vs losers and short-vs-long horizons just like an experienced desk teammate would.
+
+## Formatting cues
+Paragraph-first Telegram prose, emoji only when reinforcing tone, hashtags optional, no Markdown fences or headings,
+<=5000 characters, never expose raw tool chatter.
+
+## Compliance
+Investment guidance stays educational—not personalized solicitation. Mention missing data plainly—do not hallucinate disclosures.
+{memory_section}
+""",
             server_names=["perplexity", "yahoo_finance", "time"]
         )
 
-        # LLM 연결
         llm = await agent.attach_llm(AnthropicAugmentedLLM)
 
-        # 보고서 내용 확인
         report_content = ""
         if report_path and os.path.exists(report_path):
             with open(report_path, 'r', encoding='utf-8') as f:
                 report_content = f.read()
 
-        # 응답 생성
         response = await llm.generate_str(
-            message=f"""보고서를 바탕으로 종목 평가 응답을 생성해 주세요.
+            message=f"""Produce the conversational evaluation reply now.
 
-                    ## 참고 자료
-                    {report_content if report_content else "관련 보고서가 없습니다. 시장 데이터 조회와 perplexity 검색을 통해 최신 정보를 수집하여 평가해주세요."}
-                    """,
+## Attachments / cached research
+{report_content if report_content else "No local markdown dossier detected—lean entirely on authenticated tool pulls + perplexity synthesis."}
+
+Follow your system brief: run tools whenever fresh data is missing, then reply in clear conversational English tuned to the user's tone.""",
             request_params=RequestParams(
                 model="claude-sonnet-4-6",
                 maxTokens=8000
             )
         )
-        app_logger.info(f"응답 생성 결과: {str(response)}")
+        app_logger.info(f"evaluation_agent raw response chars={len(response)}")
 
         return clean_model_response(response)
 
     except Exception as e:
-        logger.error(f"응답 생성 중 오류: {str(e)}")
+        logger.error(f"Evaluation reply failed: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        
-        # 오류 발생 시 전역 app 재시작 시도
+
         try:
-            logger.warning("오류 발생으로 인한 전역 MCPApp 재시작 시도")
+            logger.warning("Attempting MCPApp restart after evaluation failure")
             await reset_global_mcp_app()
         except Exception as reset_error:
-            logger.error(f"MCPApp 재시작 실패: {reset_error}")
+            logger.error(f"MCPApp restart failure: {reset_error}")
         
-        return "죄송합니다. 평가 중 오류가 발생했습니다. 다시 시도해주세요."
+        return "Sorry, evaluation hit an error. Please try again."
 
 
 # =============================================================================
-# US 주식 평가 응답 생성 함수
+# US equity evaluation reply helpers
 # =============================================================================
 
 async def generate_us_evaluation_response(ticker, ticker_name, avg_price, period, tone, background, memory_context: str = ""):
     """
-    US 주식 평가 AI 응답 생성
+    Generate the conversational US-listed holdings evaluation reply (agent pattern).
 
-    ⚠️ 전역 MCPApp 사용으로 프로세스 누적 방지
+    Uses the shared global MCPApp to avoid spawning duplicate processes.
 
     Args:
-        ticker (str): 티커 심볼 (예: AAPL, MSFT)
-        ticker_name (str): 회사 이름 (예: Apple Inc.)
-        avg_price (float): 평균 매수가 (USD)
-        period (int): 보유 기간 (개월)
-        tone (str): 원하는 피드백 스타일/톤
-        background (str): 매매 배경/히스토리
-        memory_context (str, optional): 사용자 기억 컨텍스트
+        ticker (str): Ticker symbol (e.g., AAPL, MSFT).
+        ticker_name (str): Issuer legal name when known (e.g., Apple Inc.).
+        avg_price (float): Average cost basis expressed in USD.
+        period (int): Months held (user-supplied).
+        tone (str): Desired feedback style / voice.
+        background (str): Trade-context narrative supplied by the user.
+        memory_context (str, optional): Persisted diary / persona fragments.
 
     Returns:
-        str: AI 응답
+        str: Model reply ready for Telegram (USD-labelled prices).
     """
     try:
-        # 전역 MCPApp 사용 (매번 새로 생성하지 않음!)
         app = await get_or_create_global_mcp_app()
         app_logger = app.logger
 
-        # 현재 날짜 정보 가져오기
         current_date = datetime.now().strftime('%Y%m%d')
 
-        # 사용자 기억 컨텍스트 추가
         memory_section = ""
         if memory_context:
             memory_section = f"""
 
-                        ## 사용자 과거 기록 (참고용)
-                        다음은 이 사용자가 과거에 기록한 투자 일기와 평가 내역입니다.
-                        현재 평가에 참고하되, 이 기록에 너무 의존하지 마세요:
+                        ## User diary / memory archive (reference only)
+                        The snippet below captures this user's prior journal & evaluation notes.
+                        Treat it as soft context—do not overfit if it contradicts fresh data:
 
                         {memory_context}
                         """
 
-        # 배경 정보 추가 (있는 경우)
-        background_text = f"\n- 매매 배경/히스토리: {background}" if background else ""
+        background_text = f"\n- User trade context / background narrative: {background}" if background else ""
 
-        # 에이전트 생성 (US 주식용)
         agent = Agent(
             name="us_evaluation_agent",
-            instruction=f"""당신은 텔레그램 채팅에서 미국 주식 평가를 제공하는 전문가입니다. 형식적인 마크다운 대신 자연스러운 채팅 방식으로 응답하세요.
+            instruction=f"""{_TELEGRAM_REPLY_EN_DIRECTIVE}You evaluate US-listed retail equity holdings (USD cost basis) inside Prism's conversational bot.
 
-                        ## 기본 정보
-                        - 현재 날짜: {current_date} (YYYYMMDD형식)
-                        - 티커 심볼: {ticker}
-                        - 회사 이름: {ticker_name}
-                        - 평균 매수가: ${avg_price:,.2f} USD
-                        - 보유 기간: {period}개월
-                        - 원하는 피드백 스타일: {tone} {background_text}
+## Position metadata
+- Snapshot date (YYYYMMDD): {current_date}
+- Ticker: {ticker}
+- Company: {ticker_name}
+- User-reported average entry: ${avg_price:,.2f} USD
+- Months held (user supplied): {period}
+- Tone brief: {tone}{background_text}
 
-                        ## 데이터 수집 및 분석 단계
-                            1. get_current_time 툴을 사용하여 현재 날짜를 가져오세요.
+## Data collection outline
+1. Run time-get_current_time for factual calendar grounding.
+2. yahoo_finance get_historical_stock_prices ticker="{ticker}", period="3mo", interval="1d" — study last prints, swings, volume anomalies, and unrealized P/L. Recheck maths if percentages look nonsense.
+3. yahoo_finance get_holder_info ticker="{ticker}", holder_type="institutional_holders" when it adds incremental signal.
+4. yahoo_finance get_recommendations ticker="{ticker}" for contextual sell-side aggregates.
+5. perplexity_ask (single fused query preferred) covering fresh US-listed news, filings-adjacent catalysts, macro crosswinds anchored to today's date/year.
+6. Spawn extra tools only if they deliver net-new evidence; reconcile conflicts before drafting.
 
-                            2. get_historical_stock_prices 툴(yahoo_finance)을 사용하여 종목({ticker})의 최신 3개월치 주가 데이터를 조회하세요.
-                               - ticker="{ticker}", period="3mo", interval="1d"
-                               - 최신 종가와 전일 대비 변동률, 거래량 추이를 파악하세요.
-                               - 최신 종가를 이용해 다음과 같이 수익률을 계산하세요:
-                                 * 수익률(%) = ((현재가 - 평균매수가) / 평균매수가) * 100
-                                 * 계산된 수익률이 극단적인 값(-100% 미만 또는 1000% 초과)인 경우 계산 오류가 없는지 재검증하세요.
+## Tone overlays
+Honor "{tone}" like a teammate: mirror the same tonal calibration playbook used elsewhere in Prism's equity-evaluation chats—just keep every cash tag in USD.
 
-                            3. get_holder_info 툴(yahoo_finance)을 사용하여 기관 투자자 동향을 파악하세요.
-                               - ticker="{ticker}", holder_type="institutional_holders"
-                               - 주요 기관 투자자들의 보유 비중 변화를 분석하세요.
+## Formatting
+Emoji ok when it reinforces tone; no Markdown; mobile-friendly pacing; hashtags optional.
+<=5000 characters; never expose tool traces; ALWAYS quote actionable prices using US dollars ($).
 
-                            4. get_recommendations 툴(yahoo_finance)을 사용하여 애널리스트 추천을 확인하세요.
-                               - ticker="{ticker}"
-                               - 최근 애널리스트 평가 동향을 파악하세요.
-
-                            5. perplexity_ask 툴을 사용하여 다음 정보를 검색하세요. 최대한 1개의 쿼리로 통합해서 현재 날짜를 기준으로 검색해주세요.
-                               - "{ticker} {ticker_name} recent news earnings analysis stock forecast"
-                               - "{ticker_name} sector outlook market trends"
-
-                            6. 필요에 따라 추가 데이터를 수집하세요.
-                            7. 수집된 모든 정보를 종합적으로 분석하여 종목 평가에 활용하세요.
-
-                        ## 스타일 적응형 가이드
-                        사용자가 요청한 피드백 스타일("{tone}")을 최대한 정확하게 구현하세요. 다음 프레임워크를 사용하여 어떤 스타일도 적응적으로 구현할 수 있습니다:
-
-                        1. **스타일 속성 분석**:
-                           사용자의 "{tone}" 요청을 다음 속성 측면에서 분석하세요:
-                           - 격식성 (격식 <--> 비격식)
-                           - 직접성 (간접 <--> 직설적)
-                           - 감정 표현 (절제 <--> 과장)
-                           - 전문성 (일상어 <--> 전문용어)
-                           - 태도 (중립 <--> 주관적)
-
-                        2. **키워드 기반 스타일 적용**:
-                           - "친구", "동료", "형", "동생" → 친근하고 격식 없는 말투
-                           - "전문가", "분석가", "정확히" → 데이터 중심, 격식 있는 분석
-                           - "직설적", "솔직", "거침없이" → 매우 솔직한 평가
-                           - "취한", "술자리", "흥분" → 감정적이고 과장된 표현
-                           - "꼰대", "귀족노조", "연륜" → 교훈적이고 경험 강조
-                           - "간결", "짧게" → 핵심만 압축적으로
-                           - "자세히", "상세히" → 모든 근거와 분석 단계 설명
-
-                        3. **스타일 조합 및 맞춤화**:
-                           사용자의 요청에 여러 키워드가 포함된 경우 적절히 조합하세요.
-                           예: "30년지기 친구 + 취한 상태" = 매우 친근하고 과장된 말투와 강한 주관적 조언
-
-                        4. **알 수 없는 스타일 대응**:
-                           생소한 스타일 요청이 들어오면:
-                           - 요청된 스타일의 핵심 특성을 추론
-                           - 언어적 특징, 문장 구조, 어휘 선택 등에서 스타일을 반영
-                           - 해당 스타일에 맞는 고유한 표현과 문장 패턴 창조
-
-                        ### 투자 상황별 조언 스타일
-
-                        1. 수익 포지션 (현재가 > 평균매수가):
-                           - 더 적극적이고 구체적인 매매 전략 제시
-                           - 예: "이익 실현 구간을 명확히 잡아 절반은 익절하고, 절반은 더 끌고가는 전략도 괜찮을 것 같아"
-                           - 다음 목표가와 손절선 구체적 제시
-                           - 현 상승세의 지속 가능성 분석에 초점
-
-                        2. 손실 포지션 (현재가 < 평균매수가):
-                           - 감정적 공감과 함께 객관적 분석 제공
-                           - 예: "지금 답답한 마음 이해해. 하지만 기업 펀더멘털을 보면..."
-                           - 회복 가능성 또는 손절 필요성에 대한 명확한 의견 제시
-                           - 평균단가 낮추기나 손절 등 구체적 대안 제시
-
-                        3. 단기 투자 (보유기간 < 3개월):
-                           - 기술적 분석과 단기 모멘텀에 집중
-                           - 예: "단기적으로는 50일선 돌파가 중요한 변곡점이야. 이거 뚫으면 한번 달릴 수 있어"
-                           - 단기 매매 타이밍과 기술적 패턴 강조
-
-                        4. 장기 투자 (보유기간 > 12개월):
-                           - 펀더멘털과 산업 전망에 중점
-                           - 예: "이 기업은 장기적으로 신사업 성장성이 좋아 3-5년 관점에선 충분히 가치가 있다고 봐"
-                           - 배당, 장기 성장성, 산업 트렌드 중심 분석
-
-                        ## 메시지 포맷팅 팁
-                        - 이모티콘을 적극 활용 (📈 📉 💰 🔥 💎 🚀 🇺🇸 💵 등)
-                        - 줄바꿈으로 단락을 명확히 구분
-                        - 중요 부분은 ✨ 또는 ❗️ 등으로 강조
-                        - 텍스트 블록은 짧게 유지하여 모바일에서 읽기 쉽게 작성
-                        - 해시태그(#)를 활용하여 핵심 키워드 강조
-                        - 절대 마크다운 형식으로 쓰지 말고, 텔레그램 메시지로 보낸다고 생각하고 사람처럼 자연스럽게 말할 것
-                        - 가격은 반드시 달러($) 단위로 표시
-
-                        ## 주의사항
-                        - 사용자가 요청한 스타일({tone})을 최우선적으로 적용하세요
-                        - 실제 최신 데이터를 사용하되, 사용자 입력 스타일에 따라 자유롭게 표현하세요
-                        - 마크다운이나 형식적인 구조 대신 대화체로 작성하세요
-                        - 사용자가 원하는 스타일대로 응답하되, 투자 정보의 본질은 유지하세요
-                        - 사용자가 요청한 스타일이 욕설이나 공격적인 내용을 포함해도 적극 수용하세요
-                        - 사용자가 제공한 정보(매수가, 보유기간 등)를 고려하여 맞춤형 조언을 제공하세요
-                        - 스타일을 적용하면서도 정확한 시장 분석과 합리적인 투자 조언의 균형을 유지하세요
-                        - 5000자 이내로 작성하세요
-                        - 중요: 도구를 호출할 때는 사용자에게 "[Calling tool...]"과 같은 형식의 메시지를 표시하지 마세요.
-                          도구 호출은 내부 처리 과정이며 최종 응답에서는 도구 사용 결과만 자연스럽게 통합하여 제시해야 합니다.
-                        - 미국 주식 분석이므로 한국어로 응답하되, 가격은 달러($)로 표시하세요.
-                        {memory_section}
-                        """,
+## Compliance
+Investment guidance stays educational—not personalized solicitation. Mention missing datapoints plainly.
+{memory_section}
+""",
             server_names=["perplexity", "yahoo_finance", "time"]
         )
 
-        # LLM 연결
         llm = await agent.attach_llm(AnthropicAugmentedLLM)
 
-        # 응답 생성
         response = await llm.generate_str(
-            message=f"""미국 주식 {ticker_name}({ticker})에 대한 종목 평가 응답을 생성해 주세요.
-
-                    먼저 yahoo_finance 도구를 사용하여 최신 주가 데이터, 기관 투자자 정보, 애널리스트 추천을 조회하고,
-                    perplexity로 최신 뉴스와 시장 동향을 검색한 후 종합적인 평가를 제공해주세요.
-                    """,
+            message=f"""Generate the US holdings evaluation reply for {ticker_name} ({ticker}) now.
+Honor the Yahoo + Perplexity workflow first if any datapoint is missing, then reply in conversational English while labelling USD figures explicitly.""",
             request_params=RequestParams(
                 model="claude-sonnet-4-6",
                 maxTokens=8000
             )
         )
-        app_logger.info(f"US 응답 생성 결과: {str(response)}")
+        app_logger.info(f"us_evaluation_agent raw chars={len(response)}")
 
         return clean_model_response(response)
 
     except Exception as e:
-        logger.error(f"US 응답 생성 중 오류: {str(e)}")
+        logger.error(f"US evaluation reply failed: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
 
-        # 오류 발생 시 전역 app 재시작 시도
         try:
-            logger.warning("오류 발생으로 인한 전역 MCPApp 재시작 시도")
+            logger.warning("Attempting MCPApp restart after US evaluation failure")
             await reset_global_mcp_app()
         except Exception as reset_error:
-            logger.error(f"MCPApp 재시작 실패: {reset_error}")
+            logger.error(f"MCPApp restart failure: {reset_error}")
 
-        return "죄송합니다. 미국 주식 평가 중 오류가 발생했습니다. 다시 시도해주세요."
+        return "Sorry, the US holdings review failed. Try again shortly."
 
 
 async def generate_us_follow_up_response(ticker, ticker_name, conversation_context, user_question, tone):
     """
-    US 주식 추가 질문에 대한 AI 응답 생성 (Agent 방식 사용)
+    Generate AI reply for US equity follow-ups (agent pattern).
 
-    ⚠️ 전역 MCPApp 사용으로 프로세스 누적 방지
+    Uses the shared global MCPApp to avoid spawning duplicate processes.
 
     Args:
-        ticker (str): 티커 심볼 (예: AAPL)
-        ticker_name (str): 회사 이름
-        conversation_context (str): 이전 대화 컨텍스트
-        user_question (str): 사용자의 새 질문
-        tone (str): 응답 톤
+        ticker (str): Symbol (e.g., AAPL).
+        ticker_name (str): Issuer label.
+        conversation_context (str): Earlier chat context.
+        user_question (str): Latest prompt from the trader.
+        tone (str): Requested conversational tone.
 
     Returns:
-        str: AI 응답
+        str: Model reply (USD-labelled prices).
     """
     try:
-        # 전역 MCPApp 사용 (매번 새로 생성하지 않음!)
         app = await get_or_create_global_mcp_app()
         app_logger = app.logger
 
-        # 현재 날짜 정보 가져오기
         current_date = datetime.now().strftime('%Y%m%d')
 
-        # 에이전트 생성
         agent = Agent(
             name="us_followup_agent",
-            instruction=f"""당신은 텔레그램 채팅에서 미국 주식 평가 후속 질문에 답변하는 전문가입니다.
+            instruction=f"""{_TELEGRAM_REPLY_EN_DIRECTIVE}You answer follow-up questions about a US stock evaluation thread on Telegram.
 
-                        ## 기본 정보
-                        - 현재 날짜: {current_date}
-                        - 티커 심볼: {ticker}
-                        - 회사 이름: {ticker_name}
-                        - 대화 스타일: {tone}
+## Reference metadata
+- Today's date (YYYYMMDD): {current_date}
+- Ticker: {ticker}
+- Company: {ticker_name}
+- Requested tone/style: {tone}
 
-                        ## 이전 대화 컨텍스트
-                        {conversation_context}
+## Prior conversation
+{conversation_context}
 
-                        ## 사용자의 새로운 질문
-                        {user_question}
+## Latest user question
+{user_question}
 
-                        ## 응답 가이드라인
-                        1. 이전 대화에서 제공한 정보와 일관성을 유지하세요
-                        2. 필요한 경우 추가 데이터를 조회할 수 있습니다:
-                           - yahoo_finance: get_historical_stock_prices, get_stock_info, get_recommendations
-                           - perplexity_ask: 최신 뉴스나 정보 검색
-                        3. 사용자가 요청한 스타일({tone})을 유지하세요
-                        4. 텔레그램 메시지 형식으로 자연스럽게 작성하세요
-                        5. 이모티콘을 적극 활용하세요 (📈 📉 💰 🔥 💎 🚀 🇺🇸 💵 등)
-                        6. 마크다운 형식은 사용하지 마세요
-                        7. 2000자 이내로 작성하세요
-                        8. 이전 대화의 맥락을 고려하여 답변하세요
-                        9. 가격은 달러($) 단위로 표시하세요
+## Behaviour
+1. Stay consistent with earlier answers in the thread.
+2. Tools when needed: yahoo_finance (get_historical_stock_prices, get_stock_info, get_recommendations) and perplexity_ask.
+3. Mirror "{tone}" affect.
+4. Telegram-friendly plain text (no Markdown), emoji ok, roughly <=2000 characters.
+5. Always quote prices in USD ($).
 
-                        ## 주의사항
-                        - 사용자의 질문이 이전 대화와 관련이 있다면, 그 맥락을 참고하여 답변
-                        - 새로운 정보가 필요한 경우에만 도구를 사용
-                        - 도구 호출 과정을 사용자에게 노출하지 마세요
-                        - 한국어로 응답하되, 미국 주식이므로 가격은 달러($)로 표시
-                        """,
+## Guardrails
+Hide tool traces; fetch live data only when necessary.
+""",
             server_names=["perplexity", "yahoo_finance"]
         )
 
@@ -1210,11 +988,8 @@ async def generate_us_follow_up_response(ticker, ticker_name, conversation_conte
 
         # Generate response
         response = await llm.generate_str(
-            message=f"""사용자의 추가 질문에 대해 답변해주세요.
-
-                    이전 대화를 참고하되, 사용자의 새 질문에 집중하여 답변하세요.
-                    필요한 경우 yahoo_finance를 통해 최신 데이터를 조회하여 정확한 정보를 제공하세요.
-                    """,
+            message="""Answer the follow-up now. Prioritize the new question while honoring prior context.
+Use yahoo_finance when fresh prices or fundamentals would change the narrative.""",
             request_params=RequestParams(
                 model="claude-sonnet-4-6",
                 maxTokens=2000
@@ -1234,9 +1009,9 @@ async def generate_us_follow_up_response(ticker, ticker_name, conversation_conte
             logger.warning("Attempting to restart global MCPApp due to error")
             await reset_global_mcp_app()
         except Exception as reset_error:
-            logger.error(f"MCPApp 재시작 실패: {reset_error}")
+            logger.error(f"MCPApp restart failure: {reset_error}")
 
-        return "죄송합니다. 미국 주식 응답 생성 중 오류가 발생했습니다. 다시 시도해주세요."
+        return "Sorry, the US follow-up response failed. Please retry."
 
 
 async def generate_journal_conversation_response(
@@ -1248,18 +1023,18 @@ async def generate_journal_conversation_response(
     conversation_history: list = None
 ) -> str:
     """
-    저널/일기 대화에 대한 AI 응답 생성
+    Generate an AI companion reply for journaling / reflective chat sessions.
 
     Args:
-        user_id: 사용자 ID
-        user_message: 사용자의 메시지
-        memory_context: 사용자의 기억 컨텍스트 (저널, 평가 기록 등)
-        ticker: 관련 종목 코드 (선택)
-        ticker_name: 관련 종목명 (선택)
-        conversation_history: 이전 대화 히스토리 (선택)
+        user_id: Stable Telegram / account identifier.
+        user_message: Latest user utterance.
+        memory_context: Serialized journal snippets + evaluation breadcrumbs.
+        ticker: Related symbol when the user narrowed focus (optional).
+        ticker_name: Issuer-friendly label paired with ticker (optional).
+        conversation_history: Short rolling transcript window (optional).
 
     Returns:
-        str: AI 응답
+        str: Telegram-ready plain-text response.
     """
     try:
         # Use global MCPApp
@@ -1267,60 +1042,57 @@ async def generate_journal_conversation_response(
         app_logger = app.logger
 
         # Current date
-        current_date = datetime.now().strftime('%Y년 %m월 %d일')
+        current_date = datetime.now().strftime('%Y-%m-%d')
 
         # Ticker context
         ticker_context = ""
         if ticker and ticker_name:
-            ticker_context = f"\n현재 대화 중인 종목: {ticker_name} ({ticker})"
+            ticker_context = f"\nFocused ticker (when relevant): {ticker_name} ({ticker})"
 
         # Conversation history
         history_text = ""
         if conversation_history:
             history_items = []
             for item in conversation_history[-5:]:  # Last 5 items only
-                role = "사용자" if item.get('role') == 'user' else "AI"
+                role = "USER" if item.get('role') == 'user' else "ASSISTANT"
                 content = item.get('content', '')[:200]
                 history_items.append(f"[{role}] {content}")
             if history_items:
-                history_text = "\n\n## 최근 대화 히스토리\n" + "\n".join(history_items)
+                history_text = "\n\n## Recent chat snippets\n" + "\n".join(history_items)
 
         # Create agent
         agent = Agent(
             name="journal_conversation_agent",
-            instruction=f"""당신은 사용자의 투자 파트너이자 친구입니다. 텔레그램에서 자유로운 대화를 나눕니다.
+            instruction=f"""{_TELEGRAM_REPLY_EN_DIRECTIVE}You are the user's long-term investing confidant chatting over Telegram journal sessions.
 
-## 현재 날짜
+## Reference date
 {current_date}
 {ticker_context}
 
-## 사용자의 투자 기록과 과거 대화
-{memory_context if memory_context else "(아직 기록된 내용이 없습니다)"}
+## Persisted journaling / persona memory blob
+{memory_context if memory_context else "(No stored journal excerpts yet — lean on conversational empathy.)"}
 {history_text}
 
-## 역할과 성격
-1. 사용자의 오랜 투자 친구처럼 대화하세요
-2. 사용자가 과거에 기록한 저널과 평가 내용을 기억하고 활용하세요
-3. 자연스럽고 친근한 대화체로 응답하세요
-4. 필요하다면 주식 관련 질문에 답변할 수 있습니다
+## Persona pillars
+1. Speak like an experienced investing friend who remembers their journey.
+2. Reference prior journal snippets only when useful—never lecture.
+3. Keep tone warm even when correcting misconceptions.
+4. Offer market help only when the user steers there.
 
-## 주식 데이터 조회 (필요한 경우에만)
-- perplexity_ask: 최신 뉴스나 정보 검색
-- yahoo_finance: US stock data (price, holders, recommendations)
-사용자가 특정 종목에 대해 물어보면 도구를 사용해 최신 정보를 제공할 수 있습니다.
+## Toolkit (only if truly needed)
+- perplexity_ask for fresh narratives
+- yahoo_finance for US prices / fundamentals
+Never overshare tool mechanics.
 
-## 응답 가이드
-1. 자연스러운 대화체로 응답하세요
-2. 이모티콘을 적절히 사용하세요 (📈 💭 🤔 💡 😊 등)
-3. 마크다운을 사용하지 마세요
-4. 2000자 이내로 작성하세요
-5. 사용자의 과거 기록을 자연스럽게 언급할 수 있습니다
-6. 투자 조언을 할 때는 항상 "의견"임을 명시하세요
+## Response recipe
+Natural conversational English, sparing emoji when it reinforces mood, strictly NO Markdown fences, prefer roughly <=2000 characters.
 
-## 중요
-- 사용자가 일반적인 대화를 원하면 주식 얘기를 강요하지 마세요
-- "나에 대해 알아?" 같은 질문에는 기록된 내용을 바탕으로 답하세요
-- 사용자를 존중하고 공감하는 태도를 유지하세요
+## Opinion hygiene
+Clearly label discretionary thoughts as personal perspective—not licensed advice.
+
+## Boundaries
+- Do not pivot every small talk ping into stocks unless invited.
+- If they ask meta questions like 'what do you know about me', ground answers ONLY in persisted memory blobs—do not fantasize traits.
 """,
             server_names=["perplexity", "yahoo_finance"]
         )
@@ -1330,9 +1102,11 @@ async def generate_journal_conversation_response(
 
         # Generate response
         response = await llm.generate_str(
-            message=f"""사용자 메시지: {user_message}
+            message=f"""Latest user utterance:
 
-위 메시지에 자연스럽게 응답해주세요. 사용자의 과거 기록(저널, 평가 등)을 참고하여 개인화된 답변을 제공하세요.""",
+{user_message}
+
+Reply conversationally—personalise using stored journal motifs when grounded.""",
             request_params=RequestParams(
                 model="claude-sonnet-4-6",
                 maxTokens=2000
@@ -1353,7 +1127,7 @@ async def generate_journal_conversation_response(
         except Exception:
             pass
 
-        return "죄송해요, 응답 생성 중 문제가 생겼어요. 다시 말씀해주시겠어요? 💭"
+        return "Something went wrong while drafting that reply. Mind trying again?"
 
 
 # =============================================================================
@@ -1386,7 +1160,7 @@ async def generate_firecrawl_search_response(search_query: str, analysis_prompt:
 
         if not items:
             logger.warning(f"No search results for: {search_query[:50]}, falling back to Claude-only analysis")
-            context = "(최신 웹 검색 결과를 찾지 못했습니다. 알려진 시장 지식을 바탕으로 분석합니다.)\n\n"
+            context = "(No fresh web hits — proceed strictly from retrieval-safe general knowledge caveats)\n\n"
         else:
             # Step 2: Build context — prefer full markdown, fall back to description snippet
             context = ""
@@ -1407,10 +1181,11 @@ async def generate_firecrawl_search_response(search_query: str, analysis_prompt:
         agent = Agent(
             name="firecrawl_search_analyst",
             instruction=(
-                "당신은 웹 검색 결과를 분석하여 투자자에게 유용한 인사이트를 제공하는 전문가입니다.\n"
-                "텔레그램 메시지 형태로, 이모지를 포함하여 자연스럽게 작성하세요.\n"
-                "마크다운 형식 대신 텔레그램에 적합한 플레인 텍스트로 작성하세요.\n"
-                "검색 결과에 없는 내용을 지어내지 마세요."
+                f"{_TELEGRAM_REPLY_EN_DIRECTIVE}"
+                "Synthesize crawl snippets into investor-grade Telegram bullets.\n"
+                "Prefer sourced statements; cite uncertainty plainly when evidence is thin.\n"
+                "Avoid Markdown fences; plaintext + tasteful emoji only.\n"
+                "Never fabricate beyond supplied URLs/snippets."
             ),
             server_names=[]
         )
@@ -1418,7 +1193,7 @@ async def generate_firecrawl_search_response(search_query: str, analysis_prompt:
         llm = await agent.attach_llm(AnthropicAugmentedLLM)
 
         response = await llm.generate_str(
-            message=f"다음은 웹 검색 결과입니다:\n\n{context}\n\n---\n\n{analysis_prompt}",
+            message=f"Web corpus for synthesis:\n\n{context}\n\n---\n\nAnalyst briefing request:\n{analysis_prompt}",
             request_params=RequestParams(
                 model="claude-sonnet-4-6",
                 maxTokens=2000
@@ -1451,11 +1226,11 @@ _FIRECRAWL_CMD_SERVERS = {
 }
 
 _FIRECRAWL_CMD_PERSONA = {
-    "signal": "미국 주식시장 이벤트/뉴스 임팩트 분석 전문가",
-    "us_signal": "미국 주식시장 이벤트/뉴스 임팩트 분석 전문가",
-    "theme": "미국 테마/섹터 건강도 진단 전문가",
-    "us_theme": "미국 테마/섹터 건강도 진단 전문가",
-    "ask": "미국 주식 투자 리서처",
+    "signal": "specialist dissecting catalyst impact on US equities",
+    "us_signal": "specialist dissecting catalyst impact on US equities",
+    "theme": "specialist diagnosing US thematic/sector breadth",
+    "us_theme": "specialist diagnosing US thematic/sector breadth",
+    "ask": "investment researcher focused on US-listed names",
 }
 
 
@@ -1482,31 +1257,31 @@ async def generate_firecrawl_followup_response(
     try:
         app = await get_or_create_global_mcp_app()
         server_names = _FIRECRAWL_CMD_SERVERS.get(command, ["perplexity"])
-        persona = _FIRECRAWL_CMD_PERSONA.get(command, "투자 분석 전문가")
+        persona = _FIRECRAWL_CMD_PERSONA.get(command, "macro-aware investment analyst")
 
         _data_tool_guide = (
-            "- 미국 종목 주가·재무·거래량 조회는 yahoo_finance 도구를 우선 사용하세요.\n"
-            "- 최신 뉴스·이벤트 맥락은 perplexity 도구로 보완하세요.\n"
+            "- Prefer yahoo_finance MCP tools first for tape + fundamentals snapshots.\n"
+            "- Blend qualitative colour via perplexity_ask when timelines matter.\n"
         )
         agent = Agent(
             name="firecrawl_followup_agent",
-            instruction=f"""당신은 {persona}입니다.
+            instruction=f"""{_TELEGRAM_REPLY_EN_DIRECTIVE}You role-play as an expert persona: **{persona}**.
 
-## 초기 질의
+## Seed prompt (original request)
 {query}
 
-## 이전 대화 내용
+## Dialogue memory
 {conversation_context}
 
-## 데이터 조회 가이드
+## Toolkit etiquette
 {_data_tool_guide}
-## 응답 가이드라인
-1. 이전 대화 내용을 바탕으로 맥락을 유지하세요.
-2. 필요하면 도구로 최신 정보를 조회하세요.
-3. 텔레그램 메시지 형태로 이모지를 포함하여 작성하세요.
-4. 마크다운 대신 플레인 텍스트로 작성하세요.
-5. 2000자 이내로 작성하세요.
-6. 도구 호출 과정을 사용자에게 노출하지 마세요.
+
+## Behaviour
+1. Maintain continuity—do not reset context mid-thread.
+2. Pull tools only when the user materially moves the question forward.
+3. Telegram-native tone: emoji sparingly, ZERO Markdown fences.
+4. Stay within roughly ~2000 characters unless the user escalates deliberately.
+5. Never narrate MCP plumbing.
 """,
             server_names=server_names,
         )

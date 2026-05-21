@@ -8,39 +8,14 @@ Uses perplexity and firecrawl for news gathering and sector analysis.
 from mcp_agent.agents.agent import Agent
 
 
-def _news_report_locale(
-    language: str,
+def _news_report_structure_block(
     ref_year: str,
     ref_month: str,
     ref_day: str,
 ) -> str:
-    """Markdown heading requirements and prose language (headings Korean when language == ko)."""
-    if language == "ko":
-        return f"""
-## Report Structure (MUST use markdown heading format)
+    """Markdown heading contract; narrative prose is English-only."""
 
-- Start: \\n\\n### 3. 최근 주요 뉴스 요약
-- First section MUST be: #### 당일 주가 변동 요인 분석
-- Sub-sections MUST use "#### Sub-section Title" format (markdown #### required — Korean titles acceptable)
-- Write in professional editorial tone suitable for filings-style summaries
-- Write all narrative prose in formal polite Korean (합쇼체: ~입니다 / ~합니다). Do not use plain/informal style (~한다 / ~된다)
-- Include date and primary source identifier for each material news item cited
-- Do not mention tools or scraping in the delivered report body
-
-## Precautions (execution)
-- **firecrawl**: only one call — the Yahoo Finance news list URL for `{ref_year}-{ref_month}-{ref_day}`
-- prioritize same-day causal analysis for price drivers
-- ticker-accurate entity resolution; verify Perplexity reply dates versus the stated reference date
-- deep interpretation; denote sources explicitly: `[YahooFinance:TICKER]` / `[Perplexity:sequence, verified date]`
-- prefer facts from roughly the past month versus the stated analysis date when nothing fresher exists
-
-## Output Format
-- No narration of tooling or scraping steps — write as-if research is complete
-- No intent chatter ("I'll...", "Let me...")
-- Deliverable always begins after two newlines (`\\n\\n`)
-"""
-
-    return f"""
+    base = f"""
 ## Report Structure (MUST use markdown heading format)
 
 - Start: \\n\\n### 3. Recent Major News Summary
@@ -60,6 +35,7 @@ def _news_report_locale(
 - Provide deep analysis and insights
 - Clear source notation: `[YahooFinance:TICKER]` / `[Perplexity:Number, Date]`
 - Use only recent info (within 1 month of analysis date)
+- Reference date `{ref_year}-{ref_month}-{ref_day}` anchors Perplexity questions and freshness expectations
 
 ## Output Format
 
@@ -68,13 +44,14 @@ def _news_report_locale(
 - No intent expressions like "I'll...", "Let me..."
 - Always start with \\n\\n
 """
+    return base
 
 
 def create_news_analysis_agent(
     company_name: str,
     ticker: str,
     reference_date: str,
-    language: str = "ko",
+    language: str = "en",
     prefetched_social_sentiment: str = None,
 ):
     """Create US news analysis agent
@@ -83,12 +60,13 @@ def create_news_analysis_agent(
         company_name: Company name
         ticker: Stock ticker symbol
         reference_date: Analysis reference date (YYYYMMDD)
-        language: Language code (default: "ko")
+        language: Legacy language argument retained for callers.
 
     Returns:
         Agent: News analysis agent
     """
 
+    _ = language
     social_context = ""
     if prefetched_social_sentiment:
         social_context = (
@@ -153,7 +131,7 @@ Interpretation checkpoints:
 5. Epistemic hygiene: downgrade unverifiable rumours
 6. If social sentiment appendix provided: explicitly reconcile divergence vs reinforcing alignment
 
-{_news_report_locale(language, ref_year, ref_month, ref_day)}{social_context}
+{_news_report_structure_block(ref_year, ref_month, ref_day)}{social_context}
 Company: {company_name} ({ticker})
 Analysis Date: {reference_date}(YYYYMMDD format)
 """

@@ -7,8 +7,8 @@
 **PRISM-INSIGHT** = AI-powered US stock analysis & automated trading system
 
 ```yaml
-Stack: Python 3.10+, mcp-agent, GPT-5/Claude 4.6, SQLite, Telegram, KIS API
-Scale: ~75,000+ LOC, 13+ AI agents, US-only pipeline
+Stack: Python 3.10+, mcp-agent, GPT-5/Claude 4.6, SQLite, KIS API
+Scale: ~75,000+ LOC, specialized analysis agents & trading loop, US-only pipeline
 ```
 
 ## Project Structure
@@ -16,7 +16,7 @@ Scale: ~75,000+ LOC, 13+ AI agents, US-only pipeline
 ```
 prism-insight/
 ├── cores/                    # AI Analysis Engine
-│   ├── agents/              # 13 specialized AI agents
+│   ├── agents/              # Analysis & trading agents
 │   ├── chatgpt_proxy/       # ChatGPT OAuth Proxy (Codex endpoint)
 │   ├── analysis.py          # Core orchestration
 │   └── report_generation.py # Report templates
@@ -38,20 +38,19 @@ stock_analysis_orchestrator.py
         Technical Analyst → Trading Flow → Financial → Industry → News → Market
     → Investment Strategist (integrates all 6 reports)
     → report_generation.py → PDF
-    → telegram_summary_agent → Telegram message (Korean)
     ↓
 stock_tracking_agent.py  (runs independently, cron)
     → sell_decision_agent → KIS sell order
     → buy via trigger signal → KIS buy order
 ```
 
-> **Multi-account (v2.9.0)**: `stock_tracking_agent` fans out buy/sell to all accounts in `kis_devlp.yaml`. Telegram report is sent from primary account only.
+> **Multi-account (v2.9.0)**: `stock_tracking_agent` fans out buy/sell to all accounts in `kis_devlp.yaml`.
 
 ---
 
 ## AI Agents
 
-13 specialized agents organized in 4 teams. Full details → [`docs/CLAUDE_AGENTS.md`](docs/CLAUDE_AGENTS.md)
+Specialized agents are organized across `cores/agents/` and orchestrated sequentially by `cores/analysis.py`. Full historical notes → [`docs/CLAUDE_AGENTS.md`](docs/CLAUDE_AGENTS.md) (legacy Telegram-era rows may appear there).
 
 | # | Agent | File | Purpose |
 |---|-------|------|---------|
@@ -63,13 +62,11 @@ stock_tracking_agent.py  (runs independently, cron)
 | 6 | Market Analyst | `cores/agents/market_index_agents.py` | S&P/NASDAQ macro context (result cached) |
 | 7 | Investment Strategist | `cores/agents/news_strategy_agents.py` | Synthesizes 1-6 into actionable strategy |
 | 8 | Macro Intelligence | `cores/agents/macro_intelligence_agent.py` | Market regime, leading/lagging sectors |
-| 9 | Summary Optimizer | `cores/agents/telegram_summary_optimizer_agent.py` | Report → 400-char Telegram message |
-| 10 | Quality Evaluator | `cores/agents/telegram_summary_evaluator_agent.py` | Summary QA loop until EXCELLENT |
-| 11 | Translation Specialist | `cores/agents/telegram_translator_agent.py` | EN↔multilingual broadcast |
-| 12 | Buy Specialist | `cores/agents/trading_agents.py` | Entry decision, score threshold |
-| 13 | Sell Specialist | `cores/agents/trading_agents.py` | Hold/sell decision, stop-loss |
+| 9 | Trading Journal | `cores/agents/trading_journal_agent.py` | Record & learn from completed trades (optional) |
+| 10 | Buy Specialist | `cores/agents/trading_agents.py` | Entry decision, score threshold |
+| 11 | Sell Specialist | `cores/agents/trading_agents.py` | Hold/sell decision, stop-loss |
 
-> Agents now run from canonical root paths (no legacy mirror namespace).
+> Agents run from canonical root paths (no legacy mirror namespace).
 
 ---
 
@@ -78,20 +75,18 @@ stock_tracking_agent.py  (runs independently, cron)
 | Command | Purpose |
 |---------|---------|
 | `python stock_analysis_orchestrator.py --mode morning` | US morning analysis |
-| `python stock_analysis_orchestrator.py --mode morning --no-telegram` | Local test (no Telegram) |
 | `PRISM_OPENAI_AUTH_MODE=chatgpt_oauth python stock_analysis_orchestrator.py --mode morning` | ChatGPT OAuth proxy mode |
 | `python trigger_batch.py morning INFO` | US surge detection only |
 | `python demo.py AAPL` | Single stock report (US) |
 | `python pending_order_batch.py` | US pending order batch (10:05 KST cron) |
 | `python pending_order_batch.py --dry-run` | US pending order dry run |
-| `python weekly_insight_report.py --dry-run` | Weekly insight report (print only) |
-| `python weekly_insight_report.py --broadcast-languages en,ja` | Weekly report + broadcast |
+| `python weekly_insight_report.py --dry-run` | Weekly insight report (print digest) |
 
 ## Configuration Files
 
 | File | Purpose |
 |------|---------|
-| `.env` | Telegram tokens, channel IDs, Redis/GCP settings, `PRISM_OPENAI_AUTH_MODE` |
+| `.env` | Redis/GCP/Firebase toggles, `PRISM_OPENAI_AUTH_MODE`, optional Adanos signals |
 | `mcp_agent.secrets.yaml` | API keys (OpenAI, Anthropic, Firecrawl, etc.) |
 | `mcp_agent.config.yaml` | MCP server configuration |
 | `trading/config/kis_devlp.yaml` | KIS trading API credentials |
@@ -102,8 +97,6 @@ stock_tracking_agent.py  (runs independently, cron)
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `TELEGRAM_BOT_TOKEN` | ✅ | Telegram bot token |
-| `TELEGRAM_CHANNEL_ID` | ✅ | Primary US channel ID |
 | `PRISM_OPENAI_AUTH_MODE` | ✅ | `api_key` (default) or `chatgpt_oauth` |
 | `ADANOS_API_KEY` | ⬜ | US social sentiment (Adanos). Omit to disable |
 | `ENABLE_TRADING_JOURNAL` | ⬜ | `true` to enable trading journal agent |

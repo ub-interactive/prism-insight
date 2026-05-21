@@ -19,7 +19,7 @@ def create_company_status_agent(
     ticker: str,
     reference_date: str,
     urls: Dict[str, str],
-    language: str = "ko",
+    language: str = "en",
     prefetched_data: dict = None
 ):
     """Create US company status analysis agent
@@ -29,23 +29,14 @@ def create_company_status_agent(
         ticker: Stock ticker symbol
         reference_date: Analysis reference date (YYYYMMDD)
         urls: Dictionary of Yahoo Finance URLs
-        language: Language code (default: "ko")
+        language: Legacy language argument retained for callers.
 
     Returns:
         Agent: Company status analysis agent
     """
 
-    title_heading = (
-        f"### 2-1. 기업 현황 분석: {company_name}"
-        if language == "ko"
-        else f"### 2-1. Company Status Analysis: {company_name}"
-    )
-    prose_rule = (
-        "Write all narrative prose in formal polite Korean (합쇼체: ~입니다 / ~합니다). "
-        "Do not use informal/plain endings (~한다 / ~된다)."
-        if language == "ko"
-        else "Write analytical narrative in clear professional English."
-    )
+    title_heading = f"### 2-1. Company Status Analysis: {company_name}"
+    prose_rule = "Write analytical narrative in clear professional English."
 
     instruction = f"""You are a company status analyst for US-listed equities. Pull structured fundamentals from Yahoo Finance (Key Statistics / Financials / Analyst views) unless pre-collected data blocks were injected later.
 When scraping pages with firecrawl_scrape use formats=["markdown"] and onlyMainContent=true.
@@ -88,7 +79,7 @@ When scraping pages with firecrawl_scrape use formats=["markdown"] and onlyMainC
 6. Institutional float / accumulation clues from Yahoo-holder snapshots feeding into positioning overlay
 
 ## Report Structure (Markdown contract)
-- Lead with TWO blank lines THEN the fixed title line verbatim (language-specific constraint below)
+- Lead with TWO blank lines THEN the fixed title line verbatim (exact string below)
 - Subsections deepen via markdown `####` depth (avoid mixing `#` / `##` inside this artifact)
 - Table-wrap dense KPI panels; bullets summarize table → thesis linkages crisply
 - All quoted monetary bands / accounting figures expressed in USD for cross-border comparability
@@ -190,7 +181,7 @@ def create_company_overview_agent(
     ticker: str,
     reference_date: str,
     urls: Dict[str, str],
-    language: str = "ko",
+    language: str = "en",
     prefetched_data: dict = None
 ):
     """Create US company overview analysis agent
@@ -200,24 +191,15 @@ def create_company_overview_agent(
         ticker: Stock ticker symbol
         reference_date: Analysis reference date (YYYYMMDD)
         urls: Dictionary of Yahoo Finance URLs
-        language: Language code (default: "ko")
+        language: Legacy language argument retained for callers.
 
     Returns:
         Agent: Company overview analysis agent
     """
 
 
-    title_heading = (
-        f"### 2-2. 기업 개요 분석: {company_name}"
-        if language == "ko"
-        else f"### 2-2. Company Overview Analysis: {company_name}"
-    )
-    prose_rule = (
-        "Write all narrative prose in formal polite Korean (합쇼체: ~입니다 / ~합니다). "
-        "Do not use informal/plain endings (~한다 / ~된다)."
-        if language == "ko"
-        else "Write analytical narrative in clear professional English."
-    )
+    title_heading = f"### 2-2. Company Overview Analysis: {company_name}"
+    prose_rule = "Write analytical narrative in clear professional English."
 
     instruction = f"""You are an equity-sector cartographer profiling US-listed issuers strictly from factual Yahoo artefacts (Profile/Holders overlays) unless yfinance blobs were prefetched downstream.
 Operational posture: disciplined firecrawl invocations (`formats=["markdown"], onlyMainContent=true`) — minimise decorative chart imagery; tables > hero images for signal density.

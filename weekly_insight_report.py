@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
 Weekly Insight Report — Trading Summary, Sell Evaluation, Trigger Performance, AI Intuitions
-Sends weekly insight report to Telegram channel with optional broadcast.
+
+Outputs the compiled digest to stdout. Use ``--dry-run`` explicitly when you want
+to skip optional side effects wired by other tooling.
 
 Usage:
-    python3 weekly_insight_report.py                              # Send to Telegram
-    python3 weekly_insight_report.py --dry-run                     # Print only
-    python3 weekly_insight_report.py --broadcast-languages en,ja   # With broadcast
+    python weekly_insight_report.py
+    python weekly_insight_report.py --dry-run                     # Explicit no-op labeling
 """
 import argparse
 import asyncio
 import logging
-import os
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -339,66 +339,12 @@ async def generate_weekly_report(db_path: str = DB_PATH) -> str:
 • 승률 = 해당 트리거로 분석한 종목 중 30일 후 수익이 난 비율
 • 매매 원칙 = AI가 과거 매매 경험에서 스스로 학습한 규칙
 • 직관 = AI가 반복 패턴에서 추출한 매매 원칙"""
-    """Send message to Telegram channel."""
-    try:
-        from telegram import Bot
-    except ImportError:
-        logger.error("python-telegram-bot not installed. Run: pip install python-telegram-bot")
-        return
-
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    channel_id = os.getenv("TELEGRAM_CHANNEL_ID")
-
-    if not token or not channel_id:
-        logger.error("TELEGRAM_BOT_TOKEN or TELEGRAM_CHANNEL_ID not set in .env")
-        return
-
-    try:
-        bot = Bot(token=token)
-        await bot.send_message(chat_id=channel_id, text=message, parse_mode="HTML")
-        logger.info("Weekly report sent to Telegram successfully")
-    except Exception as e:
-        logger.error(f"Failed to send Telegram message: {e}")
-
-
-async def _send_broadcast(message: str, broadcast_languages: list):
-    """Send report to broadcast language channels."""
-    if not broadcast_languages:
-        return
-
-    try:
-        from telegram import Bot
-
-        token = os.getenv("TELEGRAM_BOT_TOKEN")
-        if not token:
-            logger.error("TELEGRAM_BOT_TOKEN not set")
-            return
-
-        bot = Bot(token=token)
-
-        for lang in broadcast_languages:
-            try:
-                lang_upper = lang.upper()
-                channel_id = os.getenv(f"TELEGRAM_CHANNEL_ID_{lang_upper}")
-                if not channel_id:
-                    logger.warning(f"No channel ID for language: {lang} (TELEGRAM_CHANNEL_ID_{lang_upper})")
-                    continue
-
-                await bot.send_message(chat_id=channel_id, text=message, parse_mode="HTML")
-                logger.info(f"Weekly report sent to {lang} channel")
-
-            except Exception as e:
-                logger.error(f"Broadcast to {lang} failed: {e}")
-
-    except Exception as e:
-        logger.error(f"Broadcast error: {e}")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Weekly Insight Report")
-    parser.add_argument("--dry-run", action="store_true", help="Print only, don't send")
-    parser.add_argument("--broadcast-languages", type=str, default="",
-                        help="Broadcast languages (comma-separated, e.g., 'en,ja')")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Print digest only (default behavior; flag documents intent)")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -409,15 +355,8 @@ def main():
     async def _run():
         message = await generate_weekly_report()
         print(message)
-
-        if not args.dry_run:
-            await send_to_telegram(message)
-
-            broadcast_languages = [l.strip() for l in args.broadcast_languages.split(",") if l.strip()]
-            if broadcast_languages:
-                await _send_broadcast(message, broadcast_languages)
-        else:
-            logger.info("Dry run mode — message not sent")
+        if args.dry_run:
+            logger.info("Dry run requested — digest printed above.")
 
     try:
         asyncio.run(_run())

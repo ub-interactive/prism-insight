@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from trading import kis_auth as ka
 from trading.stock_trading import USStockTrading
 from telegram_bot_agent import TelegramBotAgent
+from telegram_config import telegram_opt_in_requested
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +37,11 @@ with open(CONFIG_FILE, encoding="utf-8") as f:
 
 class PortfolioTelegramReporter:
     def __init__(self, telegram_token: str = None, chat_id: str = None, trading_mode: str = None):
+        if not telegram_opt_in_requested():
+            raise RuntimeError(
+                "Portfolio Telegram reporting is suppressed until PRISM_ENABLE_TELEGRAM is set to "
+                "a truthy value (or you restore the Telegram integration layer)."
+            )
         self.telegram_token = telegram_token or os.environ.get("TELEGRAM_BOT_TOKEN")
         self.chat_id = chat_id or os.environ.get("TELEGRAM_CHANNEL_ID")
         if not self.telegram_token or not self.chat_id:

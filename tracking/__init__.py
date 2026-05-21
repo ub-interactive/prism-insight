@@ -31,7 +31,6 @@ from tracking.trading_ops import (
 )
 from tracking.journal import JournalManager
 from tracking.compression import CompressionManager
-from tracking.telegram import TelegramSender
 
 __all__ = [
     # Database
@@ -58,5 +57,4 @@ __all__ = [
     # Managers
     "JournalManager",
     "CompressionManager",
-    "TelegramSender",
 ]

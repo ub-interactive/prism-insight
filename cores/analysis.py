@@ -52,7 +52,7 @@ async def analyze_us_stock(
     ticker: str = "AAPL",
     company_name: str = "Apple Inc.",
     reference_date: str = None,
-    language: str = "ko",
+    language: str = "en",
     include_news: bool = True,
     macro_context: dict = None
 ) -> str:
@@ -63,7 +63,7 @@ async def analyze_us_stock(
         ticker: Stock ticker symbol (e.g., "AAPL", "MSFT")
         company_name: Company name (e.g., "Apple Inc.")
         reference_date: Analysis reference date (YYYYMMDD format)
-        language: Language code (default: "ko")
+        language: Legacy language code forwarded across synthesis helpers.
         include_news: Whether to include news analysis (requires Perplexity API)
 
     Returns:
@@ -241,7 +241,7 @@ async def analyze_us_stock(
             )
             # Remove any publication date line right after title removal
             summary = re.sub(
-                r'^\*{0,2}(Publication Date|발행일)\*{0,2}\s*:\s*[^\n]+\n+',
+                r'^\*{0,2}Publication Date\*{0,2}\s*:\s*[^\n]+\n+',
                 '',
                 summary,
                 flags=re.IGNORECASE

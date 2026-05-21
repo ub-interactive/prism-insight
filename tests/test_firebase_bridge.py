@@ -1,7 +1,8 @@
 """Tests for Firebase Bridge - message parsing functions only (no Firebase needed)."""
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from firebase_bridge import (
@@ -13,74 +14,67 @@ from firebase_bridge import (
 )
 
 
-def test_detect_market_always_us_legacy_korean_text():
-    """US-only runtime: Korean-looking alerts still classify as ``us``."""
-    msg = "삼성전자(005930) 급등 포착\n현재가: 82,500원 (+5.2%)"
+def test_detect_market_always_us_short_message():
+    """US-only runtime: arbitrary body text still classifies as ``us``."""
+    msg = "Intraday move on sample ticker (+5.2%)"
     assert detect_market(msg) == "us"
 
-    msg2 = "코스피 3,200 돌파! 외국인 매수세 강화"
+    msg2 = "Sample macro headline copied from overseas channel"
     assert detect_market(msg2) == "us"
 
 
 def test_detect_market_us():
     """US market detection."""
     msg = "AAPL earnings beat expectations. $198.50 (+3.2%)"
-    assert detect_market(msg) == 'us'
-
-    msg2 = "나스닥 NVIDIA $950 신고가 경신"
-    assert detect_market(msg2) == 'us'
+    assert detect_market(msg) == "us"
 
 
 def test_detect_type_trigger():
-    """Trigger type detection (default)."""
-    msg = "삼성전자 급등 포착! 82,500원 (+5.2%)"
-    assert detect_type(msg) == 'trigger'
+    """Explicit prism/trigger phrasing resolves before generic analysis keywords."""
+    msg = "US Stock Morning Prism Signal Alert — ticker XYZ"
+    assert detect_type(msg) == "trigger"
 
 
 def test_detect_type_analysis():
     """Analysis type detection."""
-    msg = "시장 분석 요약: 코스피 전망 긍정적"
-    assert detect_type(msg) == 'analysis'
-
-    msg2 = "Weekly Market Analysis Summary"
-    assert detect_type(msg2) == 'analysis'
+    msg = "Market analysis summary — constructive tone on macro"
+    assert detect_type(msg) == "analysis"
 
 
 def test_detect_type_portfolio():
     """Portfolio type detection."""
-    msg = "포트폴리오 현황: +12.5%"
-    assert detect_type(msg) == 'portfolio'
+    msg = "Portfolio summary: diversified across growth + value sleeves"
+    assert detect_type(msg) == "portfolio"
 
 
 def test_detect_type_pdf():
     """PDF type detection (.pdf substring before other keywords)."""
-    msg = "AAPL_20260301_report.pdf 업로드 완료"
-    assert detect_type(msg) == 'pdf'
+    msg = "AAPL_20260301_report.pdf uploaded"
+    assert detect_type(msg) == "pdf"
 
 
 def test_extract_title():
     """Title extraction."""
-    msg = "삼성전자 급등 포착\n82,500원 (+5.2%)\n매수 신호 발생"
+    msg = "NVDA breakout watch\nVolume elevated\nMomentum signal flagged"
     title = extract_title(msg)
-    assert title == '삼성전자 급등 포착'
+    assert title == "NVDA breakout watch"
 
-    # Skip empty/separator lines
-    msg2 = "\n---\n실제 제목\n내용"
-    assert extract_title(msg2) == '실제 제목'
+    msg2 = "\n---\nActual headline\nBody"
+    assert extract_title(msg2) == "Actual headline"
 
 
 def test_extract_title_markdown():
     """Title extraction with markdown."""
-    msg = "**삼성전자** 급등 포착"
+    msg = "**NVDA** breakout watch — volume elevated"
     title = extract_title(msg)
-    assert '삼성전자' in title
-    assert '*' not in title
+    assert "NVDA" in title
+    assert "*" not in title
 
 
 def test_extract_preview_short():
     """Preview extraction for short messages."""
-    msg = "짧은 메시지"
-    assert extract_preview(msg) == '짧은 메시지'
+    msg = "Short note."
+    assert extract_preview(msg) == "Short note."
 
 
 def test_extract_preview_long():
@@ -88,7 +82,7 @@ def test_extract_preview_long():
     msg = "A" * 200
     preview = extract_preview(msg)
     assert len(preview) <= 100
-    assert preview.endswith('...')
+    assert preview.endswith("...")
 
 
 def test_extract_stock_info_us_ticker():
@@ -101,13 +95,13 @@ def test_extract_stock_info_us_ticker():
 
 def test_extract_stock_info_none():
     """No stock info in message."""
-    msg = "시장 전반 요약 리포트"
+    msg = "Broad market recap with no ticker inline"
     code, name = extract_stock_info(msg)
     assert code is None
 
 
-if __name__ == '__main__':
-    tests = [v for k, v in globals().items() if k.startswith('test_')]
+if __name__ == "__main__":
+    tests = [v for k, v in globals().items() if k.startswith("test_")]
     passed = 0
     failed = 0
     for test_fn in tests:
@@ -118,9 +112,4 @@ if __name__ == '__main__':
         except AssertionError as e:
             print(f"  FAIL: {test_fn.__name__} - {e}")
             failed += 1
-        except Exception as e:
-            print(f"  ERROR: {test_fn.__name__} - {e}")
-            failed += 1
-
-    print(f"\n{passed} passed, {failed} failed out of {passed + failed} tests")
-    exit(1 if failed else 0)
+    sys.exit(0 if failed == 0 else 1)

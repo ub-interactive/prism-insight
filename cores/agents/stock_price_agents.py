@@ -8,37 +8,7 @@ Uses yahoo_finance MCP server for data (Alex2Yang97/yahoo-finance-mcp).
 from mcp_agent.agents.agent import Agent
 
 
-def _price_volume_report_locale(language: str) -> str:
-    """Report headings and prose locale (Korean vs English). Instructions stay English."""
-    if language == "ko":
-        return """
-## Report Structure (MUST use markdown heading format)
-### 1-1. 주가 및 거래량 분석
-#### 주가 데이터 개요 및 요약
-- recent trends, main price levels, volatility
-#### 거래량 분석
-- volume patterns vs price action
-#### 주요 기술적 지표 및 해석
-- moving averages, support/resistance, other indicators
-#### 기술적 관점에서의 향후 전망
-- short-/medium-term path; levels to monitor
-
-## Writing Style
-- Give clear explanations suitable for retail investors; cite concrete figures and dates
-- Explain what technical signals mean in general terms; prefer conditional scenarios over certainty
-- Focus on essential indicators/patterns and omit needless detail
-- Express all amounts in USD
-- Write all narrative prose in formal polite Korean (합쇼체: ~입니다 / ~합니다). Do not use plain/informal style (~한다 / ~된다)
-
-## Report Format (VERY IMPORTANT)
-- Insert 2 newline characters at the start of the report (\\n\\n)
-- Section title MUST be exactly: "### 1-1. 주가 및 거래량 분석"
-- Sub-sections MUST use "#### Sub-section Title" format (markdown #### required — use the Korean subsection titles listed above)
-- Emphasize important information in **bold**
-- Present major data summaries in table format
-- Present key support/resistance levels, trading points, and other important price levels as specific figures in USD
-"""
-    return """
+_PRICE_VOLUME_REPORT_BLOCK = """
 ## Report Structure (MUST use markdown heading format)
 ### 1-1. Price and Volume Analysis
 #### Stock Price Data Overview and Summary
@@ -68,13 +38,55 @@ def _price_volume_report_locale(language: str) -> str:
 """
 
 
+def _price_volume_report_locale(language: str) -> str:
+    """Markdown structure is English-only; callers may still pass legacy language codes."""
+    _ = language
+    return _PRICE_VOLUME_REPORT_BLOCK
+
+
+_INSTITUTIONAL_REPORT_BLOCK = """
+## Report Structure (MUST use markdown heading format)
+### 1-2. Institutional Ownership Analysis
+#### Overview of Institutional Ownership
+- Summary of ownership breakdown
+#### Major Institutional Holders Analysis
+- Top 10 holders, position sizes, recent changes
+#### Mutual Fund and ETF Holdings
+- Key fund positions
+#### Ownership Trend Analysis
+- Recent quarterly changes
+#### Implications and Outlook
+- What institutional activity suggests about the stock
+
+## Writing Style
+- Provide clear explanations that individual investors can understand
+- Specify key percentages and institution names concretely
+- Provide the meaning and general interpretation of institutional patterns
+- Present conditional scenarios rather than definitive predictions
+- Focus on significant ownership changes and patterns
+
+## Report Format (VERY IMPORTANT)
+- Insert 2 newline characters at the start of the report (\\n\\n)
+- Title: "### 1-2. Institutional Ownership Analysis"
+- Sub-sections MUST use "#### Sub-section Title" format (markdown #### required)
+- Emphasize important information in **bold**
+- Present major data summaries in table format
+- Present key ownership percentages and holder names with specific figures
+"""
+
+
+def _institutional_report_locale(language: str) -> str:
+    _ = language
+    return _INSTITUTIONAL_REPORT_BLOCK
+
+
 def create_price_volume_analysis_agent(
     company_name: str,
     ticker: str,
     reference_date: str,
     max_years_ago: str,
     max_years: int,
-    language: str = "ko",
+    language: str = "en",
     prefetched_data: str = None
 ):
     """Create US stock price and trading volume analysis agent
@@ -85,7 +97,7 @@ def create_price_volume_analysis_agent(
         reference_date: Analysis reference date (YYYYMMDD)
         max_years_ago: Analysis start date (YYYYMMDD)
         max_years: Analysis period (years)
-        language: Language code (default: "ko")
+        language: Language code for legacy callers (English-only narratives).
 
     Returns:
         Agent: Stock price and trading volume analysis agent
@@ -149,75 +161,13 @@ Company: {company_name} ({ticker})
     )
 
 
-def _institutional_report_locale(language: str) -> str:
-    """Report headings and prose locale for institutional holdings."""
-    if language == "ko":
-        return """
-## Report Structure (MUST use markdown heading format)
-### 1-2. 기관 투자자 보유 분석
-#### 기관 보유 현황 개요
-- summarize ownership composition
-#### 주요 기관 투자자 분석
-- top ~10 holders, size of stakes, recent changes
-#### 뮤추얼펀드 및 ETF 보유
-- notable fund stakes
-#### 보유 추세 분석
-- recent quarterly changes
-#### 시사점 및 전망
-- implications of positioning
-
-## Writing Style
-- Give clear retail-friendly explanations; cite concrete percentages and institution names
-- Explain what ownership patterns imply; prefer conditional scenarios over certainty
-- Focus on meaningful changes and trends
-- Write all narrative prose in formal polite Korean (합쇼체: ~입니다 / ~합니다). Do not use plain/informal style (~한다 / ~된다)
-
-## Report Format (VERY IMPORTANT)
-- Insert 2 newline characters at the start of the report (\\n\\n)
-- Section title MUST be exactly: "### 1-2. 기관 투자자 보유 분석"
-- Sub-sections MUST use "#### Sub-section Title" format (markdown #### required — use the Korean subsection titles listed above)
-- Emphasize important information in **bold**
-- Present major data summaries in table format
-- Present key ownership percentages and holder names with specific figures
-"""
-    return """
-## Report Structure (MUST use markdown heading format)
-### 1-2. Institutional Ownership Analysis
-#### Overview of Institutional Ownership
-- Summary of ownership breakdown
-#### Major Institutional Holders Analysis
-- Top 10 holders, position sizes, recent changes
-#### Mutual Fund and ETF Holdings
-- Key fund positions
-#### Ownership Trend Analysis
-- Recent quarterly changes
-#### Implications and Outlook
-- What institutional activity suggests about the stock
-
-## Writing Style
-- Provide clear explanations that individual investors can understand
-- Specify key percentages and institution names concretely
-- Provide the meaning and general interpretation of institutional patterns
-- Present conditional scenarios rather than definitive predictions
-- Focus on significant ownership changes and patterns
-
-## Report Format (VERY IMPORTANT)
-- Insert 2 newline characters at the start of the report (\\n\\n)
-- Title: "### 1-2. Institutional Ownership Analysis"
-- Sub-sections MUST use "#### Sub-section Title" format (markdown #### required)
-- Emphasize important information in **bold**
-- Present major data summaries in table format
-- Present key ownership percentages and holder names with specific figures
-"""
-
-
 def create_institutional_holdings_analysis_agent(
     company_name: str,
     ticker: str,
     reference_date: str,
     max_years_ago: str,
     max_years: int,
-    language: str = "ko",
+    language: str = "en",
     prefetched_data: str = None
 ):
     """Create US institutional holdings analysis agent
@@ -231,7 +181,7 @@ def create_institutional_holdings_analysis_agent(
         reference_date: Analysis reference date (YYYYMMDD)
         max_years_ago: Analysis start date (YYYYMMDD)
         max_years: Analysis period (years)
-        language: Language code (default: "ko")
+        language: Language code for legacy callers (English-only narratives).
 
     Returns:
         Agent: Institutional holdings analysis agent

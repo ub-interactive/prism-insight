@@ -144,7 +144,7 @@ class TestPublishSignal:
             ticker="005930",
             company_name="Samsung Electronics",
             price=82000,
-            source="AI분석"
+            source="ai_analysis"
         )
 
         assert result == "1234567890-0"
@@ -175,7 +175,7 @@ class TestPublishSignal:
             ticker="005930",
             company_name="Samsung Electronics",
             price=82000,
-            source="AI분석",
+            source="ai_analysis",
             scenario=sample_scenario
         )
 

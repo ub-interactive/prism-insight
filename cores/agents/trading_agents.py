@@ -17,7 +17,7 @@ GICS_SECTORS = [
 ]
 
 
-def create_trading_scenario_agent(language: str = "ko", sector_names: list = None):
+def create_trading_scenario_agent(language: str = "en", sector_names: list = None):
     """
     Create US trading scenario generation agent.
 
@@ -26,7 +26,7 @@ def create_trading_scenario_agent(language: str = "ko", sector_names: list = Non
     stocks with active momentum, scaled by US market regime (S&P 500 + VIX).
 
     Args:
-        language: Language code ("ko" or "en", default: "ko")
+        language: Legacy language argument retained for callers (English JSON strings).
         sector_names: List of valid sector names. Falls back to GICS_SECTORS.
 
     Returns:
@@ -34,13 +34,14 @@ def create_trading_scenario_agent(language: str = "ko", sector_names: list = Non
     """
     sectors = sector_names or GICS_SECTORS
     sector_constraint = ", ".join(sectors)
+    _ = language
 
     instruction = """## SYSTEM CONSTRAINTS
 
 1. This system has NO watchlist tracking. Trigger fires ONCE only — there is no "next time".
 2. Conditional waits are meaningless. Do NOT use phrases like "enter after support confirmation",
    "wait for breakout consolidation", or "re-enter on pullback".
-3. Decide now — no deferred entries. Encode the JSON `decision` field as ascii `enter` or `no_entry` only (the trading stack also accepts synonyms such as 진입 / 미진입, but stick to ascii for consistency). Never hedge with “later/next opportunity”.
+3. Decide now — no deferred entries. Encode the JSON `decision` field as ascii `enter` or `no_entry` only (the trading stack also accepts legacy localized synonyms for enter/skip elsewhere in the codebase, but emit ascii here). Never hedge with “later/next opportunity”.
 4. No partial fills. 1 slot = 10% of portfolio = 100% buy or 100% sell. All-in / all-out.
 5. If genuinely ambiguous setups arise, articulate the uncertainties and still emit `decision`: `enter` or `no_entry`. "Vague concern" remains an invalid rejection reason (see banned phrases).
 
@@ -136,7 +137,7 @@ State the demotion in `market_condition` field.
 - Active buying recommended: use the report-derived max_portfolio_size as-is. Do NOT reduce slots.
 - Risk control comes ONLY from (1) Distribution Day Kill Switch and (2) momentum / buy_score gating
   and (3) tight stop_loss enforcement — do not work around it via sizing reduction.
-- State the parabolic regime in `portfolio_context`, but do NOT use "reduction" or "축소" language.
+- State the parabolic regime in `portfolio_context`, but do NOT frame position sizing as a reduction, pullback in allocation slots, or other “scale down deployment” wording.
   Parabolic = momentum tailwind = full deployment; risk is managed downstream by the kill switch.
 
 ## Step 3 — Momentum Signals (count toward matrix row)
@@ -335,22 +336,6 @@ Prohibited: `"$170"`, `"about $170"`, `"minimum 170"`.
 }
 """
 
-    if language == "ko":
-        instruction += """
-
-## Narrative locale (when language is Korean for this run)
-
-Keep every rule above in English logic. Human-readable explanatory strings inside JSON
-(`portfolio_analysis`, `valuation_analysis`, `sector_outlook`, `rationale`, rejection_reason wording,
-individual `sell_triggers`/`hold_conditions` bullets, `portfolio_context`) SHOULD be fluent formal polite Korean (합쇼체)
-to match downstream reports.
-
-Machine-stable fields MUST stay ascii: `decision` is exactly `enter` or `no_entry` only; pipeline may recognize legacy synonyms
-진입 / 미진입 but do not emit them here. `investment_period` is exactly lowercase `short`, `medium`, or `long`.
-
-`fundamental_check` lines must begin with ascii PASS or FAIL, followed by concise Korean evidence text if desired.
-`sector` must remain one of the allowed English GICS names from the constrained list."""
-
     instruction = instruction.replace("{sector_constraint}", sector_constraint)
 
     return Agent(
@@ -360,19 +345,20 @@ Machine-stable fields MUST stay ascii: `decision` is exactly `enter` or `no_entr
     )
 
 
-def create_sell_decision_agent(language: str = "ko"):
+def create_sell_decision_agent(language: str = "en"):
     """
     Create US sell decision agent
 
     Professional analyst agent that determines the selling timing for US stock holdings.
 
     Args:
-        language: Language code ("ko" or "en", default: "ko")
+        language: Legacy language argument retained for callers (English narratives).
 
     Returns:
         Agent: US sell decision agent
     """
 
+    _ = language
     instruction = """## 🎯 Your Identity
 You are William O'Neil. Your iron rule: "Cut losses at 7-8%, no exceptions."
 
@@ -512,14 +498,6 @@ Trailing Stop %: Bull peak × 0.92 (-8%), Bear/Sideways peak × 0.95 (-5%)
 
 **🔒 Stop loss ratchet**: new_stop_loss must be HIGHER than current stop_loss. Stop loss can only move up.
 """
-
-    if language == "ko":
-        instruction += """
-
-## Narrative locale (when language is Korean for this run)
-Keep rules in English. For human-facing strings (`sell_reason`, nested `analysis_summary` text fields,
-`portfolio_adjustment.reason`), write formal polite Korean (합쇼체) when Korean briefing is desired.
-JSON keys and boolean/number literals stay standard."""
 
     return Agent(
         name="us_sell_decision_agent",

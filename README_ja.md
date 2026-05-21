@@ -132,7 +132,7 @@ python3 demo.py TSLA --language ko  # Tesla（韓国語レポート）
 >
 > **オプション**: ニュース分析のために [Perplexity APIキー](https://www.perplexity.ai/) を `mcp_agent.config.yaml` に追加できます
 
-AIが生成したPDFレポートは `prism-us/pdf_reports/` に保存されます。
+AIが生成したPDFレポートは `pdf_reports/` に保存されます。
 
 <details>
 <summary>Docker を使用する場合（Python環境構築不要）</summary>
@@ -307,10 +307,10 @@ PRISM-INSIGHTは、**韓国（KOSPI/KOSDAQ）** および **米国（NYSE/NASDAQ
 
 ```bash
 # Run US analysis
-python prism-us/us_stock_analysis_orchestrator.py --mode morning --no-telegram
+python stock_analysis_orchestrator.py --mode morning --no-telegram
 
 # With English reports
-python prism-us/us_stock_analysis_orchestrator.py --mode morning --language en
+python stock_analysis_orchestrator.py --mode morning --language en
 ```
 
 **データソース**: yahoo-finance-mcp、sec-edgar-mcp（SEC提出書類、インサイダー取引）

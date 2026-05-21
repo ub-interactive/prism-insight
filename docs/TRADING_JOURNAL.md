@@ -429,8 +429,8 @@ v2.3.0부터 KR과 US 모두 동일한 피드백 루프가 적용됩니다:
 
 | 구성 요소 | KR | US |
 |-----------|----|----|
-| Journal Manager | `tracking/journal.py` | `prism-us/tracking/journal.py` |
-| 프롬프트 주입 | `stock_tracking_agent.py` | `us_stock_tracking_agent.py` |
+| Journal Manager | `tracking/journal.py` | `tracking/journal.py` |
+| 프롬프트 주입 | `stock_tracking_agent.py` | `stock_tracking_agent.py` |
 | Performance Tracker | `analysis_performance_tracker` | `us_analysis_performance_tracker` |
 | Score Adjustment | `get_score_adjustment()` | `get_score_adjustment()` |
 

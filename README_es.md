@@ -132,7 +132,7 @@ python3 demo.py TSLA --language ko  # Tesla (informe en coreano)
 >
 > **Opcional**: Agrega una [clave de API de Perplexity](https://www.perplexity.ai/) en `mcp_agent.config.yaml` para el analisis de noticias
 
-Tus informes PDF generados por IA se guardaran en `prism-us/pdf_reports/`.
+Tus informes PDF generados por IA se guardaran en `pdf_reports/`.
 
 <details>
 <summary>O usa Docker (sin necesidad de configurar Python)</summary>
@@ -307,10 +307,10 @@ El mismo flujo de trabajo impulsado por IA para los mercados estadounidenses:
 
 ```bash
 # Run US analysis
-python prism-us/us_stock_analysis_orchestrator.py --mode morning --no-telegram
+python stock_analysis_orchestrator.py --mode morning --no-telegram
 
 # With English reports
-python prism-us/us_stock_analysis_orchestrator.py --mode morning --language en
+python stock_analysis_orchestrator.py --mode morning --language en
 ```
 
 **Fuentes de Datos**: yahoo-finance-mcp, sec-edgar-mcp (presentaciones ante la SEC, operaciones de insiders)

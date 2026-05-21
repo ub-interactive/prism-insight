@@ -83,10 +83,6 @@ docs/TELEGRAM_JOURNAL_GUIDE.md
 # Logs directory
 logs/
 
-# prism-us generated files
-prism-us/reports/
-prism-us/*.log
-
 # tests generated files
 tests/*.log
 

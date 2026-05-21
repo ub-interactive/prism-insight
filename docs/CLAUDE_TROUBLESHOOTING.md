@@ -177,6 +177,8 @@ cleaned_text = clean_markdown(raw_output)
 
 ### Issue 8: prism-us Module Import Collision
 
+> **Update**: The legacy `prism-us/` mirror directory is no longer part of this repository; the US pipeline runs from the project root (`stock_analysis_orchestrator.py`, `cores/`, `tracking/`, etc.). The following still applies if you maintain an old local tree that prepends `prism-us` to `sys.path`.
+
 **Symptoms**:
 ```
 ModuleNotFoundError: No module named 'cores.agents.telegram_translator_agent'

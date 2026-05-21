@@ -57,7 +57,7 @@ python -c "import asyncio; from cores.archive.archive_db import init_db; asyncio
 
 # 4. 기존 리포트 인제스트 (SEASON2_START=2025-09-29 이후만)
 python -m cores.archive.ingest --dir reports/ --market kr
-python -m cores.archive.ingest --dir prism-us/reports/ --market us
+python -m cores.archive.ingest --dir reports/ --market us
 
 # 5. 단일 서버 모드로 봇 기동
 python telegram_ai_bot.py

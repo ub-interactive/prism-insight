@@ -38,7 +38,6 @@ import logging
 import argparse
 import asyncio
 import threading
-import importlib.util
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -94,9 +93,7 @@ def is_market_hours(market: str = "KR") -> bool:
 def is_us_market_hours() -> bool:
     """Check if current time is during US market hours (09:30~16:00 EST, trading days only)"""
     try:
-        # Use prism-us/check_market_day.py (NYSE calendar based)
-        import sys
-        sys.path.insert(0, str(PROJECT_ROOT / "prism-us"))
+        # Project root check_market_day.py (NYSE calendar based)
         from check_market_day import is_market_open
         return is_market_open()
     except ImportError:
@@ -189,9 +186,6 @@ def get_next_us_market_open() -> datetime:
         datetime: Next US trading day's market open time (KST)
     """
     try:
-        # Use prism-us/check_market_day.py (NYSE calendar based)
-        import sys
-        sys.path.insert(0, str(PROJECT_ROOT / "prism-us"))
         from check_market_day import get_next_trading_day, EST, KST
 
         next_trading_day = get_next_trading_day()
@@ -414,14 +408,10 @@ scheduled_order_manager: Optional[ScheduledOrderManager] = None
 
 
 def load_us_stock_trading_class():
-    """Load prism-us trading module without colliding with root trading package."""
-    module_path = PROJECT_ROOT / "prism-us" / "trading" / "us_stock_trading.py"
-    spec = importlib.util.spec_from_file_location("prism_us_stock_trading", module_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Unable to load US trading module: {module_path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.USStockTrading
+    """Return USStockTrading from the project ``trading`` package."""
+    from trading.stock_trading import USStockTrading
+
+    return USStockTrading
 
 
 def setup_logging(log_file: str = None) -> logging.Logger:

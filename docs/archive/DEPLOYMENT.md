@@ -144,8 +144,8 @@ sqlite3 archive.db ".tables" | tr ' ' '\n' | grep -iE 'insight|weekly|quota'
 python -m cores.archive.ingest --dir reports/ --market kr --dry-run
 python -m cores.archive.ingest --dir reports/ --market kr
 
-python -m cores.archive.ingest --dir prism-us/reports/ --market us --dry-run
-python -m cores.archive.ingest --dir prism-us/reports/ --market us
+python -m cores.archive.ingest --dir reports/ --market us --dry-run
+python -m cores.archive.ingest --dir reports/ --market us
 
 # 장기 가격 히스토리 백필 (20~40분 소요)
 python update_current_prices.py --concurrency 2

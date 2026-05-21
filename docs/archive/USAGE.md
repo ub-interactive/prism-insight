@@ -342,7 +342,7 @@ python -m cores.archive.ingest --dir reports/ --market kr --dry-run
 
 # 실제 인제스트 (SEASON2_START=2025-09-29 이후만 통과)
 python -m cores.archive.ingest --dir reports/ --market kr
-python -m cores.archive.ingest --dir prism-us/reports/ --market us
+python -m cores.archive.ingest --dir reports/ --market us
 ```
 
 매일 분석 파이프라인이 자동 호출하므로 일반적으론 수동 실행 불필요.

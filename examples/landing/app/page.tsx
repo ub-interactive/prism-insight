@@ -305,7 +305,7 @@ python demo.py AAPL`
                   {'\n'}
                   <code className="text-emerald-400">[3/3] Saving report files...</code>
                   {'\n\n'}
-                  <code className="text-yellow-400">  PDF: prism-us/pdf_reports/NVDA_20260201.pdf</code>
+                  <code className="text-yellow-400">  PDF: pdf_reports/NVDA_20260201.pdf</code>
                 </pre>
               </CardContent>
             </Card>

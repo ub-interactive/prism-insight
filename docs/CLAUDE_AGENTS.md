@@ -2,8 +2,6 @@
 
 > **Note**: This is a detailed reference for the AI Agent System. For quick overview, see main [CLAUDE.md](../CLAUDE.md).
 >
-> **Language**: [English](CLAUDE_AGENTS.md) | [한국어](CLAUDE_AGENTS_ko.md)
-
 ---
 
 ## The 13+ Specialized Agents

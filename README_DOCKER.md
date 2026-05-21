@@ -1,7 +1,5 @@
 # 🐳 PRISM-INSIGHT Docker Installation Guide
 
-> 📖 [한국어 문서](README_DOCKER_ko.md)
-
 Run Ubuntu 24.04-based AI stock analysis system easily with Docker.
 
 ---

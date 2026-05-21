@@ -1,7 +1,5 @@
 # 🧪 Async Trading API Test Guide
 
-> 📖 [한국어 문서](README_async_trading_ko.md)
-
 ## 📋 Overview
 
 These test scripts are tools for safely testing the asynchronous API functions in `domestic_stock_trading.py`.

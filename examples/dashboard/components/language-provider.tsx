@@ -987,20 +987,23 @@ const translations: Record<Language, Record<string, string>> = {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("ko")
+  const [language, setLanguageState] = useState<Language>("en")
 
   // Load language from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem("language") as Language
-    if (stored === "ko" || stored === "en") {
+    if (stored === "en") {
       setLanguageState(stored)
     }
   }, [])
 
   // Save language to localStorage when it changes
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang)
-    localStorage.setItem("language", lang)
+    if (lang !== "en") {
+      return
+    }
+    setLanguageState("en")
+    localStorage.setItem("language", "en")
   }
 
   // Translation function

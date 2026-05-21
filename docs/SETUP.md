@@ -2,8 +2,6 @@
 
 > Complete installation and configuration guide for PRISM-INSIGHT
 
-**Language**: [English](SETUP.md) | [한국어](SETUP_ko.md)
-
 ---
 
 ## Table of Contents

@@ -1,7 +1,5 @@
 # Dashboard Setup Guide
 
-> 📖 [한국어 문서](DASHBOARD_README_ko.md)
-
 This document guides you through the installation and execution of the dashboard frontend.
 
 ## Prerequisites

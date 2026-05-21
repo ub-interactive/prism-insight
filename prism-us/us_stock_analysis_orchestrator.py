@@ -475,7 +475,7 @@ class USStockAnalysisOrchestrator:
             tickers: List of stocks to analyze
             mode: Execution mode
             timeout: Timeout (seconds)
-            language: Analysis language (default: "ko")
+            language: Analysis language (default: "en")
 
         Returns:
             list: List of successful report paths
@@ -938,54 +938,31 @@ class USStockAnalysisOrchestrator:
         CHANNEL_EN = {"top-down": "Top-Down (Leading Sector)", "bottom-up": "Bottom-Up (Individual)"}
 
         # Language-specific templates
-        if language == "ko":
-            if mode == "morning":
-                title = "🔔 미국주식 오전 프리즘 시그널 얼럿"
-                time_desc = "장 시작 후 10분 시점"
-            elif mode == "midday":
-                title = "🔔 미국주식 장중 프리즘 시그널 얼럿"
-                time_desc = "장중 12시 30분 시점"
-            else:
-                title = "🔔 미국주식 오후 프리즘 시그널 얼럿"
-                time_desc = "오후 분석"
-            header = f"{title}\n📅 {formatted_date} {time_desc} 포착된 관심종목\n"
-            volume_label = "거래량 증가"
-            gap_label = "갭상승"
-            footer = "📋 10~30분 후 상세 분석 리포트가 제공됩니다\n※ 본 정보는 투자 참고용이며, 투자 결정은 본인 책임입니다."
-            channel_map = CHANNEL_KO
-            regime_map = REGIME_KO
-            score_label = "점수"
-            rr_label = "R/R"
-            sl_label = "손절"
-        else:  # English
-            if mode == "morning":
-                title = "🔔 US Stock Morning Prism Signal Alert"
-                time_desc = "10 minutes after market open"
-            elif mode == "midday":
-                title = "🔔 US Stock Midday Prism Signal Alert"
-                time_desc = "at 12:30 PM market time"
-            else:
-                title = "🔔 US Stock Afternoon Prism Signal Alert"
-                time_desc = "after market close"
-            header = f"{title}\n📅 {formatted_date} Stocks detected {time_desc}\n"
-            volume_label = "Volume Increase"
-            gap_label = "Gap Up"
-            footer = "📋 Detailed analysis report will be available in 10-30 minutes\n※ This is for investment reference only. Investment decisions are your responsibility."
-            channel_map = CHANNEL_EN
-            regime_map = REGIME_EN
-            score_label = "Score"
-            rr_label = "R/R"
-            sl_label = "SL"
+        if mode == "morning":
+            title = "🔔 US Stock Morning Prism Signal Alert"
+            time_desc = "10 minutes after market open"
+        elif mode == "midday":
+            title = "🔔 US Stock Midday Prism Signal Alert"
+            time_desc = "at 12:30 PM market time"
+        else:
+            title = "🔔 US Stock Afternoon Prism Signal Alert"
+            time_desc = "after market close"
+        header = f"{title}\n📅 {formatted_date} Stocks detected {time_desc}\n"
+        volume_label = "Volume Increase"
+        gap_label = "Gap Up"
+        footer = "📋 Detailed analysis report will be available in 10-30 minutes\n※ This is for investment reference only. Investment decisions are your responsibility."
+        channel_map = CHANNEL_EN
+        regime_map = REGIME_EN
+        score_label = "Score"
+        rr_label = "R/R"
+        sl_label = "SL"
 
         message = header
 
         # Hybrid selection summary (regime + strategy)
         if market_regime and "hybrid" in selection_strategy:
             regime_display = regime_map.get(market_regime, market_regime)
-            if language == "ko":
-                message += f"🧭 시장국면: {regime_display} | 선정: 탑다운 {topdown_count}종목 + 바텀업 {bottomup_count}종목\n"
-            else:
-                message += f"🧭 Regime: {regime_display} | Selection: Top-Down {topdown_count} + Bottom-Up {bottomup_count}\n"
+            message += f"🧭 Regime: {regime_display} | Selection: Top-Down {topdown_count} + Bottom-Up {bottomup_count}\n"
 
         message += "\n"
 
@@ -1067,7 +1044,7 @@ class USStockAnalysisOrchestrator:
 
         Args:
             mode: 'morning' or 'afternoon'
-            language: Analysis language (default: "ko" - same as Korean stock version)
+            language: Analysis language (default: "en")
         """
         logger.info(f"Starting US full pipeline - mode: {mode}")
         tracking_success = True
@@ -1207,8 +1184,8 @@ async def main():
     parser = argparse.ArgumentParser(description="US stock analysis and telegram transmission orchestrator")
     parser.add_argument("--mode", choices=["morning", "midday", "afternoon", "both"], default="both",
                         help="Execution mode (morning, midday, afternoon, both)")
-    parser.add_argument("--language", choices=["ko", "en"], default="ko",
-                        help="Analysis language (ko: Korean, en: English)")
+    parser.add_argument("--language", choices=["en"], default="en",
+                        help="Analysis language (en: English)")
     parser.add_argument("--broadcast-languages", type=str, default="",
                         help="Additional languages for parallel telegram channel broadcasting (comma-separated, e.g., 'en,ja')")
     parser.add_argument("--no-telegram", action="store_true",

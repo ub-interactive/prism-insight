@@ -143,10 +143,7 @@ async def analyze_us_stock(
             parallel_sections.append("news_analysis")  # perplexity (requires API key)
         else:
             # Add placeholder for skipped news section
-            if language == "ko":
-                section_reports["news_analysis"] = "_뉴스 분석은 Perplexity API 키가 필요합니다. 기술적/재무 분석은 정상적으로 제공됩니다._"
-            else:
-                section_reports["news_analysis"] = "_News analysis requires Perplexity API key. Technical and fundamental analysis are provided normally._"
+            section_reports["news_analysis"] = "_News analysis requires Perplexity API key. Technical and fundamental analysis are provided normally._"
             logger.info("Skipping news_analysis (Perplexity API not configured)")
         # Always include news_analysis in base_sections for report structure
         base_sections = yfinance_sections + ["news_analysis"]
@@ -377,10 +374,7 @@ async def analyze_us_stock(
         if macro_context:
             report_prose = macro_context.get("report_prose", "")
             if report_prose:
-                if language == "ko":
-                    macro_header = "### 거시경제 환경\n\n"
-                else:
-                    macro_header = "### Macroeconomic Environment\n\n"
+                macro_header = "### Macroeconomic Environment\n\n"
                 macro_section = macro_header + report_prose + "\n\n"
             else:
                 # Fallback: build from structured fields if report_prose is empty
@@ -390,65 +384,32 @@ async def analyze_us_stock(
                 lagging = macro_context.get("lagging_sectors", [])
                 risks = macro_context.get("risk_events", [])
 
-                if language == "ko":
-                    regime_labels = {
-                        "parabolic": "폭주 강세장",
-                        "strong_bull": "강한 강세장", "moderate_bull": "보통 강세장",
-                        "sideways": "횡보장", "moderate_bear": "보통 약세장", "strong_bear": "강한 약세장"
-                    }
-                    macro_section += "### 거시경제 환경\n\n"
-                    macro_section += f"**시장 체제**: {regime_labels.get(regime, regime)}\n\n"
-                    if regime_rationale:
-                        macro_section += f"**판단 근거**: {regime_rationale}\n\n"
-                    if leading:
-                        sectors_str = ", ".join([s.get("sector", "") for s in leading[:3]])
-                        macro_section += f"**주도 섹터**: {sectors_str}\n\n"
-                    if lagging:
-                        sectors_str = ", ".join([s.get("sector", "") for s in lagging[:3]])
-                        macro_section += f"**소외 섹터**: {sectors_str}\n\n"
-                    if risks:
-                        for r in risks[:3]:
-                            macro_section += f"- ⚠️ {r.get('event', '')} (영향: {r.get('severity', 'medium')})\n"
-                        macro_section += "\n"
-                else:
-                    macro_section += "### Macroeconomic Environment\n\n"
-                    macro_section += f"**Market Regime**: {regime.replace('_', ' ').title()}\n\n"
-                    if regime_rationale:
-                        macro_section += f"**Rationale**: {regime_rationale}\n\n"
-                    if leading:
-                        sectors_str = ", ".join([s.get("sector", "") for s in leading[:3]])
-                        macro_section += f"**Leading Sectors**: {sectors_str}\n\n"
-                    if lagging:
-                        sectors_str = ", ".join([s.get("sector", "") for s in lagging[:3]])
-                        macro_section += f"**Lagging Sectors**: {sectors_str}\n\n"
-                    if risks:
-                        for r in risks[:3]:
-                            macro_section += f"- ⚠️ {r.get('event', '')} (Severity: {r.get('severity', 'medium')})\n"
-                        macro_section += "\n"
+                macro_section += "### Macroeconomic Environment\n\n"
+                macro_section += f"**Market Regime**: {regime.replace('_', ' ').title()}\n\n"
+                if regime_rationale:
+                    macro_section += f"**Rationale**: {regime_rationale}\n\n"
+                if leading:
+                    sectors_str = ", ".join([s.get("sector", "") for s in leading[:3]])
+                    macro_section += f"**Leading Sectors**: {sectors_str}\n\n"
+                if lagging:
+                    sectors_str = ", ".join([s.get("sector", "") for s in lagging[:3]])
+                    macro_section += f"**Lagging Sectors**: {sectors_str}\n\n"
+                if risks:
+                    for r in risks[:3]:
+                        macro_section += f"- ⚠️ {r.get('event', '')} (Severity: {r.get('severity', 'medium')})\n"
+                    macro_section += "\n"
 
         # Language-specific headers
-        if language == "ko":
-            headers = {
-                "title": f"# {company_name} ({ticker}) 분석 보고서",
-                "pub_date": "발행일",
-                "exec_summary": "## 핵심 요약",
-                "tech_analysis": "## 1. 기술적 분석",
-                "fundamental": "## 2. 펀더멘털 분석",
-                "news": "## 3. 최근 주요 뉴스 요약",
-                "market": "## 4. 시장 분석",
-                "strategy": "## 5. 투자 전략 및 의견",
-            }
-        else:
-            headers = {
-                "title": f"# {company_name} ({ticker}) Analysis Report",
-                "pub_date": "Publication Date",
-                "exec_summary": "## Executive Summary",
-                "tech_analysis": "## 1. Technical Analysis",
-                "fundamental": "## 2. Fundamental Analysis",
-                "news": "## 3. Recent Major News Summary",
-                "market": "## 4. Market Analysis",
-                "strategy": "## 5. Investment Strategy and Opinion",
-            }
+        headers = {
+            "title": f"# {company_name} ({ticker}) Analysis Report",
+            "pub_date": "Publication Date",
+            "exec_summary": "## Executive Summary",
+            "tech_analysis": "## 1. Technical Analysis",
+            "fundamental": "## 2. Fundamental Analysis",
+            "news": "## 3. Recent Major News Summary",
+            "market": "## 4. Market Analysis",
+            "strategy": "## 5. Investment Strategy and Opinion",
+        }
 
         final_report = f"""{headers["title"]}
 

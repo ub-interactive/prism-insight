@@ -1,7 +1,5 @@
 # 📅 PRISM-INSIGHT Crontab Setup Guide
 
-> 📖 [한국어 문서](CRONTAB_SETUP_ko.md)
-
 ## Overview
 PRISM-INSIGHT uses crontab to automate stock market analysis. This document explains how to set up automatic execution schedules on your system.
 

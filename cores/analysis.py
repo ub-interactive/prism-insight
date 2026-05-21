@@ -242,41 +242,20 @@ async def analyze_stock(company_code: str = "000660", company_name: str = "SK하
                 lagging = macro_context.get("lagging_sectors", [])
                 risks = macro_context.get("risk_events", [])
 
-                if language == "ko":
-                    regime_labels = {
-                        "parabolic": "폭주 강세장",
-                        "strong_bull": "강한 강세장", "moderate_bull": "보통 강세장",
-                        "sideways": "횡보장", "moderate_bear": "보통 약세장", "strong_bear": "강한 약세장"
-                    }
-                    macro_section += "### 거시경제 환경\n\n"
-                    macro_section += f"**시장 체제**: {regime_labels.get(regime, regime)}\n\n"
-                    if regime_rationale:
-                        macro_section += f"**판단 근거**: {regime_rationale}\n\n"
-                    if leading:
-                        sectors_str = ", ".join([s.get("sector", "") for s in leading[:3]])
-                        macro_section += f"**주도 섹터**: {sectors_str}\n\n"
-                    if lagging:
-                        sectors_str = ", ".join([s.get("sector", "") for s in lagging[:3]])
-                        macro_section += f"**소외 섹터**: {sectors_str}\n\n"
-                    if risks:
-                        for r in risks[:3]:
-                            macro_section += f"- ⚠️ {r.get('event', '')} (영향: {r.get('severity', 'medium')})\n"
-                        macro_section += "\n"
-                else:
-                    macro_section += "### Macroeconomic Environment\n\n"
-                    macro_section += f"**Market Regime**: {regime.replace('_', ' ').title()}\n\n"
-                    if regime_rationale:
-                        macro_section += f"**Rationale**: {regime_rationale}\n\n"
-                    if leading:
-                        sectors_str = ", ".join([s.get("sector", "") for s in leading[:3]])
-                        macro_section += f"**Leading Sectors**: {sectors_str}\n\n"
-                    if lagging:
-                        sectors_str = ", ".join([s.get("sector", "") for s in lagging[:3]])
-                        macro_section += f"**Lagging Sectors**: {sectors_str}\n\n"
-                    if risks:
-                        for r in risks[:3]:
-                            macro_section += f"- ⚠️ {r.get('event', '')} (Severity: {r.get('severity', 'medium')})\n"
-                        macro_section += "\n"
+                macro_section += "### Macroeconomic Environment\n\n"
+                macro_section += f"**Market Regime**: {regime.replace('_', ' ').title()}\n\n"
+                if regime_rationale:
+                    macro_section += f"**Rationale**: {regime_rationale}\n\n"
+                if leading:
+                    sectors_str = ", ".join([s.get("sector", "") for s in leading[:3]])
+                    macro_section += f"**Leading Sectors**: {sectors_str}\n\n"
+                if lagging:
+                    sectors_str = ", ".join([s.get("sector", "") for s in lagging[:3]])
+                    macro_section += f"**Lagging Sectors**: {sectors_str}\n\n"
+                if risks:
+                    for r in risks[:3]:
+                        macro_section += f"- ⚠️ {r.get('event', '')} (Severity: {r.get('severity', 'medium')})\n"
+                    macro_section += "\n"
 
         # 12. Compose final report with proper heading hierarchy
         disclaimer = get_disclaimer(language)
@@ -285,26 +264,15 @@ async def analyze_stock(company_code: str = "000660", company_name: str = "SK하
         formatted_date = f"{reference_date[:4]}.{reference_date[4:6]}.{reference_date[6:]}"
 
         # Define main section headers by language
-        if language == "ko":
-            main_headers = {
-                "title": f"# {company_name} ({company_code}) 분석 보고서",
-                "pub_date": "발행일",
-                "tech_analysis": f"## 1. 기술적 분석\n\n",
-                "fundamental": f"## 2. 펀더멘털 분석\n\n",
-                "news": f"## 3. 뉴스 분석\n\n",
-                "market": f"## 4. 시장 분석\n\n",
-                "strategy": f"## 5. 투자 전략\n\n"
-            }
-        else:
-            main_headers = {
-                "title": f"# {company_name} ({company_code}) Analysis Report",
-                "pub_date": "Publication Date",
-                "tech_analysis": f"## 1. Technical Analysis\n\n",
-                "fundamental": f"## 2. Fundamental Analysis\n\n",
-                "news": f"## 3. News Analysis\n\n",
-                "market": f"## 4. Market Analysis\n\n",
-                "strategy": f"## 5. Investment Strategy\n\n"
-            }
+        main_headers = {
+            "title": f"# {company_name} ({company_code}) Analysis Report",
+            "pub_date": "Publication Date",
+            "tech_analysis": f"## 1. Technical Analysis\n\n",
+            "fundamental": f"## 2. Fundamental Analysis\n\n",
+            "news": f"## 3. News Analysis\n\n",
+            "market": f"## 4. Market Analysis\n\n",
+            "strategy": f"## 5. Investment Strategy\n\n"
+        }
 
         # Build final report with title first (disclaimer at the end like US version)
         final_report = f"""{main_headers["title"]}

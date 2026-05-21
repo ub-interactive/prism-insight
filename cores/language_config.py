@@ -1,12 +1,8 @@
 """
 Language Configuration Module
 
-This module provides centralized language configuration and translation management
+English-only language configuration and translation management
 for the PRISM-INSIGHT stock analysis system.
-
-Supported Languages:
-- Korean (ko): Default language
-- English (en): International users
 """
 
 import os
@@ -17,7 +13,6 @@ from typing import Dict, Any
 
 class Language(Enum):
     """Supported languages"""
-    KOREAN = "ko"
     ENGLISH = "en"
 
 
@@ -29,12 +24,12 @@ class LanguageConfig:
     used throughout the PRISM-INSIGHT system.
     """
 
-    def __init__(self, language: Language = Language.KOREAN):
+    def __init__(self, language: Language = Language.ENGLISH):
         """
         Initialize language configuration
 
         Args:
-            language: Target language (default: Korean)
+            language: Target language (default: English)
         """
         self.language = language
 
@@ -45,28 +40,16 @@ class LanguageConfig:
         Returns:
             Dictionary mapping section keys to localized titles
         """
-        if self.language == Language.ENGLISH:
-            return {
-                "price_volume_analysis": "Price and Volume Analysis",
-                "investor_trading_analysis": "Investor Trading Trends Analysis",
-                "company_status": "Company Status",
-                "company_overview": "Company Overview",
-                "news_analysis": "News Analysis",
-                "market_index_analysis": "Market Analysis",
-                "investment_strategy": "Investment Strategy and Opinion",
-                "executive_summary": "Executive Summary"
-            }
-        else:  # Korean (default)
-            return {
-                "price_volume_analysis": "주가 및 거래량 분석",
-                "investor_trading_analysis": "투자자별 매매 동향 분석",
-                "company_status": "기업 현황",
-                "company_overview": "기업 개요",
-                "news_analysis": "뉴스 분석",
-                "market_index_analysis": "시장 분석",
-                "investment_strategy": "투자 전략 및 의견",
-                "executive_summary": "요약"
-            }
+        return {
+            "price_volume_analysis": "Price and Volume Analysis",
+            "investor_trading_analysis": "Investor Trading Trends Analysis",
+            "company_status": "Company Status",
+            "company_overview": "Company Overview",
+            "news_analysis": "News Analysis",
+            "market_index_analysis": "Market Analysis",
+            "investment_strategy": "Investment Strategy and Opinion",
+            "executive_summary": "Executive Summary"
+        }
 
     def get_telegram_template(self) -> Dict[str, str]:
         """
@@ -75,116 +58,60 @@ class LanguageConfig:
         Returns:
             Dictionary of Telegram message templates
         """
-        if self.language == Language.ENGLISH:
-            return {
-                # Alert titles
-                "alert_title_morning": "🌅 Morning Buy Signal Alert",
-                "alert_title_afternoon": "🌆 Afternoon Buy Signal Alert",
+        return {
+            # Alert titles
+            "alert_title_morning": "🌅 Morning Buy Signal Alert",
+            "alert_title_afternoon": "🌆 Afternoon Buy Signal Alert",
 
-                # Time descriptions
-                "time_desc_morning": "10 minutes after market open",
-                "time_desc_afternoon": "10 minutes after lunch break",
+            # Time descriptions
+            "time_desc_morning": "10 minutes after market open",
+            "time_desc_afternoon": "10 minutes after lunch break",
 
-                # Message templates
-                "detected_stocks": "📊 Buy signals detected on {date} ({time_desc})",
-                "total_stocks": "Total: {count} stocks",
-                "no_signals": "No buy signals detected today.",
+            # Message templates
+            "detected_stocks": "📊 Buy signals detected on {date} ({time_desc})",
+            "total_stocks": "Total: {count} stocks",
+            "no_signals": "No buy signals detected today.",
 
-                # Report sections
-                "buy_score": "Buy Score",
-                "current_price": "Current Price",
-                "target_price": "Target Price",
-                "stop_loss": "Stop Loss",
-                "investment_period": "Investment Period",
-                "sector": "Sector",
-                "rationale": "Investment Rationale",
+            # Report sections
+            "buy_score": "Buy Score",
+            "current_price": "Current Price",
+            "target_price": "Target Price",
+            "stop_loss": "Stop Loss",
+            "investment_period": "Investment Period",
+            "sector": "Sector",
+            "rationale": "Investment Rationale",
 
-                # Disclaimers
-                "disclaimer_title": "📝 Important Notice",
-                "disclaimer_simulation": "This report is an AI-based simulation result and is not related to actual trading.",
-                "disclaimer_reference": "This information is for reference only. All investment decisions and responsibilities lie solely with the investor.",
-                "disclaimer_not_recommendation": "This is not a leading channel and does not recommend buying/selling specific stocks.",
+            # Disclaimers
+            "disclaimer_title": "📝 Important Notice",
+            "disclaimer_simulation": "This report is an AI-based simulation result and is not related to actual trading.",
+            "disclaimer_reference": "This information is for reference only. All investment decisions and responsibilities lie solely with the investor.",
+            "disclaimer_not_recommendation": "This is not a leading channel and does not recommend buying/selling specific stocks.",
 
-                # Portfolio summary
-                "portfolio_summary_title": "📊 PRISM Simulator | Real-time Portfolio",
-                "current_holdings": "Current Holdings",
-                "best_performer": "Best Performer",
-                "worst_performer": "Worst Performer",
-                "sector_distribution": "Sector Distribution",
-                "trading_history": "Trading History Stats",
-                "total_trades": "Total Trades",
-                "profitable_trades": "Profitable Trades",
-                "losing_trades": "Losing Trades",
-                "win_rate": "Win Rate",
-                "cumulative_return": "Cumulative Return",
+            # Portfolio summary
+            "portfolio_summary_title": "📊 PRISM Simulator | Real-time Portfolio",
+            "current_holdings": "Current Holdings",
+            "best_performer": "Best Performer",
+            "worst_performer": "Worst Performer",
+            "sector_distribution": "Sector Distribution",
+            "trading_history": "Trading History Stats",
+            "total_trades": "Total Trades",
+            "profitable_trades": "Profitable Trades",
+            "losing_trades": "Losing Trades",
+            "win_rate": "Win Rate",
+            "cumulative_return": "Cumulative Return",
 
-                # Chart labels
-                "chart_title_price": "Price Chart",
-                "chart_title_volume": "Trading Volume",
+            # Chart labels
+            "chart_title_price": "Price Chart",
+            "chart_title_volume": "Trading Volume",
 
-                # Investment periods
-                "period_short": "Short-term",
-                "period_medium": "Mid-term",
-                "period_long": "Long-term",
+            # Investment periods
+            "period_short": "Short-term",
+            "period_medium": "Mid-term",
+            "period_long": "Long-term",
 
-                # Date format
-                "date_format": "%B %d, %Y"  # January 15, 2024
-            }
-        else:  # Korean (default)
-            return {
-                # Alert titles
-                "alert_title_morning": "🌅 오전 매수 신호 알림",
-                "alert_title_afternoon": "🌆 오후 매수 신호 알림",
-
-                # Time descriptions
-                "time_desc_morning": "장 시작 10분 후",
-                "time_desc_afternoon": "점심시간 이후 10분 후",
-
-                # Message templates
-                "detected_stocks": "📊 {date} ({time_desc}) 매수 신호 감지",
-                "total_stocks": "총 {count}개 종목",
-                "no_signals": "오늘은 매수 신호가 감지되지 않았습니다.",
-
-                # Report sections
-                "buy_score": "매수 점수",
-                "current_price": "현재가",
-                "target_price": "목표가",
-                "stop_loss": "손절가",
-                "investment_period": "투자 기간",
-                "sector": "산업군",
-                "rationale": "투자 근거",
-
-                # Disclaimers
-                "disclaimer_title": "📝 안내사항",
-                "disclaimer_simulation": "이 보고서는 AI 기반 시뮬레이션 결과이며, 실제 매매와 무관합니다.",
-                "disclaimer_reference": "본 정보는 단순 참고용이며, 투자 결정과 책임은 전적으로 투자자에게 있습니다.",
-                "disclaimer_not_recommendation": "이 채널은 리딩방이 아니며, 특정 종목 매수/매도를 권유하지 않습니다.",
-
-                # Portfolio summary
-                "portfolio_summary_title": "📊 프리즘 시뮬레이터 | 실시간 포트폴리오",
-                "current_holdings": "현재 보유 종목",
-                "best_performer": "최고 수익",
-                "worst_performer": "최저 수익",
-                "sector_distribution": "산업군 분포",
-                "trading_history": "매매 이력 통계",
-                "total_trades": "총 거래 건수",
-                "profitable_trades": "수익 거래",
-                "losing_trades": "손실 거래",
-                "win_rate": "승률",
-                "cumulative_return": "누적 수익률",
-
-                # Chart labels
-                "chart_title_price": "주가 차트",
-                "chart_title_volume": "거래량",
-
-                # Investment periods
-                "period_short": "단기",
-                "period_medium": "중기",
-                "period_long": "장기",
-
-                # Date format
-                "date_format": "%Y.%m.%d"  # 2024.01.15
-            }
+            # Date format
+            "date_format": "%B %d, %Y"  # January 15, 2024
+        }
 
     def get_chart_labels(self) -> Dict[str, str]:
         """
@@ -193,50 +120,27 @@ class LanguageConfig:
         Returns:
             Dictionary of chart labels
         """
-        if self.language == Language.ENGLISH:
-            return {
-                "date": "Date",
-                "price": "Price (KRW)",
-                "volume": "Volume",
-                "market_cap": "Market Cap (KRW Billion)",
-                "per": "PER",
-                "pbr": "PBR",
-                "roe": "ROE (%)",
-                "debt_ratio": "Debt Ratio (%)",
-                "operating_margin": "Operating Margin (%)",
-                "net_margin": "Net Margin (%)",
-                "price_chart": "Stock Price Chart",
-                "volume_chart": "Trading Volume Chart",
-                "fundamental_chart": "Fundamental Analysis",
-                "moving_average_5": "5-day MA",
-                "moving_average_20": "20-day MA",
-                "moving_average_60": "60-day MA",
-                "moving_average_120": "120-day MA",
-                "support_level": "Support Level",
-                "resistance_level": "Resistance Level"
-            }
-        else:  # Korean (default)
-            return {
-                "date": "날짜",
-                "price": "주가 (원)",
-                "volume": "거래량",
-                "market_cap": "시가총액 (억원)",
-                "per": "PER",
-                "pbr": "PBR",
-                "roe": "ROE (%)",
-                "debt_ratio": "부채비율 (%)",
-                "operating_margin": "영업이익률 (%)",
-                "net_margin": "순이익률 (%)",
-                "price_chart": "주가 차트",
-                "volume_chart": "거래량 차트",
-                "fundamental_chart": "재무 지표 분석",
-                "moving_average_5": "5일 이동평균",
-                "moving_average_20": "20일 이동평균",
-                "moving_average_60": "60일 이동평균",
-                "moving_average_120": "120일 이동평균",
-                "support_level": "지지선",
-                "resistance_level": "저항선"
-            }
+        return {
+            "date": "Date",
+            "price": "Price (KRW)",
+            "volume": "Volume",
+            "market_cap": "Market Cap (KRW Billion)",
+            "per": "PER",
+            "pbr": "PBR",
+            "roe": "ROE (%)",
+            "debt_ratio": "Debt Ratio (%)",
+            "operating_margin": "Operating Margin (%)",
+            "net_margin": "Net Margin (%)",
+            "price_chart": "Stock Price Chart",
+            "volume_chart": "Trading Volume Chart",
+            "fundamental_chart": "Fundamental Analysis",
+            "moving_average_5": "5-day MA",
+            "moving_average_20": "20-day MA",
+            "moving_average_60": "60-day MA",
+            "moving_average_120": "120-day MA",
+            "support_level": "Support Level",
+            "resistance_level": "Resistance Level"
+        }
 
     def format_date(self, date_str: str) -> str:
         """
@@ -291,62 +195,33 @@ class LanguageConfig:
         Returns:
             Dictionary of analysis terms
         """
-        if self.language == Language.ENGLISH:
-            return {
-                "technical_analysis": "Technical Analysis",
-                "fundamental_analysis": "Fundamental Analysis",
-                "valuation": "Valuation",
-                "momentum": "Momentum",
-                "trend": "Trend",
-                "support": "Support",
-                "resistance": "Resistance",
-                "breakout": "Breakout",
-                "consolidation": "Consolidation",
-                "overbought": "Overbought",
-                "oversold": "Oversold",
-                "bullish": "Bullish",
-                "bearish": "Bearish",
-                "neutral": "Neutral",
-                "uptrend": "Uptrend",
-                "downtrend": "Downtrend",
-                "sideways": "Sideways",
-                "volatility": "Volatility",
-                "liquidity": "Liquidity",
-                "market_cap": "Market Capitalization",
-                "pe_ratio": "Price-to-Earnings Ratio (PER)",
-                "pb_ratio": "Price-to-Book Ratio (PBR)",
-                "dividend_yield": "Dividend Yield",
-                "earnings_growth": "Earnings Growth",
-                "revenue_growth": "Revenue Growth"
-            }
-        else:  # Korean (default)
-            return {
-                "technical_analysis": "기술적 분석",
-                "fundamental_analysis": "기본적 분석",
-                "valuation": "밸류에이션",
-                "momentum": "모멘텀",
-                "trend": "추세",
-                "support": "지지선",
-                "resistance": "저항선",
-                "breakout": "돌파",
-                "consolidation": "횡보",
-                "overbought": "과매수",
-                "oversold": "과매도",
-                "bullish": "강세",
-                "bearish": "약세",
-                "neutral": "중립",
-                "uptrend": "상승추세",
-                "downtrend": "하락추세",
-                "sideways": "횡보추세",
-                "volatility": "변동성",
-                "liquidity": "유동성",
-                "market_cap": "시가총액",
-                "pe_ratio": "주가수익비율 (PER)",
-                "pb_ratio": "주가순자산비율 (PBR)",
-                "dividend_yield": "배당수익률",
-                "earnings_growth": "이익 성장률",
-                "revenue_growth": "매출 성장률"
-            }
+        return {
+            "technical_analysis": "Technical Analysis",
+            "fundamental_analysis": "Fundamental Analysis",
+            "valuation": "Valuation",
+            "momentum": "Momentum",
+            "trend": "Trend",
+            "support": "Support",
+            "resistance": "Resistance",
+            "breakout": "Breakout",
+            "consolidation": "Consolidation",
+            "overbought": "Overbought",
+            "oversold": "Oversold",
+            "bullish": "Bullish",
+            "bearish": "Bearish",
+            "neutral": "Neutral",
+            "uptrend": "Uptrend",
+            "downtrend": "Downtrend",
+            "sideways": "Sideways",
+            "volatility": "Volatility",
+            "liquidity": "Liquidity",
+            "market_cap": "Market Capitalization",
+            "pe_ratio": "Price-to-Earnings Ratio (PER)",
+            "pb_ratio": "Price-to-Book Ratio (PBR)",
+            "dividend_yield": "Dividend Yield",
+            "earnings_growth": "Earnings Growth",
+            "revenue_growth": "Revenue Growth"
+        }
 
 
 def get_language_from_env() -> Language:
@@ -354,18 +229,18 @@ def get_language_from_env() -> Language:
     Get language setting from environment variable
 
     Reads PRISM_LANGUAGE environment variable.
-    Defaults to Korean if not set or invalid.
+    Defaults to English if not set or invalid.
 
     Returns:
         Language enum value
     """
-    lang_str = os.getenv("PRISM_LANGUAGE", "ko").lower()
+    lang_str = os.getenv("PRISM_LANGUAGE", "en").lower()
 
     try:
         return Language(lang_str)
     except ValueError:
-        # Default to Korean if invalid language specified
-        return Language.KOREAN
+        # Default to English if invalid language specified
+        return Language.ENGLISH
 
 
 # Convenience function for getting config
@@ -374,7 +249,7 @@ def get_config(language: str = None) -> LanguageConfig:
     Get language configuration instance
 
     Args:
-        language: Language code ("ko" or "en"). If None, reads from environment.
+        language: Language code ("en"). If None, reads from environment.
 
     Returns:
         LanguageConfig instance
@@ -385,6 +260,6 @@ def get_config(language: str = None) -> LanguageConfig:
         try:
             lang = Language(language)
         except ValueError:
-            lang = Language.KOREAN
+            lang = Language.ENGLISH
 
     return LanguageConfig(lang)

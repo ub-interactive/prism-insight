@@ -1046,13 +1046,13 @@ class StockAnalysisOrchestrator:
         else:
             return "🔎"
 
-    async def run_full_pipeline(self, mode, language: str = "ko"):
+    async def run_full_pipeline(self, mode, language: str = "en"):
         """
         Execute full pipeline
 
         Args:
             mode (str): 'morning' or 'afternoon'
-            language (str): Analysis language ("ko" or "en")
+            language (str): Analysis language ("en")
         """
         logger.info(f"Starting full pipeline - mode: {mode}")
 
@@ -1204,7 +1204,7 @@ class StockAnalysisOrchestrator:
             tickers: List of stocks to analyze
             mode: Execution mode
             timeout: Timeout (seconds)
-            language: Analysis language ("ko" or "en")
+            language: Analysis language ("en")
 
         Returns:
             list: List of successful report paths
@@ -1271,8 +1271,8 @@ async def main():
     parser = argparse.ArgumentParser(description="Stock analysis and telegram transmission orchestrator")
     parser.add_argument("--mode", choices=["morning", "afternoon", "both"], default="both",
                         help="Execution mode (morning, afternoon, both)")
-    parser.add_argument("--language", choices=["ko", "en"], default="ko",
-                        help="Analysis language (ko: Korean, en: English)")
+    parser.add_argument("--language", choices=["en"], default="en",
+                        help="Analysis language (en: English)")
     parser.add_argument("--broadcast-languages", type=str, default="",
                         help="Additional languages for parallel telegram channel broadcasting (comma-separated, e.g., 'en,ja')")
     parser.add_argument("--no-telegram", action="store_true",

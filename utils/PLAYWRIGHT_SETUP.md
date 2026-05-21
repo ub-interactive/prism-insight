@@ -1,7 +1,5 @@
 # Playwright Installation Guide
 
-> 📖 [한국어 문서](PLAYWRIGHT_SETUP_ko.md)
-
 ## 🎯 Installation for All Environments
 
 PRISM-INSIGHT uses Playwright (Chromium browser) for PDF generation.

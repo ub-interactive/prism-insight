@@ -1,7 +1,5 @@
 # Contributing Guidelines
 
-> 📖 [한국어 문서](CONTRIBUTING_ko.md)
-
 Thank you for contributing to the PRISM-INSIGHT project! 🎉
 
 ## 📋 How to Contribute

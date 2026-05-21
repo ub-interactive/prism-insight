@@ -251,20 +251,12 @@ Yahoo Finance 페이지 스크랩 금지. MCP 도구 호출 금지.
 {pf.get('financial_statements', '')}
 """
         # Inject prefetch block into instruction
-        if language == "ko":
-            start_marker = "## 수집할 데이터"
-            end_marker = "## 분석 방향"
-            start_idx = instruction.find(start_marker)
-            end_idx = instruction.find(end_marker)
-            if start_idx != -1 and end_idx != -1:
-                instruction = instruction[:start_idx] + prefetch_block_ko + "\n" + instruction[end_idx:]
-        else:
-            start_marker = "## Data to Collect"
-            end_marker = "## Analysis Direction"
-            start_idx = instruction.find(start_marker)
-            end_idx = instruction.find(end_marker)
-            if start_idx != -1 and end_idx != -1:
-                instruction = instruction[:start_idx] + prefetch_block + "\n" + instruction[end_idx:]
+        start_marker = "## Data to Collect"
+        end_marker = "## Analysis Direction"
+        start_idx = instruction.find(start_marker)
+        end_idx = instruction.find(end_marker)
+        if start_idx != -1 and end_idx != -1:
+            instruction = instruction[:start_idx] + prefetch_block + "\n" + instruction[end_idx:]
     elif has_prefetch:
         # Partial prefetch - still need Analysis page firecrawl
         prefetch_block = f"""## Pre-collected Data (Company Status)
@@ -297,22 +289,13 @@ Key Statistics, Financials 페이지 스크랩 금지. yahoo_finance MCP 도구 
    - EPS 추세: 현재 및 과거 추정치
    - 애널리스트 권고: 매수/보유/매도 평가, 목표가
 """
-        if language == "ko":
-            # Replace Korean data section
-            start_marker = "## 수집할 데이터"
-            end_marker = "## 분석 방향"
-            start_idx = instruction.find(start_marker)
-            end_idx = instruction.find(end_marker)
-            if start_idx != -1 and end_idx != -1:
-                instruction = instruction[:start_idx] + prefetch_block_ko + "\n" + instruction[end_idx:]
-        else:
-            # Replace English data section
-            start_marker = "## Data to Collect"
-            end_marker = "## Analysis Direction"
-            start_idx = instruction.find(start_marker)
-            end_idx = instruction.find(end_marker)
-            if start_idx != -1 and end_idx != -1:
-                instruction = instruction[:start_idx] + prefetch_block + "\n" + instruction[end_idx:]
+        # Replace English data section
+        start_marker = "## Data to Collect"
+        end_marker = "## Analysis Direction"
+        start_idx = instruction.find(start_marker)
+        end_idx = instruction.find(end_marker)
+        if start_idx != -1 and end_idx != -1:
+            instruction = instruction[:start_idx] + prefetch_block + "\n" + instruction[end_idx:]
 
     # Server selection based on prefetch status
     if has_prefetch and has_analysis:
@@ -524,20 +507,12 @@ Profile, Holders 페이지 firecrawl 스크랩 금지. MCP 도구 호출 금지.
 {f"### 기관 투자자 보유 데이터{chr(10)}{chr(10)}{holder_data}" if holder_data else ""}
 {f"{chr(10)}{segment_data}" if segment_data else ""}
 """
-        if language == "ko":
-            start_marker = "## 수집할 데이터"
-            end_marker = "## 분석 방향"
-            start_idx = instruction.find(start_marker)
-            end_idx = instruction.find(end_marker)
-            if start_idx != -1 and end_idx != -1:
-                instruction = instruction[:start_idx] + prefetch_block_ko + "\n" + instruction[end_idx:]
-        else:
-            start_marker = "## Data to Collect"
-            end_marker = "## Analysis Direction"
-            start_idx = instruction.find(start_marker)
-            end_idx = instruction.find(end_marker)
-            if start_idx != -1 and end_idx != -1:
-                instruction = instruction[:start_idx] + prefetch_block + "\n" + instruction[end_idx:]
+        start_marker = "## Data to Collect"
+        end_marker = "## Analysis Direction"
+        start_idx = instruction.find(start_marker)
+        end_idx = instruction.find(end_marker)
+        if start_idx != -1 and end_idx != -1:
+            instruction = instruction[:start_idx] + prefetch_block + "\n" + instruction[end_idx:]
 
     # When prefetched: no MCP servers needed
     if has_prefetch:

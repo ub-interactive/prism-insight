@@ -3,7 +3,7 @@ from mcp_agent.agents.agent import Agent
 from cores.openai_error_logging import log_openai_error
 
 
-def create_telegram_translator_agent(from_lang: str = "ko", to_lang: str = "en"):
+def create_telegram_translator_agent(from_lang: str = "en", to_lang: str = "en"):
     """
     Create telegram message translation agent
 
@@ -11,7 +11,7 @@ def create_telegram_translator_agent(from_lang: str = "ko", to_lang: str = "en")
     emojis, numbers, and technical terms.
 
     Args:
-        from_lang: Source language code (default: "ko" for Korean)
+        from_lang: Source language code (default: "en")
         to_lang: Target language code (default: "en" for English)
 
     Returns:
@@ -44,29 +44,25 @@ Your task is to translate {from_lang_name} telegram messages to {to_lang_name}.
 - Keep markdown formatting (*, -, etc.)
 
 ### 2. Number and Currency Formatting
-- Keep Korean won amounts: "1,000원" → "1,000 KRW" or "₩1,000"
+- Keep KRW amounts normalized (e.g., "1,000 KRW")
 - Preserve all numeric values and percentages
 - Keep date formats: "2025.01.10" → "2025.01.10"
 
 ### 3. Technical Terms
-- Translate stock market terminology accurately:
-  - "매수" → "Buy"
-  - "매도" → "Sell"
-  - "수익률" → "Return" or "Profit Rate"
-  - "보유기간" → "Holding Period"
-  - "손절가" → "Stop Loss"
-  - "목표가" → "Target Price"
-  - "시가총액" → "Market Cap"
-  - "거래량" → "Volume"
-  - "거래대금" → "Trading Value"
+- Translate stock market terminology accurately and consistently:
+  - Buy / Sell
+  - Return / Profit Rate
+  - Holding Period
+  - Stop Loss / Target Price
+  - Market Cap / Volume / Trading Value
 
 ### 4. Stock Names - CRITICAL
 - **ALWAYS translate company names to {to_lang_name}**
 - **DO NOT keep the original language company names**
 - Always include ticker symbols if present
-- Example (Korean to English): "삼성전자(005930)" → "Samsung Electronics (005930)"
-- Example (Korean to English): "현대자동차" → "Hyundai Motor Company"
-- Example (Korean to English): "SK하이닉스" → "SK Hynix"
+- Example: "Example Corp (005930)" → "Example Corp (005930)"
+- Example: "Sample Automotive" → "Sample Automotive"
+- Example: "Sample Memory" → "Sample Memory"
 - For well-known companies, use their official {to_lang_name} names
 - For lesser-known companies, provide a descriptive translation
 

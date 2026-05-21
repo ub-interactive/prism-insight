@@ -1,10 +1,5 @@
 """Tests for Firebase Bridge - message parsing functions only (no Firebase needed)."""
 
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from firebase_bridge import (
     detect_market,
     detect_type,
@@ -101,6 +96,8 @@ def test_extract_stock_info_none():
 
 
 if __name__ == "__main__":
+    import sys
+
     tests = [v for k, v in globals().items() if k.startswith("test_")]
     passed = 0
     failed = 0

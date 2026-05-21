@@ -16,22 +16,17 @@ Redis Streams Signal Pub/Sub 테스트
     # 실제 Redis 연결 테스트
     pytest tests/test_redis_signal_pubsub.py::TestIntegrationWithRealRedis -v
 """
-import os
-import sys
 import json
+import os
+
 import pytest
-import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime
-from pathlib import Path
 
-# 프로젝트 루트 경로 추가
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-# .env 파일 로드
 from dotenv import load_dotenv
-load_dotenv(PROJECT_ROOT / ".env")
+from repo_paths import REPO_ROOT
+
+load_dotenv(REPO_ROOT / ".env")
 
 from messaging.redis_signal_publisher import (
     SignalPublisher,

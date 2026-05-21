@@ -7,14 +7,8 @@ Tests JSON parsing logic in stock_tracking_agent.py.
 
 import json
 import re
-import sys
 import sqlite3
-from pathlib import Path
 from typing import Dict, Any
-
-# Add project root to Python path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
 
 
 class TestJSONParser:

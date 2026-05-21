@@ -17,22 +17,17 @@ GCP Pub/Sub Signal Publisher 테스트
     # 실제 GCP 연결 테스트
     pytest tests/test_gcp_pubsub_signal.py::TestIntegrationWithRealPubSub -v
 """
-import os
-import sys
 import json
+import os
+
 import pytest
-import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime
-from pathlib import Path
 
-# 프로젝트 루트 경로 추가
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-# .env 파일 로드
 from dotenv import load_dotenv
-load_dotenv(PROJECT_ROOT / ".env")
+from repo_paths import REPO_ROOT
+
+load_dotenv(REPO_ROOT / ".env")
 
 from messaging.gcp_pubsub_signal_publisher import (
     SignalPublisher,

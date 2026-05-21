@@ -28,9 +28,6 @@ pytestmark = pytest.mark.skip(
     ),
 )
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 from stock_tracking_agent import StockTrackingAgent
 
 # Configure logging

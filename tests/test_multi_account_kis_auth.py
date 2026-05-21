@@ -1,14 +1,12 @@
 import atexit
-import sys
 import textwrap
 from pathlib import Path
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+from repo_paths import REPO_ROOT
 
-CONFIG_DIR = PROJECT_ROOT / "trading" / "config"
+CONFIG_DIR = REPO_ROOT / "trading" / "config"
 CONFIG_FILE = CONFIG_DIR / "kis_devlp.yaml"
 _CREATED_TEST_CONFIG = False
 

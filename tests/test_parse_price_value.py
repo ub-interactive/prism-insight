@@ -5,13 +5,7 @@ _parse_price_value function test script
 This test validates the _parse_price_value method from stock_tracking_agent.py under various input conditions.
 """
 
-import sys
 import re
-from pathlib import Path
-
-# Add project root to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
 
 
 class TestParsePriceValue:
@@ -257,6 +251,8 @@ def performance_test():
 
 
 if __name__ == "__main__":
+    import sys
+
     # Run basic tests
     exit_code = run_tests()
 

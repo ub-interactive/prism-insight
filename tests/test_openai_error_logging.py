@@ -1,11 +1,7 @@
 import logging
-import sys
-from pathlib import Path
 
 import httpx
 from openai import BadRequestError, RateLimitError
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cores.openai_error_logging import extract_openai_error_details, log_openai_error
 

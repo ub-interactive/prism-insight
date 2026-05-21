@@ -39,8 +39,10 @@ __pycache__/
 *.so
 .Python
 
-# IntelliJ IDEA project files
+# IntelliJ IDEA / GitHub / local venv (not versioned)
 .idea/
+.github/
+.venv/
 
 # trading/.gitignore
 trading/config/KIS*

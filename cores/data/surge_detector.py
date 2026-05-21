@@ -12,13 +12,9 @@ import logging
 import pandas as pd
 import numpy as np
 import yfinance as yf
-import sys
 from typing import Tuple, Optional, List
 
-from repo_paths import REPO_ROOT
-
-sys.path.insert(0, str(REPO_ROOT))
-from scripts.check_market_day import get_last_trading_day, get_next_trading_day, is_us_market_day
+from cores.market_calendar import get_last_trading_day, get_next_trading_day, is_us_market_day
 
 # Logger setup
 logger = logging.getLogger(__name__)

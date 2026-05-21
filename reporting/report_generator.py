@@ -248,7 +248,7 @@ sys.path.insert(0, project_root)
 os.chdir(project_root)
 
 from cores.analysis import analyze_us_stock
-from scripts.check_market_day import get_reference_date
+from cores.market_calendar import get_reference_date
 
 async def run():
     try:

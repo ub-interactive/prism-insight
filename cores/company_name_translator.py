@@ -9,6 +9,7 @@ import logging
 import re
 from typing import Any, Dict
 
+from cores.model_config import get_configured_model
 from cores.openai_error_logging import log_openai_error
 
 logger = logging.getLogger(__name__)
@@ -128,7 +129,7 @@ Return ONLY the English company name, nothing else. No quotes, no explanation.
         english_name = await llm.generate_str(
             message=f"Translate this Korean company name to English: {korean_name}",
             request_params=RequestParams(
-                model="gpt-5.4-mini",
+                model=get_configured_model("company_name_translation", "gpt-5.4-mini"),
                 maxTokens=1000,
                 temperature=0.1,
                 max_iterations=1

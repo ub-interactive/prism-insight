@@ -6,8 +6,15 @@ AI-based dashboard data translation utilities
 import asyncio
 import json
 import logging
-from typing import Dict, Any, List
+import sys
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from cores.model_config import get_configured_model
 from mcp_agent.agents.agent import Agent
 from mcp_agent.workflows.llm.augmented_llm import RequestParams
 from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
@@ -18,14 +25,18 @@ logger = logging.getLogger(__name__)
 class DashboardTranslator:
     """Dashboard data translation class"""
     
-    def __init__(self, model: str = "gpt-5-nano"):
+    def __init__(self, model: Optional[str] = None):
         """
         Initialize translator
 
         Args:
-            model: OpenAI model to use (default: gpt-5-nano)
+            model: OpenAI model override; when None, uses mcp_agent.config.yaml keys
+                   ``example_dashboard_translation`` then ``us_translation``, else gpt-5-nano.
         """
-        self.model = model
+        self.model = model or get_configured_model(
+            "example_dashboard_translation",
+            get_configured_model("us_translation", "gpt-5-nano"),
+        )
 
         # Translation cache (prevent re-translating identical text)
         self.translation_cache = {}
@@ -444,7 +455,7 @@ if __name__ == "__main__":
     import os
 
     async def test():
-        translator = DashboardTranslator(model="gpt-5-nano")
+        translator = DashboardTranslator()
 
         # Single translation test
         result = await translator.translate_text("The automotive industry outlook is bright.")

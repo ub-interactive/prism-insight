@@ -24,6 +24,7 @@ from pathlib import Path
 # Allow running from project root without installing the package
 PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT))
+from cores.model_config import get_archive_query_allowed_models, get_configured_model
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -46,12 +47,18 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--ticker", help="티커 (예: AAPL)")
     p.add_argument("--date-from", dest="date_from", metavar="YYYY-MM-DD", help="시작일")
     p.add_argument("--date-to", dest="date_to", metavar="YYYY-MM-DD", help="종료일")
-    _ALLOWED_MODELS = ["gpt-5.4-mini", "gpt-4.1-mini", "gpt-4.1", "gpt-4.1-nano"]
+    archive_models = get_archive_query_allowed_models()
+    default_archive_model = get_configured_model(
+        "archive_query_default",
+        archive_models[0] if archive_models else "gpt-5.4-mini",
+    )
+    if archive_models and default_archive_model not in archive_models:
+        default_archive_model = archive_models[0]
     p.add_argument(
         "--model",
-        default="gpt-5.4-mini",
-        choices=_ALLOWED_MODELS,
-        help="LLM 모델 (기본값: gpt-5.4-mini)",
+        default=default_archive_model,
+        choices=archive_models,
+        help="LLM model (defaults to openai.archive_query_default in mcp_agent.config.yaml)",
     )
     p.add_argument(
         "--skip-cache",

@@ -7,15 +7,18 @@ API key is loaded from FIRECRAWL_API_KEY env var or mcp_agent.config.yaml fallba
 """
 import logging
 import os
-from typing import Literal, Optional
+from typing import Optional
 
 from dotenv import load_dotenv
+
+from cores.model_config import get_configured_firecrawl_spark_model
 
 load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Singleton instance
 _firecrawl_app = None
+
 
 def _get_api_key() -> str:
     """Resolve Firecrawl API key from environment or mcp_agent.config.yaml."""
@@ -131,23 +134,29 @@ def _extract_agent_text(result) -> Optional[str]:
     return None
 
 
-def firecrawl_agent(prompt: str, max_credits: int = 200, model: Literal["spark-1-mini", "spark-1-pro"] = "spark-1-mini") -> Optional[str]:
+def firecrawl_agent(
+    prompt: str,
+    max_credits: int = 200,
+    model: Optional[str] = None,
+) -> Optional[str]:
     """
     Run Firecrawl agent (Spark) with a prompt.
 
     Args:
         prompt: Natural language prompt for the agent
         max_credits: Maximum credits to spend (default 200)
-        model: Agent model to use (default "spark-1-mini")
+        model: Spark model ID (e.g. ``spark-1-mini``, ``spark-1-pro``). When omitted,
+               uses ``firecrawl.spark_agent_model`` from ``mcp_agent.config.yaml``.
 
     Returns:
         Agent response text, or None on error
     """
     try:
+        resolved_model = model or get_configured_firecrawl_spark_model()
         app = get_firecrawl_app()
         result = app.agent(
             prompt=prompt,
-            model=model,
+            model=resolved_model,
             max_credits=max_credits,
         )
         # Debug: log raw result structure

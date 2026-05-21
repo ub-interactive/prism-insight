@@ -18,6 +18,8 @@ from mcp_agent.app import MCPApp
 from mcp_agent.workflows.llm.augmented_llm import RequestParams
 from mcp_agent.workflows.llm.augmented_llm_anthropic import AnthropicAugmentedLLM
 
+from cores.model_config import get_configured_anthropic_model
+
 # Logger setup
 logger = logging.getLogger(__name__)
 
@@ -699,7 +701,7 @@ async def generate_firecrawl_search_response(search_query: str, analysis_prompt:
         response = await llm.generate_str(
             message=f"Web corpus for synthesis:\n\n{context}\n\n---\n\nAnalyst briefing request:\n{analysis_prompt}",
             request_params=RequestParams(
-                model="claude-sonnet-4-6",
+                model=get_configured_anthropic_model("firecrawl_analyst", "claude-sonnet-4-6"),
                 maxTokens=2000
             )
         )

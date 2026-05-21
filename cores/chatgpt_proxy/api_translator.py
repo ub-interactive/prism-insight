@@ -7,25 +7,15 @@ import json
 import time
 from typing import Any
 
-
-# Models not supported on Codex endpoint -> best available replacement
-_MODEL_MAP: dict[str, str] = {
-    "gpt-4o": "gpt-5.4-mini",
-    "gpt-4o-mini": "gpt-5.4-mini",
-    "gpt-4o-2024-08-06": "gpt-5.4-mini",
-    "gpt-4-turbo": "gpt-5.4-mini",
-    "gpt-4": "gpt-5.4-mini",
-    "gpt-3.5-turbo": "gpt-5.4-mini",
-    "o4-mini": "gpt-5.4-mini",
-    "o3-mini": "gpt-5.4-mini",
-}
+from cores.model_config import (
+    get_chatgpt_proxy_codex_model_map,
+    get_chatgpt_proxy_request_default_model,
+)
 
 
 def _map_model(model: str) -> str:
-    """Map unsupported model names to Codex-compatible equivalents."""
-    return _MODEL_MAP.get(model, model)
-
-
+    """Map unsupported model names to Codex-compatible equivalents (from YAML or defaults)."""
+    return get_chatgpt_proxy_codex_model_map().get(model, model)
 def translate_request(body: dict) -> dict:
     """Translate Chat Completions request to Responses API format.
 
@@ -36,7 +26,7 @@ def translate_request(body: dict) -> dict:
     - response_format -> text.format
     """
     translated: dict[str, Any] = {
-        "model": _map_model(body.get("model", "gpt-4o")),
+        "model": _map_model(body.get("model", get_chatgpt_proxy_request_default_model())),
     }
 
     # Messages -> Input (with role mapping)

@@ -10,6 +10,8 @@ import logging
 import aiohttp
 from aiohttp import web
 
+from cores.model_config import get_chatgpt_proxy_request_default_model
+
 from . import api_translator
 from .constants import CHATGPT_RESPONSES_URL
 from .token_manager import TokenManager
@@ -59,7 +61,7 @@ async def handle_chat_completions(request: web.Request) -> web.Response:
             status=400,
         )
 
-    original_model = body.get("model", "gpt-4o")
+    original_model = body.get("model", get_chatgpt_proxy_request_default_model())
 
     # Translate request
     try:

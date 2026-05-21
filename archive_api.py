@@ -35,10 +35,24 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from cores.model_config import get_archive_query_allowed_models, get_configured_model
+
+
+def _default_archive_query_model() -> str:
+    allowed = get_archive_query_allowed_models()
+    base = get_configured_model(
+        "archive_query_default",
+        allowed[0] if allowed else "gpt-5.4-mini",
+    )
+    if allowed and base not in allowed:
+        return allowed[0]
+    return base
+
+
 try:
     from fastapi import FastAPI, HTTPException, Security, Depends
     from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-    from pydantic import BaseModel
+    from pydantic import BaseModel, Field
 except ImportError as e:
     print(f"fastapi not installed. Run: pip install fastapi uvicorn\nError: {e}")
     sys.exit(1)
@@ -88,7 +102,7 @@ class QueryRequest(BaseModel):
     date_from: Optional[str] = None    # YYYY-MM-DD
     date_to: Optional[str] = None      # YYYY-MM-DD
     skip_cache: bool = False
-    model: str = "gpt-5.4-mini"
+    model: str = Field(default_factory=_default_archive_query_model)
 
 
 class QueryResponse(BaseModel):

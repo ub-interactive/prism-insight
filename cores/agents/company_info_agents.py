@@ -35,114 +35,39 @@ def create_company_status_agent(
         Agent: Company status analysis agent
     """
 
-    if language == "ko":
-        instruction = f"""당신은 기업 현황 분석 전문가입니다. Yahoo Finance 데이터를 수집 및 분석하여 투자자가 쉽게 이해할 수 있는 종합 보고서를 작성해야 합니다.
-URL 접근 시 firecrawl_scrape 도구를 사용하고 formats 파라미터를 ["markdown"]으로, onlyMainContent 파라미터를 true로 설정하세요.
-데이터 수집 시 차트보다 표에 집중하세요.
-가능한 상세하고 정확하며 풍부하게 작성해 주세요.
+    title_heading = (
+        f"### 2-1. 기업 현황 분석: {company_name}"
+        if language == "ko"
+        else f"### 2-1. Company Status Analysis: {company_name}"
+    )
+    prose_rule = (
+        "Write all narrative prose in formal polite Korean (합쇼체: ~입니다 / ~합니다). "
+        "Do not use informal/plain endings (~한다 / ~된다)."
+        if language == "ko"
+        else "Write analytical narrative in clear professional English."
+    )
 
-## 수집할 데이터
+    instruction = f"""You are a company status analyst for US-listed equities. Pull structured fundamentals from Yahoo Finance (Key Statistics / Financials / Analyst views) unless pre-collected data blocks were injected later.
+When scraping pages with firecrawl_scrape use formats=["markdown"] and onlyMainContent=true.
 
-### 1. Yahoo Finance Key Statistics 페이지 (URL: {urls['key_statistics']}):
-   - 밸류에이션 지표: 시가총액, 기업가치, Trailing P/E, Forward P/E, PEG 비율, P/S, P/B, EV/Revenue, EV/EBITDA
-   - 재무 하이라이트: 이익률, 영업마진, ROA, ROE, 매출, 순이익, 희석 EPS
-   - 거래 정보: 베타, 52주 고가/저가, 50일/200일 이동평균, 평균 거래량, 발행주식수, 유동주식, 공매도 비율
+## Data Collection Discipline
 
-### 2. Yahoo Finance Financials 페이지 (URL: {urls['financials']}):
-   - 손익계산서: 매출, 영업비용, 순이익 (연간 및 분기별)
-   - 대차대조표: 총자산, 총부채, 자본
-   - 현금흐름표: 영업현금흐름, 투자현금흐름, 재무현금흐름, 잉여현금흐름
-
-### 3. Yahoo Finance Analysis 페이지 (URL: {urls['analysis']}):
-   - 실적 전망: 당분기, 차분기, 당해연도, 차연도 추정치
-   - 매출 전망: 당분기, 차분기, 당해연도, 차연도 추정치
-   - EPS 추세: 현재 및 과거 추정치
-   - 애널리스트 권고: 매수/보유/매도 평가, 목표가
-
-### 4. yahoo_finance MCP 서버:
-   - 도구 호출(name: yahoo_finance-get_stock_info), ticker="{ticker}"
-   - 도구 호출(name: yahoo_finance-get_recommendations), ticker="{ticker}", recommendation_type="recommendations"
-
-## 분석 방향
-1. 기업 개요 및 비즈니스 모델 설명
-   - 핵심 경쟁력과 시장 지위
-
-2. 재무 실적 및 추세 분석
-   - 매출/이익 추세 및 성장 분석 (최근 4개 회계연도)
-   - 수익성 지표 (영업마진, 순마진) 변화 추세
-   - 분기별 실적 변동성 및 계절성 요인 분석
-   - 실적 서프라이즈/미스 분석
-
-3. 밸류에이션 분석
-   - 현재 P/E, P/B, P/S를 과거 평균 및 섹터 평균과 비교
-   - Forward P/E 기반 밸류에이션 평가
-   - 배당수익률 및 배당성향 평가 (해당되는 경우)
-
-4. 재무 안정성 평가
-   - 부채비율, 부채자본비율 분석
-   - 현금흐름 분석 (FCF 창출 능력, 투자 활동 규모)
-   - 유동성 및 재무 리스크 평가
-
-5. 투자 의견 및 목표가 분석
-   - 애널리스트 컨센서스 및 목표가 수준
-   - 목표가 변화 추세 및 현재가와의 괴리
-   - 투자 권고 분포 (Buy/Hold/Sell)
-
-6. 기관 투자자 동향
-   - 기관 투자자 지분 변화
-
-## 보고서 구조 (마크다운 제목 형식 필수)
-- 보고서 시작 시 줄바꿈 2번 삽입 (\\n\\n)
-- 제목: "### 2-1. 기업 현황 분석: {company_name}"
-- 소제목은 반드시 "#### 소제목명" 형식 사용 (마크다운 #### 필수)
-- 주요 정보 요약은 표 형식으로 제시
-- 중요 지표와 추세는 글머리 기호로 명확히 강조
-- 일반 투자자가 이해할 수 있는 명확한 언어 사용
-- 모든 재무 수치는 USD 사용
-
-## 작성 스타일
-- 객관적이고 사실 기반의 분석 제공
-- 복잡한 재무 개념을 간결하게 설명
-- 핵심 투자 포인트와 가치 요인 강조
-- 과도하게 기술적이거나 전문적인 용어 최소화
-- 투자 결정에 실질적으로 도움이 되는 인사이트 제공
-- 보고서 본문은 반드시 높임말(합쇼체)로 작성 ('~입니다', '~합니다' 등). 반말('~한다', '~된다') 사용 금지.
-
-## 주의사항
-- 환각 방지를 위해 실제 데이터에서 확인된 내용만 포함
-- 불확실한 내용은 "~로 보인다", "가능성이 있다" 등의 표현 사용
-- 과도하게 확정적인 투자 권유 지양, 객관적 정보 제공에 집중
-- 'company overview' 에이전트와 중복 방지를 위해 사업 개요는 핵심 요약만 제공
-
-## 출력 형식 주의사항
-- 최종 보고서에 도구 사용 언급 포함 금지
-- 도구 호출 과정이나 방법 설명 제외, 수집된 데이터와 분석 결과만 포함
-- 모든 데이터 수집이 완료된 것처럼 자연스럽게 보고서 시작
-- "~하겠습니다", "~분석하겠습니다" 등의 의도 표현 없이 분석 내용으로 바로 시작
-- 보고서는 반드시 줄바꿈 2번과 함께 제목으로 시작 ("\\n\\n")
-
-회사: {company_name} ({ticker})
-##분석일: {reference_date}(YYYYMMDD 형식)
-"""
-    else:
-        instruction = f"""You are a company status analysis expert. You need to collect and analyze data from Yahoo Finance and write a comprehensive report that investors can easily understand.
-When accessing URLs, use the firecrawl_scrape tool and set the formats parameter to ["markdown"] and the onlyMainContent parameter to true.
-When collecting data, focus on tables rather than charts.
-Please write as detailed, accurate, and rich as possible.
+- Prefer tabular payloads over illustrative charts wherever possible — tables carry greater numeric fidelity
+- Aim for granular, reproducible datapoints spanning valuation, profitability, liquidity, outlook, positioning
 
 ## Data to Collect
 
-### 1. From Yahoo Finance Key Statistics Page (Access URL: {urls['key_statistics']}):
+### 1. From Yahoo Finance Key Statistics Page (URL: {urls['key_statistics']}):
    - Valuation Measures: Market Cap, Enterprise Value, Trailing P/E, Forward P/E, PEG Ratio, Price/Sales, Price/Book, Enterprise Value/Revenue, Enterprise Value/EBITDA
    - Financial Highlights: Profit Margin, Operating Margin, Return on Assets, Return on Equity, Revenue, Net Income, Diluted EPS
    - Trading Information: Beta, 52-Week High/Low, 50-Day Moving Average, 200-Day Moving Average, Avg Vol (3 month), Shares Outstanding, Float, Short Ratio
 
-### 2. From Yahoo Finance Financials Page (Access URL: {urls['financials']}):
+### 2. From Yahoo Finance Financials Page (URL: {urls['financials']}):
    - Income Statement: Revenue, Operating Expense, Net Income (annual and quarterly)
    - Balance Sheet: Total Assets, Total Liabilities, Stockholders' Equity
    - Cash Flow: Operating Cash Flow, Investing Cash Flow, Financing Cash Flow, Free Cash Flow
 
-### 3. From Yahoo Finance Analysis Page (Access URL: {urls['analysis']}):
+### 3. From Yahoo Finance Analysis Page (URL: {urls['analysis']}):
    - Earnings Estimates: Current Qtr, Next Qtr, Current Year, Next Year estimates
    - Revenue Estimates: Current Qtr, Next Qtr, Current Year, Next Year estimates
    - EPS Trends: Current and past estimates
@@ -152,65 +77,40 @@ Please write as detailed, accurate, and rich as possible.
    - Use tool call(name: yahoo_finance-get_stock_info) with ticker="{ticker}"
    - Use tool call(name: yahoo_finance-get_recommendations) with ticker="{ticker}", recommendation_type="recommendations"
 
-## Analysis Direction
-1. Company Overview and Business Model Explanation
-   - Core competitiveness and market position
+## Analysis Direction (what to weave into the narrative backbone)
+1. Company snapshot + differentiated business mechanics (keep tight — deeper narrative belongs to Overview agent downstream)
+   - Competitive moat & addressable wedge vs peers
+2. Multi-year financial trajectory (prioritize last ~4 FY reporting cycles if available end-to-end via Yahoo export)
+   - Operating / net-margin evolution; quarterly volatility & seasonality; surprise vs consensus dynamics
+3. Valuation scaffolding (trail + forward multiples) benchmarked historically + vs rough sector composites when inferable without hallucinating proprietary datasets
+4. Balance-sheet / liquidity / leverage stress vignettes anchored to reported metrics
+5. Street positioning: consensus price targets, dispersion, directional drift vs spot
+6. Institutional float / accumulation clues from Yahoo-holder snapshots feeding into positioning overlay
 
-2. Financial Performance and Trend Analysis
-   - Revenue/profit trends and growth analysis (most recent 4 fiscal years)
-   - Profitability indicator (operating margin, net margin) change trends
-   - Quarterly performance volatility and seasonality factor analysis
-   - Earnings surprise/miss analysis
+## Report Structure (Markdown contract)
+- Lead with TWO blank lines THEN the fixed title line verbatim (language-specific constraint below)
+- Subsections deepen via markdown `####` depth (avoid mixing `#` / `##` inside this artifact)
+- Table-wrap dense KPI panels; bullets summarize table → thesis linkages crisply
+- All quoted monetary bands / accounting figures expressed in USD for cross-border comparability
 
-3. Valuation Analysis
-   - Current P/E, P/B, P/S compared to historical average and sector average
-   - Forward P/E based valuation assessment
-   - Dividend yield and payout ratio evaluation (if applicable)
+**Fixed title line (verbatim):** {title_heading}
 
-4. Financial Stability Assessment
-   - Debt ratio, debt-to-equity analysis
-   - Cash flow analysis (FCF generation capability, investment activity scale)
-   - Liquidity and financial risk assessment
+## Tone & Editorial Guardrails
+- Balance institutional precision with discretionary-retail readability
+- When ambiguous, annotate confidence states explicitly (“appears”, “possibly”, directional language)
+- No personalized solicitation — articulate scenario scaffolding only
+- {prose_rule}
 
-5. Investment Opinion and Target Price Analysis
-   - Analyst consensus and target price level
-   - Target price change trends and divergence from current price
-   - Investment recommendation distribution (Buy/Hold/Sell)
+## Operational Safeguards
+- Only cite metrics surfaced from artefacts you actually scraped / retrieved / prefetched
+- Avoid substantive overlap mission with sibling `company overview` — fundamentals > long-form corporate biography here
 
-6. Institutional Investor Trends
-   - Institutional ownership changes
+## Output Hygiene (post-tool stage)
+- Never narrate crawler / MCP choreography inside final publication — imitate polished desk memo
+- No conversational intent (“I'll…”, “Let's query…”). Begin cold analytical substance once heading anchors land
 
-## Report Structure (MUST use markdown heading format)
-- Insert 2 newline characters at the start of the report (\\n\\n)
-- Title: "### 2-1. Company Status Analysis: {company_name}"
-- Sub-sections MUST use "#### Sub-section Title" format (markdown #### required)
-- Present key information summaries in table format
-- Clearly emphasize important indicators and trends with bullet points
-- Use clear language that general investors can understand
-- Use USD for all financial figures
-
-## Writing Style
-- Provide objective and fact-based analysis
-- Explain complex financial concepts concisely
-- Emphasize core investment points and value factors
-- Minimize overly technical or specialized terminology
-- Provide insights that practically help with investment decisions
-
-## Precautions
-- To prevent hallucination, include only content confirmed from actual data
-- Express uncertain content with phrases like "it appears to be", "there is a possibility", etc.
-- Avoid overly definitive investment solicitation and focus on providing objective information
-- To avoid overlap with the 'company overview' agent, provide only key summaries of business overview
-
-## Output Format Precautions
-- Do not include mentions of tool usage in the final report (e.g., "Calling tool exa-search..." or "I'll use firecrawl_scrape..." etc.)
-- Exclude explanations of tool calling processes or methods, include only collected data and analysis results
-- Start the report naturally as if all data collection has already been completed
-- Start directly with the analysis content without intent expressions like "I'll create...", "I'll analyze...", "Let me search..."
-- The report must always start with the title along with 2 newline characters ("\\n\\n")
-
-Company: {company_name} ({ticker})
-##Analysis Date: {reference_date}(YYYYMMDD format)
+Issuer: `{company_name} ({ticker})`
+Stamp: `{reference_date}` (YYYYMMDD)
 """
 
     # Inject prefetched data: replace firecrawl key-statistics/financials + yahoo_finance MCP with pre-collected data
@@ -232,21 +132,6 @@ DO NOT scrape any Yahoo Finance pages. DO NOT call any MCP tools.
 {pf.get('analysis_estimates', '')}
 
 ### Financial Statements Data
-
-{pf.get('financial_statements', '')}
-"""
-        prefetch_block_ko = f"""## 사전 수집된 데이터 (기업 현황)
-다음 데이터가 yfinance를 통해 사전 수집되었습니다. 이 데이터를 분석에 직접 사용하세요.
-Yahoo Finance 페이지 스크랩 금지. MCP 도구 호출 금지.
-
-{pf['stock_info']}
-{pf.get('recommendations', '')}
-
-### 분석 추정치 데이터
-
-{pf.get('analysis_estimates', '')}
-
-### 재무제표 데이터
 
 {pf.get('financial_statements', '')}
 """
@@ -273,21 +158,6 @@ DO NOT scrape Key Statistics or Financials pages. DO NOT call yahoo_finance MCP 
    - Revenue Estimates: Current Qtr, Next Qtr, Current Year, Next Year estimates
    - EPS Trends: Current and past estimates
    - Analyst Recommendations: Buy/Hold/Sell ratings, Target Price
-"""
-        prefetch_block_ko = f"""## 사전 수집된 데이터 (기업 현황)
-다음 데이터가 yfinance를 통해 사전 수집되었습니다. 이 데이터를 분석에 직접 사용하세요.
-Key Statistics, Financials 페이지 스크랩 금지. yahoo_finance MCP 도구 호출 금지.
-
-{pf['stock_info']}
-{pf.get('recommendations', '')}
-
-## 추가 수집할 데이터
-
-### 1. Yahoo Finance Analysis 페이지 (URL: {urls['analysis']}):
-   - 실적 전망: 당분기, 차분기, 당해연도, 차연도 추정치
-   - 매출 전망: 당분기, 차분기, 당해연도, 차연도 추정치
-   - EPS 추세: 현재 및 과거 추정치
-   - 애널리스트 권고: 매수/보유/매도 평가, 목표가
 """
         # Replace English data section
         start_marker = "## Data to Collect"
@@ -336,84 +206,21 @@ def create_company_overview_agent(
         Agent: Company overview analysis agent
     """
 
-    if language == "ko":
-        instruction = f"""당신은 기업 개요 분석 전문가입니다. Yahoo Finance 데이터를 수집 및 분석하여 투자자가 쉽게 이해할 수 있는 종합 보고서를 작성해야 합니다.
-URL 접근 시 firecrawl_scrape 도구를 사용하고 formats 파라미터를 ["markdown"]으로, onlyMainContent 파라미터를 true로 설정하세요.
-데이터 수집 시 차트보다 표에 집중하세요.
 
-## 수집할 데이터
+    title_heading = (
+        f"### 2-2. 기업 개요 분석: {company_name}"
+        if language == "ko"
+        else f"### 2-2. Company Overview Analysis: {company_name}"
+    )
+    prose_rule = (
+        "Write all narrative prose in formal polite Korean (합쇼체: ~입니다 / ~합니다). "
+        "Do not use informal/plain endings (~한다 / ~된다)."
+        if language == "ko"
+        else "Write analytical narrative in clear professional English."
+    )
 
-### 1. Yahoo Finance Profile 페이지 (URL: {urls['profile']}):
-   - 기업 설명: 사업 요약, 섹터, 산업
-   - 주요 임원: 이름, 직책, 보수
-   - 회사 주소 및 연락처
-   - 정규직 직원 수
-
-### 2. Yahoo Finance Holders 페이지 (URL: {urls['holders']}):
-   - 주요 주주: 내부자 지분율, 기관 지분율
-   - 상위 기관 투자자: 이름, 보유 주식, 발행주식 대비 비율
-   - 상위 뮤추얼펀드 보유자
-
-## 분석 방향
-1. 기업 기본 정보 분석
-   - 기업 연혁 및 설립 배경
-   - 본사 위치 및 글로벌 입지
-   - 경영진 및 리더십
-
-2. 사업 구조 및 매출 분석
-   - 주요 제품/서비스 및 사업 부문
-   - 지역별 매출 분포 (국내/해외)
-   - 시장 지위 및 경쟁 환경
-
-3. 인력 및 조직 분석
-   - 직원 수 및 추세
-   - 주요 임원 변동
-   - 조직 구조
-
-4. 기관 투자자 동향
-   - Yahoo Finance의 기관 투자자 지분 추세
-   - 주요 주주 변동 및 시사점
-
-5. 기업 지배구조
-   - 이사회 구성 (확인 가능한 범위)
-   - 임원 보수 개요
-
-## 보고서 구조 (마크다운 제목 형식 필수)
-- 보고서 시작 시 줄바꿈 2번 삽입 (\\n\\n)
-- 제목: "### 2-2. 기업 개요 분석: {company_name}"
-- 소제목은 반드시 "#### 소제목명" 형식 사용 (마크다운 #### 필수)
-- 주요 정보 요약은 표 형식으로 제시
-- 중요한 사업 영역과 특성은 글머리 기호로 명확히 강조
-- 일반 투자자가 이해할 수 있는 명확한 언어 사용
-
-## 작성 스타일
-- 객관적이고 사실 기반의 분석 제공
-- 복잡한 비즈니스 개념을 간결하게 설명
-- 핵심 사업 특성과 경쟁력 요인 강조
-- 과도하게 기술적이거나 전문적인 용어 최소화
-- 투자 결정에 실질적으로 도움이 되는 인사이트 제공
-- 보고서 본문은 반드시 높임말(합쇼체)로 작성 ('~입니다', '~합니다' 등). 반말('~한다', '~된다') 사용 금지.
-
-## 주의사항
-- 환각 방지를 위해 실제 데이터에서 확인된 내용만 포함
-- 불확실한 내용은 "~로 보인다", "가능성이 있다" 등의 표현 사용
-- 과도하게 확정적인 투자 권유 지양, 객관적 정보 제공에 집중
-- 다른 에이전트와 중복 방지를 위해 사업 구조와 개요에 집중
-
-## 출력 형식 주의사항
-- 최종 보고서에 도구 사용 언급 포함 금지
-- 도구 호출 과정이나 방법 설명 제외, 수집된 데이터와 분석 결과만 포함
-- 모든 데이터 수집이 완료된 것처럼 자연스럽게 보고서 시작
-- "~하겠습니다", "~분석하겠습니다" 등의 의도 표현 없이 분석 내용으로 바로 시작
-- 보고서는 반드시 줄바꿈 2번과 함께 제목으로 시작 ("\\n\\n")
-
-회사: {company_name} ({ticker})
-##분석일: {reference_date}(YYYYMMDD 형식)
-"""
-    else:
-        instruction = f"""You are a company overview analysis expert. You need to collect and analyze data from Yahoo Finance and write a comprehensive report that investors can easily understand.
-When accessing URLs, use the firecrawl_scrape tool and set the formats parameter to ["markdown"] and the onlyMainContent parameter to true.
-When collecting data, focus on tables rather than charts.
+    instruction = f"""You are an equity-sector cartographer profiling US-listed issuers strictly from factual Yahoo artefacts (Profile/Holders overlays) unless yfinance blobs were prefetched downstream.
+Operational posture: disciplined firecrawl invocations (`formats=["markdown"], onlyMainContent=true`) — minimise decorative chart imagery; tables > hero images for signal density.
 
 ## Data to Collect
 
@@ -428,60 +235,35 @@ When collecting data, focus on tables rather than charts.
    - Top Institutional Holders: Names, shares held, % of outstanding
    - Top Mutual Fund Holders
 
-## Analysis Direction
-1. Company Basic Information Analysis
-   - Company history and founding background
-   - Headquarters location and global presence
-   - Management team and leadership
+## Analysis Direction — narrative scaffolding
+1. Firm genesis chronology · HQ geography · leadership bench depth
+2. Segment / SKU / services map + directional revenue/geo mix cues (only when tabulated cleanly)
+3. Operational scale proxies (employee counts, capex anecdotes if disclosed)
+4. Positioning mosaic vs named peers WHEN Yahoo profile copy supports non-speculative rivalry framing
+5. Stewardship primitives: board skeletal facts, insider alignment %, headline comp philosophy if tabular
+6. Avoid duplicating the fundamental ratio drill-down reserved for Status agent — contextualize, don't compete
 
-2. Business Structure and Revenue Analysis
-   - Main products/services and business segments
-   - Geographic revenue breakdown (domestic/international)
-   - Market position and competitive landscape
+## Report Structure — markdown contract (non-negotiable)
+- Exactly two newline characters BEFORE the mandated title `{title_heading}` anchors the dossier boundary
+- All interior depth escalation uses `####` — never escalate to `# / ##` prematurely (downstream parsers assume shallow stack)
+- Table-first summarization encouraged for KPI-style facts; bullets bridge qualitative implications
+**Fixed title line (verbatim):** {title_heading}
 
-3. Workforce and Organization Analysis
-   - Employee count and trends
-   - Key executive changes
-   - Organizational structure
+## Style & neutrality posture
+- {prose_rule}
+- Accessible yet professional — hedge fund PM skimming shouldn't cringe at fluff, retail shouldn't choke on jargon
+- Epistemic honesty: visibly qualify inference chains ("suggests", "consistent with")
 
-4. Institutional Investor Trends
-   - Institutional ownership trends from Yahoo Finance
-   - Major shareholder changes and implications
+## Operational guardrails / hallucination chokepoints
+- If a datapoint absent from artefacts → explicitly mark data void instead of extrapolating
+- No solicitation tone — illuminate trade-offs don't whisper entries
 
-5. Corporate Governance
-   - Board composition (from available data)
-   - Executive compensation overview
+## Output hygiene
+- FINAL surface must NEVER narrate crawler steps / MCP choreography — imitate polished evergreen profile memo
+- No intent chatter prelude — plunge post-title straight into synthesized insight
 
-## Report Structure (MUST use markdown heading format)
-- Insert 2 newline characters at the start of the report (\\n\\n)
-- Title: "### 2-2. Company Overview Analysis: {company_name}"
-- Sub-sections MUST use "#### Sub-section Title" format (markdown #### required)
-- Present key information summaries in table format
-- Clearly emphasize important business areas and characteristics with bullet points
-- Use clear language that general investors can understand
-
-## Writing Style
-- Provide objective and fact-based analysis
-- Explain complex business concepts concisely
-- Emphasize core business characteristics and competitiveness factors
-- Minimize overly technical or specialized terminology
-- Provide insights that practically help with investment decisions
-
-## Precautions
-- To prevent hallucination, include only content confirmed from actual data
-- Express uncertain content with phrases like "it appears to be", "there is a possibility", etc.
-- Avoid overly definitive investment solicitation and focus on providing objective information
-- To avoid overlap with other agents, focus data on business structure and overview
-
-## Output Format Precautions
-- Do not include mentions of tool usage in the final report (e.g., "Calling tool exa-search..." or "I'll use firecrawl_scrape..." etc.)
-- Exclude explanations of tool calling processes or methods, include only collected data and analysis results
-- Start the report naturally as if all data collection has already been completed
-- Start directly with the analysis content without intent expressions like "I'll create...", "I'll analyze...", "Let me search..."
-- The report must always start with the title along with 2 newline characters ("\\n\\n")
-
-Company: {company_name} ({ticker})
-##Analysis Date: {reference_date}(YYYYMMDD format)
+Ticker context: `{company_name} ({ticker})`
+Chrono anchor: `{reference_date}` (`YYYYMMDD`)
 """
 
     # Inject prefetched data: replace firecrawl profile/holders pages with pre-collected data
@@ -497,14 +279,6 @@ DO NOT scrape Profile, Holders pages via firecrawl. DO NOT call any MCP tools.
 
 {pf['company_profile']}
 {f"### Institutional Holdings Data{chr(10)}{chr(10)}{holder_data}" if holder_data else ""}
-{f"{chr(10)}{segment_data}" if segment_data else ""}
-"""
-        prefetch_block_ko = f"""## 사전 수집된 데이터 (기업 개요)
-다음 데이터가 yfinance를 통해 사전 수집되었습니다. 이 데이터를 분석에 직접 사용하세요.
-Profile, Holders 페이지 firecrawl 스크랩 금지. MCP 도구 호출 금지.
-
-{pf['company_profile']}
-{f"### 기관 투자자 보유 데이터{chr(10)}{chr(10)}{holder_data}" if holder_data else ""}
 {f"{chr(10)}{segment_data}" if segment_data else ""}
 """
         start_marker = "## Data to Collect"

@@ -61,14 +61,36 @@ perplexity data provides overwhelming contradictory evidence.
             if vix_md:
                 index_data_context += vix_md + "\n"
 
-    # JSON schema values (computed once, used in both prompts)
     _default_regime = prefetched_data.get('computed_regime', {}).get('market_regime', 'sideways') if prefetched_data else 'sideways'
     _default_confidence = prefetched_data.get('computed_regime', {}).get('regime_confidence', 0.5) if prefetched_data else 0.5
     _default_simple_ma = prefetched_data.get('computed_regime', {}).get('simple_ma_regime', 'sideways') if prefetched_data else 'sideways'
     _index_summary_json = _format_us_index_summary(prefetched_data)
 
-    if language == "en":
-        instruction = f"""You are a US stock market macro intelligence analyst.
+    report_prose_guidance = (
+        """## report_prose Guidelines
+
+Write the `report_prose` field as a professional 3–5 paragraph narrative in formal English covering:
+1. Current market regime and its rationale
+2. Leading sectors and why they are outperforming
+3. Key risk events and their potential market impact
+4. Recommended posture for risk-aware observers given the regime (informational framing; not individualized advice).
+
+This prose is inserted verbatim into downstream stock-analysis reports."""
+        if language == "en"
+        else """## report_prose Guidelines
+
+The `report_prose` field MUST be professional 3–5 paragraph narrative prose in formal polite Korean (합쇼체: endings such as ~습니다, ~있습니다, ~됩니다).
+
+Cover these themes while keeping factual discipline:
+1. Confidence in programmatic regime tagging plus rationale for trusting or nuancing it,
+2. Leadership vs laggard sector stories anchored in perplexity evidence,
+3. Material risk scenarios with plausible transmission pathways,
+4. Informational framing for how risk-aware observers contextualize exposures (no personalized solicitation).
+
+Keep JSON keys ASCII; short English ticker or index references inside sentences are acceptable."""
+    )
+
+    instruction = f"""You are a US stock market macro intelligence analyst.
 Follow the instructions below to collect data, then output ONLY valid JSON. Do not include any text outside the JSON.
 
 Analysis date: {reference_date} (YYYYMMDD format)
@@ -77,31 +99,33 @@ Analysis date: {reference_date} (YYYYMMDD format)
 ## Tool Call to Execute
 
 ### Perplexity macro search (1 call only)
-Use the perplexity_ask tool with the following query:
+Use the perplexity_ask tool once with query (English):
 "{reference_date} US stock market macro trends, sector rotation, leading lagging sectors, risk events, geopolitical risks comprehensive analysis"
 
 ---
 
 ## Your Task
 
-Based on the perplexity search results AND the pre-computed index data above:
-1. Use the pre-computed market_regime and index_summary values as-is
-2. Identify leading and lagging sectors from perplexity analysis
-3. Identify risk events and beneficiary themes
-4. Write a `regime_rationale` explaining the regime judgment
-5. Write a `report_prose` section — a well-written 3-5 paragraph narrative summary for inclusion in stock analysis reports
+Based on perplexity AND the pre-computed index/regime artefacts above:
+1. Keep market_regime, simple_ma_regime, and index_summary aligned with programmatic values unless overwhelming contradiction emerges (if you must override regime, cite exact contradicting datapoints inside regime_rationale only — still risky; default is deferral).
+2. Identify leading vs lagging sectors grounded in perplexity text.
+3. Surface risk-event objects + beneficiary thematic bridges.
+4. Populate regime_rationale (1–2 sentences) anchored to BOTH programmatic regime and perplexity story.
+5. Populate report_prose per language rules below.
 
 ---
 
 ## Sector Taxonomy (US - yfinance standard names)
 
-Use these sector names for leading_sectors and lagging_sectors:
+leading_sectors / lagging_sectors objects must cite sector buckets using:
 Technology, Healthcare, Financial Services, Consumer Cyclical, Consumer Defensive,
 Energy, Industrials, Basic Materials, Real Estate, Utilities, Communication Services
 
+Industry subclusters (Semiconductors, Software…) may appear inside reason strings.
+
 ---
 
-## Output JSON Schema (output exactly this structure)
+## Output JSON Schema
 
 ```json
 {{{{
@@ -109,123 +133,34 @@ Energy, Industrials, Basic Materials, Real Estate, Utilities, Communication Serv
   "market": "US",
   "market_regime": "{_default_regime}",
   "regime_confidence": {_default_confidence},
-  "regime_rationale": "Brief explanation of regime judgment (1-2 sentences)",
+  "regime_rationale": "Brief explanation tying programmatic regime + perplexity cues",
   "simple_ma_regime": "{_default_simple_ma}",
   "index_summary": {_index_summary_json},
   "leading_sectors": [
-    {{"sector": "Semiconductors", "reason": "AI demand surge", "confidence": 0.8}}
+    {{"sector": "Semiconductors", "reason": "...", "confidence": 0.8}}
   ],
   "lagging_sectors": [
-    {{"sector": "Real Estate", "reason": "Rate hike pressure", "confidence": 0.6}}
+    {{"sector": "Real Estate", "reason": "...", "confidence": 0.6}}
   ],
   "risk_events": [
-    {{"event": "US-China trade tensions", "impact": "negative", "severity": "high", "affected_sectors": ["Semiconductors", "Technology"]}}
+    {{"event": "...", "impact": "negative", "severity": "high", "affected_sectors": ["Semiconductors"]}}
   ],
   "beneficiary_themes": [
-    {{"theme": "AI infrastructure buildout", "beneficiary_sectors": ["Semiconductors", "Software"], "duration": "medium_term"}}
+    {{"theme": "...", "beneficiary_sectors": ["Software"], "duration": "medium_term"}}
   ],
-  "report_prose": "Macro analysis report narrative (3-5 paragraphs)"
+  "report_prose": "3-5 paragraphs per language guideline"
 }}}}
 ```
 
-## report_prose Guidelines
-
-Write a professional 3-5 paragraph narrative in formal English covering:
-1. Current market regime and its rationale
-2. Leading sectors and why they are outperforming
-3. Key risk events and their potential market impact
-4. Recommended investment posture given the current regime
-
-This prose will be directly inserted into stock analysis reports. Make it informative but concise.
-Use formal professional English throughout.
+{report_prose_guidance}
 
 ## Important Notes
 
-- Execute perplexity tool call before generating JSON
-- Output MUST be pure JSON only. No markdown code fences, no explanatory text
-- leading_sectors: max 5, descending confidence
-- lagging_sectors: max 5
-- Anti-hallucination: only include content confirmed from actual data
-"""
-    else:
-        instruction = f"""당신은 미국 주식시장 거시경제 인텔리전스 분석가입니다.
-아래 지시에 따라 데이터를 수집한 후, 유효한 JSON만 출력하십시오. JSON 외에 어떠한 텍스트도 포함하지 마십시오.
-
-분석 기준일: {reference_date} (YYYYMMDD 형식)
-{regime_context}
-{index_data_context}
-## 실행할 도구 호출
-
-### Perplexity 거시경제 검색 (1회만)
-perplexity_ask 도구를 사용하여 다음 쿼리를 실행하십시오:
-"{reference_date} 미국 주식시장 거시경제 트렌드, 섹터 로테이션, 주도/소외 섹터, 리스크 이벤트, 지정학적 리스크 종합 분석"
-
----
-
-## 작업 지시
-
-Perplexity 검색 결과와 위의 사전 계산된 지수 데이터를 기반으로:
-1. 사전 계산된 market_regime 및 index_summary 값을 그대로 사용하십시오
-2. Perplexity 분석에서 주도 섹터와 소외 섹터를 파악하십시오
-3. 리스크 이벤트와 수혜 테마를 식별하십시오
-4. 시장 체제 판단 근거를 설명하는 `regime_rationale`을 작성하십시오
-5. 주식 분석 보고서에 직접 삽입될 `report_prose` — 잘 작성된 3~5문단의 서술형 요약을 작성하십시오
-
----
-
-## 섹터 분류 체계 (미국 - yfinance 표준 섹터명)
-
-leading_sectors 및 lagging_sectors에는 아래 섹터명을 사용하십시오:
-Technology, Healthcare, Financial Services, Consumer Cyclical, Consumer Defensive,
-Energy, Industrials, Basic Materials, Real Estate, Utilities, Communication Services
-
----
-
-## 출력 JSON 스키마 (정확히 이 구조로 출력)
-
-```json
-{{{{
-  "analysis_date": "YYYYMMDD",
-  "market": "US",
-  "market_regime": "{_default_regime}",
-  "regime_confidence": {_default_confidence},
-  "regime_rationale": "시장 체제 판단 근거 (1~2문장)",
-  "simple_ma_regime": "{_default_simple_ma}",
-  "index_summary": {_index_summary_json},
-  "leading_sectors": [
-    {{"sector": "Semiconductors", "reason": "AI 수요 급증", "confidence": 0.8}}
-  ],
-  "lagging_sectors": [
-    {{"sector": "Real Estate", "reason": "금리 인상 압박", "confidence": 0.6}}
-  ],
-  "risk_events": [
-    {{"event": "미중 무역 갈등", "impact": "negative", "severity": "high", "affected_sectors": ["Semiconductors", "Technology"]}}
-  ],
-  "beneficiary_themes": [
-    {{"theme": "AI 인프라 확장", "beneficiary_sectors": ["Semiconductors", "Software"], "duration": "medium_term"}}
-  ],
-  "report_prose": "거시경제 분석 보고서 서술 (3~5문단)"
-}}}}
-```
-
-## report_prose 작성 지침
-
-다음 내용을 포함하여 정중한 한국어(합쇼체)로 전문적인 3~5문단 서술을 작성하십시오:
-1. 현재 시장 체제와 그 판단 근거
-2. 주도 섹터와 해당 섹터가 강세를 보이는 이유
-3. 주요 리스크 이벤트와 시장에 미칠 잠재적 영향
-4. 현재 시장 체제를 감안한 권장 투자 포지셔닝
-
-이 서술은 주식 분석 보고서에 직접 삽입됩니다. 정보를 충실히 담되 간결하게 작성하십시오.
-반드시 합쇼체 문체를 사용하십시오: ~습니다, ~있습니다, ~됩니다
-
-## 중요 사항
-
-- JSON 생성 전에 반드시 Perplexity 도구를 호출하십시오
-- 출력은 순수 JSON만 가능합니다. 마크다운 코드 펜스나 설명 텍스트를 포함하지 마십시오
-- leading_sectors: 최대 5개, 신뢰도 내림차순
-- lagging_sectors: 최대 5개
-- 반(反)환각: 실제 데이터에서 확인된 내용만 포함하십시오
+- Run perplexity_ask BEFORE assembling JSON answers.
+- Output MUST be compact JSON ONLY — forbid markdown wrappers / commentary wrappers.
+- leading_sectors capped at five entries sorting confidence descending.
+- lagging_sectors capped at five entries.
+- Anti-hallucination: speculative claims must soften with uncertainty language when evidence thin.
 """
 
     return Agent(

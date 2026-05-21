@@ -503,8 +503,7 @@ class USStockTrackingAgent:
         """
         Normalize decision string for comparison.
 
-        The agent prompt uses "Enter" or "No Entry" but code checks may use
-        lowercase variants. This method normalizes all variants to a consistent format.
+        The agent emits `decision` as enter/no_entry ascii (legacy synonyms like 진입 still normalized downstream).
 
         Args:
             decision: Raw decision string from agent

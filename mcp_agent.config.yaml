@@ -64,25 +64,23 @@ mcp:
       read_timeout_seconds: 120
 
 openai:
-  default_model: gpt-5.1
+  default_model: deepseek-v4
   reasoning_effort: high
   models:
-    report_generation: gpt-5.4-mini
-    us_journal: gpt-5.4-mini
-    us_macro_analysis: gpt-5.4-mini
-    us_report_filename: gpt-5.4-mini
-    us_trading_decision: gpt-5.5
-    us_sell_decision: gpt-5.5
-    us_notification_summary: gpt-5.4-mini
-    us_translation: gpt-5-nano
-    archive_query_default: gpt-5.4-mini
-    company_name_translation: gpt-5.4-mini
-    example_dashboard_translation: gpt-5-nano
+    report_generation: deepseek-v4-flash
+    us_journal: deepseek-v4-flash
+    us_macro_analysis: deepseek-v4-flash
+    us_report_filename: deepseek-v4-flash
+    us_trading_decision: deepseek-v4
+    us_sell_decision: deepseek-v4
+    us_notification_summary: deepseek-v4-flash
+    us_translation: deepseek-v4-flash
+    archive_query_default: deepseek-v4-flash
+    company_name_translation: deepseek-v4-flash
+    example_dashboard_translation: deepseek-v4-flash
   archive_query_allowed_models:
-    - gpt-5.4-mini
-    - gpt-4.1-mini
-    - gpt-4.1
-    - gpt-4.1-nano
+    - deepseek-v4-flash
+    - deepseek-v4
   chatgpt_proxy_request_default_model: gpt-4o
 
 anthropic:

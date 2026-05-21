@@ -25,6 +25,7 @@ Primary source material for project context lives in `CLAUDE.md` and supporting 
   - `cores/openai/`: OpenAI integration utilities — debug logging, error helpers, quota checks
   - `cores/visualization/`: chart generation for reports
   - `cores/analysis.py`: sequential orchestration and section integration
+  - `cores/market_calendar.py`: NYSE trading-day utilities (canonical location for market calendar helpers)
   - `cores/report_generation.py`: shared report tone and section formatting rules
 - `scripts/`: operational CLIs and batch jobs
 - `integrations/`: firebase, Firecrawl, archive API/query
@@ -32,7 +33,7 @@ Primary source material for project context lives in `CLAUDE.md` and supporting 
 - `trading/`: US trading integration and account handling
 - `tracking/`: journal, memory, trading state helpers
 - `messaging/`: Redis and GCP Pub/Sub messaging
-- `tests/`: targeted regression tests (`pytest.ini`: `pythonpath = .`)
+- `tests/`: targeted regression tests (`pyproject.toml`: `pythonpath = .`)
 - `docs/`: setup, troubleshooting, and agent references
 - `examples/`: dashboards, subscriber examples
 - `assets/`: static assets (logo, stock_map)
@@ -103,7 +104,8 @@ Avoid broad production-like runs unless the task requires them.
 - `cores/report_generation.py`: common report tone and section formatting rules
 - `cores/analysis.py`: sequential orchestration and section integration
 - `cores/agents/*.py`: prompt logic and agent responsibilities
-- `cores/config/models.py`: model IDs from `mcp_agent.config.yaml`
+- `cores/config/models.py`: model IDs from `mcp_agent.config.yaml` (uses `repo_paths.REPO_ROOT` for config path)
+- `cores/market_calendar.py`: NYSE calendar helpers — all market-day functions live here; `scripts/check_market_day.py` re-exports them
 - `cores/data/prefetch.py`: yfinance data pre-fetch (eliminates MCP round-trips)
 - `cores/data/surge_detector.py`: US surge/momentum detection algorithms
 - `stock_tracking_agent.py`: trading loop, sell decisions, optional journal flow

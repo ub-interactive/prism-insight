@@ -133,7 +133,13 @@ Avoid broad production-like runs unless the task requires them.
 
 ### Linting
 
-- No formal linter is configured in the repo. Use `ruff check --select E,F` for quick syntax/import checks.
+- `ruff` configuration lives in `pyproject.toml` (select, ignore, per-file-ignores). Use `ruff check --select E,F` for quick syntax/import checks.
+- The codebase has ~415 pre-existing lint findings (E501, F541, etc.); do not attempt bulk fixes unless explicitly asked.
+
+### Testing details
+
+- `pytest-asyncio` is required for async tests (`asyncio_mode = "auto"` in `pyproject.toml`). The update script installs it.
+- 30 `test_trading_journal.py` tests skip unless `ENABLE_TRADING_JOURNAL=true` and a DB with journal tables exists; this is expected.
 
 ### Backward-compatible shims
 

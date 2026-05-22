@@ -10,7 +10,7 @@ import os
 
 from dotenv import load_dotenv
 
-from cores.model_config import get_configured_firecrawl_spark_model
+from cores.config.models import get_configured_firecrawl_spark_model
 
 load_dotenv()
 logger = logging.getLogger(__name__)

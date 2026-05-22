@@ -8,8 +8,8 @@ Fills trigger_type and trigger_mode columns for existing data:
 3. Default to 'AI Analysis' if no match found
 
 Usage:
-    python utils/backfill_trigger_type.py --dry-run  # Preview
-    python utils/backfill_trigger_type.py            # Execute
+    python tools/backfill_trigger_type.py --dry-run  # Preview
+    python tools/backfill_trigger_type.py            # Execute
 """
 
 import argparse

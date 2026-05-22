@@ -27,8 +27,15 @@ Primary source material for project context lives in `CLAUDE.md` and supporting 
   - `cores/analysis.py`: sequential orchestration and section integration
   - `cores/market_calendar.py`: NYSE trading-day utilities (canonical location for market calendar helpers)
   - `cores/report_generation.py`: shared report tone and section formatting rules
-- `scripts/`: operational CLIs and batch jobs
-- `integrations/`: firebase, Firecrawl, archive API/query
+- `ops/`: canonical operational entrypoints (hierarchical)
+  - `ops/pipelines/`: orchestrator, trigger batch, tracking agent
+  - `ops/batches/`: pending orders, performance tracker
+  - `ops/reports/`: weekly insight / Firecrawl jobs
+  - `ops/maintenance/`: compression, journal retry, price updates, market calendar CLI
+  - `ops/dev/`: demo and debug utilities
+- `scripts/`: backward-compatible shims → `ops/*`
+- `integrations/`: firebase, Firecrawl
+- `tools/`: one-off migrations and host setup scripts (cron, Playwright)
 - `reporting/`: PDF/report assembly (`report_generator`, etc.)
 - `trading/`: US trading integration and account handling
 - `tracking/`: journal, memory, trading state helpers
@@ -38,7 +45,8 @@ Primary source material for project context lives in `CLAUDE.md` and supporting 
 - `examples/`: dashboards, subscriber examples
 - `assets/`: static assets (logo, stock_map)
 - `repo_paths.py`: canonical `REPO_ROOT`
-- Root `*.py` shims: delegate to `scripts/` (same `python demo.py` paths as before)
+- Root `*.py` shims: delegate to `scripts/` → `ops/` (same `python demo.py` paths as before)
+- Import canonical modules directly (no flat `cores/model_config.py` shims): `cores.config.models`, `cores.data.prefetch`, etc.
 
 ## Preferred Commands
 

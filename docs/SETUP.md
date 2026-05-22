@@ -297,7 +297,7 @@ python -m playwright install chromium
 # Korean fonts: Built-in support, no installation needed
 ```
 
-For detailed Playwright setup, see [utils/PLAYWRIGHT_SETUP.md](../utils/PLAYWRIGHT_SETUP.md).
+For detailed Playwright setup, see [tools/PLAYWRIGHT_SETUP.md](../tools/PLAYWRIGHT_SETUP.md).
 
 ---
 
@@ -309,15 +309,15 @@ Set up automatic execution:
 
 ```bash
 # Simple setup (recommended)
-chmod +x utils/setup_crontab_simple.sh
-utils/setup_crontab_simple.sh
+chmod +x tools/setup_crontab_simple.sh
+tools/setup_crontab_simple.sh
 
 # Or advanced setup
-chmod +x utils/setup_crontab.sh
-utils/setup_crontab.sh
+chmod +x tools/setup_crontab.sh
+tools/setup_crontab.sh
 ```
 
-See [utils/CRONTAB_SETUP.md](../utils/CRONTAB_SETUP.md) for details.
+See [tools/CRONTAB_SETUP.md](../tools/CRONTAB_SETUP.md) for details.
 
 ### Morning Analysis
 

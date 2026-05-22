@@ -7,7 +7,7 @@ import json
 import time
 from typing import Any
 
-from cores.model_config import (
+from cores.config.models import (
     get_chatgpt_proxy_codex_model_map,
     get_chatgpt_proxy_request_default_model,
 )

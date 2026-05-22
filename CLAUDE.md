@@ -16,23 +16,34 @@ Scale: ~75,000+ LOC, specialized analysis agents & trading loop, US-only pipelin
 ```
 prism-insight/
 ├── cores/                     # AI analysis engine
-│   ├── agents/               # Analysis & trading agents
-│   ├── chatgpt_proxy/      # ChatGPT OAuth Proxy (Codex endpoint)
-│   ├── analysis.py         # Core orchestration
-│   └── report_generation.py # Shared markdown section templates / prompts
-├── scripts/                   # Operational CLIs & cron entrypoints (implementations)
-├── integrations/              # firebase_bridge, firecrawl_client, archive_api/query
+│   ├── agents/                # Analysis & trading agents
+│   ├── config/                # models.py, language.py
+│   ├── data/                  # prefetch, surge_detector, yfinance client
+│   ├── openai/                # error logging, quota helpers
+│   ├── visualization/         # charts
+│   ├── chatgpt_proxy/         # ChatGPT OAuth Proxy (Codex endpoint)
+│   ├── analysis.py            # Core orchestration
+│   └── report_generation.py   # Shared markdown section templates / prompts
+├── ops/                       # Operational CLIs (canonical)
+│   ├── pipelines/             # orchestrator, trigger_batch, tracking agent
+│   ├── batches/               # pending orders, performance tracker
+│   ├── reports/               # weekly insight / Firecrawl
+│   ├── maintenance/           # compression, prices, market calendar
+│   └── dev/                   # demo, debug utilities
+├── scripts/                   # Backward-compatible shims → ops/*
+├── integrations/              # firebase, firecrawl
 ├── reporting/                 # report_generator, pdf_converter, analysis_manager
 ├── trading/                   # KIS API trading (US)
 ├── tracking/                  # SQLite helpers, journal, compression
 ├── messaging/                 # Redis / GCP publishers
+├── tools/                     # migrations, cron/playwright setup scripts
 ├── examples/                  # Dashboards, subscriber examples
-├── tests/                     # pytest (see pytest.ini pythonpath)
+├── tests/                     # pytest (pyproject.toml pythonpath)
 ├── repo_paths.py              # REPO_ROOT — resolve reports/DB vs cwd
-└── *.py (repo root)           # Thin shims: same CLI names, delegate into scripts/ etc.
+└── *.py (repo root)           # Thin shims: same CLI names, delegate into scripts/ → ops/
 ```
 
-Legacy commands like `python stock_analysis_orchestrator.py` still work via root shims; implementations live under `scripts/`.
+Legacy commands like `python stock_analysis_orchestrator.py` still work via root shims; implementations live under `ops/`.
 
 ## Analysis Pipeline
 

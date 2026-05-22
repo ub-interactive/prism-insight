@@ -17,8 +17,8 @@ from mcp_agent.app import MCPApp
 # Set up import paths
 import sys
 from cores.agents import get_agent_directory
-from cores.data_prefetch import prefetch_us_analysis_data
-from cores.model_config import get_configured_model
+from cores.data.prefetch import prefetch_us_analysis_data
+from cores.config.models import get_configured_model
 from cores.report_generation import (
     generate_investment_strategy,
     generate_market_report,
@@ -26,8 +26,8 @@ from cores.report_generation import (
     generate_summary,
     get_disclaimer,
 )
-from cores.social_sentiment_client import USSocialSentimentClient
-from cores.stock_chart import (
+from cores.data.social_sentiment import USSocialSentimentClient
+from cores.visualization.chart import (
     get_us_institutional_chart_html,
     get_us_price_chart_html,
     get_us_technical_chart_html,

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Helper function to import modules from main project cores/ (avoid namespace collision)
 # =============================================================================
 from cores.agents.trading_journal_agent import create_trading_journal_agent
-from cores.model_config import get_configured_model, get_optional_reasoning_effort
+from cores.config.models import get_configured_model, get_optional_reasoning_effort
 from cores.utils import parse_llm_json
 
 

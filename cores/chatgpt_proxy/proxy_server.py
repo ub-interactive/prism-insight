@@ -10,7 +10,7 @@ import logging
 import aiohttp
 from aiohttp import web
 
-from cores.model_config import get_chatgpt_proxy_request_default_model
+from cores.config.models import get_chatgpt_proxy_request_default_model
 
 from . import api_translator
 from .constants import CHATGPT_RESPONSES_URL

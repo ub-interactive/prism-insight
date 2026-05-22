@@ -3,16 +3,16 @@ from mcp_agent.agents.agent import Agent
 from mcp_agent.workflows.llm.augmented_llm import RequestParams
 from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
 
-from cores.openai_error_logging import log_openai_error
+from cores.openai.error_logging import log_openai_error
 
 try:
-    from cores.model_config import get_configured_model, get_optional_reasoning_effort
+    from cores.config.models import get_configured_model, get_optional_reasoning_effort
 except Exception:
     # Fallback for dynamic import contexts.
     import importlib.util
     from pathlib import Path
 
-    _model_cfg_path = Path(__file__).resolve().parent / "model_config.py"
+    _model_cfg_path = Path(__file__).resolve().parent / "config" / "models.py"
     _model_cfg_spec = importlib.util.spec_from_file_location("report_model_config", _model_cfg_path)
     _model_cfg_mod = importlib.util.module_from_spec(_model_cfg_spec)
     assert _model_cfg_spec is not None and _model_cfg_spec.loader is not None

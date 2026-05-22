@@ -9,7 +9,7 @@ license = {text = "MIT"}
 [tool.ruff]
 target-version = "py310"
 line-length = 120
-src = ["cores", "scripts", "integrations", "reporting", "trading", "tracking", "messaging", "tests"]
+src = ["cores", "ops", "scripts", "integrations", "reporting", "trading", "tracking", "messaging", "tools", "tests"]
 
 [tool.ruff.lint]
 select = [
@@ -33,7 +33,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["cores", "scripts", "integrations", "reporting", "trading", "tracking", "messaging", "repo_paths"]
+known-first-party = ["cores", "ops", "scripts", "integrations", "reporting", "trading", "tracking", "messaging", "tools", "repo_paths"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B", "SIM"]

@@ -7,7 +7,7 @@ DAYS_TO_KEEP_LOGS=7
 DAYS_TO_KEEP_REPORTS=30
 
 mkdir -p "$PROJECT_ROOT/utils"
-echo "$(date): cleanup started" >> "$PROJECT_ROOT/utils/log_cleanup.log"
+echo "$(date): cleanup started" >> "$PROJECT_ROOT/tools/log_cleanup.log"
 
 if [ -d "$PROJECT_ROOT/logs" ]; then
   find "$PROJECT_ROOT/logs" -type f -mtime +$DAYS_TO_KEEP_LOGS -delete
@@ -22,4 +22,4 @@ for dir in "$PROJECT_ROOT/reports" "$PROJECT_ROOT/pdf_reports"; do
   fi
 done
 
-echo "$(date): cleanup completed" >> "$PROJECT_ROOT/utils/log_cleanup.log"
+echo "$(date): cleanup completed" >> "$PROJECT_ROOT/tools/log_cleanup.log"

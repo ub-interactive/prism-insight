@@ -75,7 +75,7 @@ def is_us_market_hours() -> bool:
     """Check if current time is during US market hours (09:30~16:00 EST, trading days only)"""
     try:
         # Project root check_market_day.py (NYSE calendar based)
-        from scripts.check_market_day import is_market_open
+        from ops.maintenance.check_market_day import is_market_open
         return is_market_open()
     except ImportError:
         # fallback: calculate directly with pytz
@@ -114,7 +114,7 @@ def get_next_us_market_open() -> datetime:
         datetime: Next US trading day's market open time (KST)
     """
     try:
-        from scripts.check_market_day import get_next_trading_day, EST, KST
+        from ops.maintenance.check_market_day import get_next_trading_day, EST, KST
 
         next_trading_day = get_next_trading_day()
         if next_trading_day:

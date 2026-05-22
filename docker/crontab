@@ -3,8 +3,8 @@ PATH=/app/venv/bin:/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/us
 PYTHONPATH=/app/prism-insight
 
 # daily maintenance
-0 2 * * * cd /app/prism-insight && chmod +x utils/backup_configs.sh && ./utils/backup_configs.sh >> /app/prism-insight/logs/backup.log 2>&1
-0 3 * * * cd /app/prism-insight && chmod +x utils/cleanup_logs.sh && ./utils/cleanup_logs.sh >> /app/prism-insight/logs/cleanup.log 2>&1
+0 2 * * * cd /app/prism-insight && chmod +x tools/backup_configs.sh && ./tools/backup_configs.sh >> /app/prism-insight/logs/backup.log 2>&1
+0 3 * * * cd /app/prism-insight && chmod +x tools/cleanup_logs.sh && ./tools/cleanup_logs.sh >> /app/prism-insight/logs/cleanup.log 2>&1
 0 3 * * 0 cd /app/prism-insight && python3 compress_trading_memory.py >> /app/prism-insight/logs/compression.log 2>&1
 
 # US pending order execution (Tue-Sat, KST)

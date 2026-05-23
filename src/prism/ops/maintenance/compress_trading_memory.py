@@ -73,7 +73,6 @@ async def run_compression(
     min_entries: int = 3,
     dry_run: bool = False,
     force: bool = False,
-    language: str = "ko",
     skip_cleanup: bool = False,
     max_principles: int = 50,
     max_intuitions: int = 50,
@@ -90,7 +89,6 @@ async def run_compression(
         min_entries: Minimum entries required to trigger compression
         dry_run: If True, only show what would be compressed
         force: If True, compress even with fewer than min_entries
-        language: Language for agent prompts ("ko" or "en")
         skip_cleanup: If True, skip the cleanup phase
         max_principles: Maximum active principles to keep (default: 50)
         max_intuitions: Maximum active intuitions to keep (default: 50)
@@ -116,7 +114,7 @@ async def run_compression(
         # Initialize agent with journal enabled (required for compression)
         agent = StockTrackingAgent(db_path=db_path, enable_journal=True)
         agent.trading_agent = MagicMock()  # Mock to avoid MCP initialization
-        await agent.initialize(language=language)
+        await agent.initialize()
 
         # Get current stats
         stats_before = agent.get_compression_stats()
@@ -335,13 +333,6 @@ Examples:
         help="Force compression regardless of minimum entry count"
     )
     parser.add_argument(
-        "--language",
-        type=str,
-        default="ko",
-        choices=["ko", "en"],
-        help="Language for agent prompts (default: ko)"
-    )
-    parser.add_argument(
         "--skip-cleanup",
         action="store_true",
         help="Skip the cleanup phase (only run compression)"
@@ -381,7 +372,6 @@ Examples:
         min_entries=args.min_entries,
         dry_run=args.dry_run,
         force=args.force,
-        language=args.language,
         skip_cleanup=args.skip_cleanup,
         max_principles=args.max_principles,
         max_intuitions=args.max_intuitions,

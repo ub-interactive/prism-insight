@@ -64,7 +64,7 @@ class TestTradingJournalTables:
         agent.trading_agent = MagicMock()
 
         # Initialize the agent (creates tables)
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Check that trading_journal table exists
         agent.cursor.execute("""
@@ -97,7 +97,7 @@ class TestTradingJournalTables:
         """Test that trading_intuitions table is created correctly"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Check that trading_intuitions table exists
         agent.cursor.execute("""
@@ -131,7 +131,7 @@ class TestJournalContext:
         """Test context retrieval when no journal entries exist"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Get context for a stock with no history
         context = agent._get_relevant_journal_context(
@@ -149,7 +149,7 @@ class TestJournalContext:
         """Test context retrieval when journal entries exist"""
         agent = StockTrackingAgent(db_path=self.db_path, enable_journal=True)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert test journal entry
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -210,7 +210,7 @@ class TestScoreAdjustment:
         """Test no adjustment when no trading history exists"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         adjustment, reasons = agent._get_score_adjustment_from_context(
             ticker="005930",
@@ -227,7 +227,7 @@ class TestScoreAdjustment:
         """Test negative adjustment for stocks with loss history"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert test entries with losses
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -259,7 +259,7 @@ class TestScoreAdjustment:
         """Test positive adjustment for stocks with profit history"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert test entries with profits
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -308,7 +308,7 @@ class TestParseJournalResponse:
         """Test parsing valid JSON response"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         response = '''
 ```json
@@ -342,7 +342,7 @@ class TestParseJournalResponse:
         """Test parsing invalid JSON response returns default structure"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         response = "This is not valid JSON at all"
 
@@ -377,7 +377,7 @@ class TestCompression:
         """Test compression stats with no entries"""
         agent = StockTrackingAgent(db_path=self.db_path, enable_journal=True)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         stats = agent.get_compression_stats()
 
@@ -392,7 +392,7 @@ class TestCompression:
         """Test compression stats with entries"""
         agent = StockTrackingAgent(db_path=self.db_path, enable_journal=True)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert test entries
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -420,7 +420,7 @@ class TestCompression:
         """Test saving intuition to database"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         intuition = {
             "category": "pattern",
@@ -450,7 +450,7 @@ class TestCompression:
         """Test that saving duplicate intuition updates existing one"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         intuition = {
             "category": "pattern",
@@ -485,7 +485,7 @@ class TestCompression:
         """Test simple summary generation"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         entry = {
             "one_line_summary": "급등 후 분할 매도로 수익 실현",
@@ -512,7 +512,7 @@ class TestCompression:
         """Test entry formatting for compression"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         entries = [
             {
@@ -540,7 +540,7 @@ class TestCompression:
         """Test parsing compression response"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         response = '''
 ```json
@@ -587,7 +587,7 @@ def run_quick_test():
             agent.trading_agent = MagicMock()
 
             # Initialize
-            await agent.initialize(language="ko")
+            await agent.initialize()
             logger.info("Agent initialized successfully")
 
             # Check tables exist
@@ -673,7 +673,7 @@ class TestTradingPrinciples:
         """Test that trading_principles table is created correctly"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Check that trading_principles table exists
         agent.cursor.execute("""
@@ -701,7 +701,7 @@ class TestTradingPrinciples:
         """Test that trading_intuitions has scope column"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Check scope column exists
         agent.cursor.execute("PRAGMA table_info(trading_intuitions)")
@@ -715,7 +715,7 @@ class TestTradingPrinciples:
         """Test extracting principles from lessons"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Test lessons
         lessons = [
@@ -755,7 +755,7 @@ class TestTradingPrinciples:
         """Test that high priority lessons are classified as universal"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         lessons = [
             {
@@ -782,7 +782,7 @@ class TestTradingPrinciples:
         """Test retrieving universal principles"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert test principles
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -832,7 +832,7 @@ class TestTradingPrinciples:
         """Test that context includes universal principles section"""
         agent = StockTrackingAgent(db_path=self.db_path, enable_journal=True)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert universal principle
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -869,7 +869,7 @@ class TestTradingPrinciples:
         """Test that saving duplicate principle updates existing one"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Save first principle
         agent._save_principle(
@@ -927,7 +927,7 @@ class TestMigrationScript:
         """Test that migration extracts lessons from existing journals"""
         agent = StockTrackingAgent(db_path=self.db_path)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert test journal entries with lessons (simulating Kakao, Samsung Electronics data)
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1000,7 +1000,7 @@ class TestCleanupStaleData:
         """Test that low confidence principles are deactivated"""
         agent = StockTrackingAgent(db_path=self.db_path, enable_journal=True)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert principles with varying confidence
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1032,7 +1032,7 @@ class TestCleanupStaleData:
         """Test that max_principles limit is enforced"""
         agent = StockTrackingAgent(db_path=self.db_path, enable_journal=True)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert 10 principles
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1068,7 +1068,7 @@ class TestCleanupStaleData:
         """Test that old Layer 3 entries are archived (deleted)"""
         agent = StockTrackingAgent(db_path=self.db_path, enable_journal=True)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert journal entries with different dates
         old_date = (datetime.now() - timedelta(days=400)).strftime("%Y-%m-%d %H:%M:%S")
@@ -1108,7 +1108,7 @@ class TestCleanupStaleData:
         """Test that dry_run mode doesn't modify data"""
         agent = StockTrackingAgent(db_path=self.db_path, enable_journal=True)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         # Insert low confidence principle
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

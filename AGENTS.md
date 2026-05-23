@@ -1,76 +1,46 @@
-# AGENTS.md - Codex Guide for PRISM-INSIGHT
+# AGENTS.md — Cursor / Codex guide
 
-This file governs the repository rooted here.
+Instructions for AI agents working in this repository.
 
-## Project Summary
+## Start here
 
-PRISM-INSIGHT is an AI-powered US stock analysis and automated trading system built around:
+1. **Skills** — `.cursor/skills/` (`prism-project`, `prism-python`, `prism-trading`, `prism-reports`)
+2. **Full guide** — [`CURSOR.md`](CURSOR.md)
+3. **Setup** — [`docs/SETUP.md`](docs/SETUP.md)
 
-- Python 3.10+
-- GPT-5 / Claude based analysis agents
-- SQLite storage
-- KIS trading APIs
-- US market flows
+## Project
 
-Primary source material for project context lives in `CLAUDE.md` and supporting docs under `docs/`.
-
-## Repository Map
+PRISM-INSIGHT: US stock analysis + KIS trading. Package: `src/prism`. Install: `pip install -e .`.
 
 ```
-prism-insight/
-├── README.md, LICENSE, pyproject.toml, requirements.txt
-├── deploy/              # Dockerfile, docker/, quickstart.sh
-├── src/
-│   ├── config/          # mcp_agent.config.yaml (no secrets)
-│   ├── var/             # gitignored outputs (reports, pdf, logs, triggers)
-│   ├── vendor/sqlite/   # MCP sqlite server
-│   └── prism/           # Application package
-│       ├── core/, ops/, reporting/, integrations/, trading/, tracking/, messaging/
-│       └── paths.py     # REPO_ROOT, SRC_ROOT, config/var paths
-├── tests/, examples/, assets/, tools/
-├── demo.py, stock_analysis_orchestrator.py, …  # thin root CLI shims (5 files)
-└── repo_paths.py        # backward-compat → prism.paths
+src/prism/{core,ops,trading,tracking,reporting,integrations,messaging}
+src/config/   src/var/   src/vendor/sqlite/
 ```
 
-## Preferred Commands
+Import `prism.*` only (not `cores`, `scripts`, or root `trading`).
+
+## Commands
 
 ```bash
 pip install -e .
-pip install -r requirements.txt
-python3 -m playwright install chromium
-```
-
-```bash
-python stock_analysis_orchestrator.py --mode morning
 python demo.py AAPL
-prism-demo AAPL   # after pip install -e .
+python stock_analysis_orchestrator.py --mode morning
+pytest tests/test_multi_account_us.py tests/test_trading_journal.py
 ```
 
-```bash
-pytest tests/test_trading_journal.py tests/test_multi_account_us.py
-```
+Skip unless required: `test_gcp_pubsub_signal.py`, `test_redis_signal_pubsub.py`, `test_integration_pipeline.py`.
 
-## Change Rules
+## Safety
 
-- Default to safe paths: prefer `--dry-run`, demo mode, or isolated tests.
-- Do not commit real credentials in `.env` or `**/trading/config/kis_devlp.yaml`.
-- Import canonical modules: `prism.core.*`, `prism.ops.*`, `prism.paths` — not legacy `cores` or `scripts`.
+- Prefer `--dry-run` and **demo** trading mode
+- No secrets in git (`.env`, `kis_devlp.yaml`, `mcp_agent.secrets.yaml`)
+- Sequential LLM agents; async-safe I/O
 
-## Engineering Rules
+## Deep dives
 
-- Async I/O in async flows; no blocking `requests` in async paths.
-- Sequential LLM agent execution (no `asyncio.gather` on report sections).
-- Korean report text: formal polite style (합쇼체).
-- KIS numeric fields: use existing safe conversion helpers.
-
-## File-Specific Notes
-
-- `src/prism/core/analysis.py` — sequential orchestration
-- `src/prism/core/config/models.py` — reads `src/config/mcp_agent.config.yaml`
-- `src/prism/paths.py` — `REPO_ROOT`, `src/var/reports`, `TRADING_CONFIG_DIR`
-- `src/prism/ops/pipelines/` — cron entry implementations
-
-## Before Finishing
-
-- Run the smallest relevant pytest subset.
-- Root shims and `pip install -e .` console scripts (`prism-demo`, etc.) should both work.
+| Topic | File |
+|-------|------|
+| Agents | `docs/agent-reference.md` |
+| Troubleshooting | `docs/troubleshooting.md` |
+| Tasks | `docs/tasks-reference.md` |
+| Paths / reports | `src/prism/paths.py` |

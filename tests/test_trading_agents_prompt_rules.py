@@ -4,20 +4,20 @@ from prism.core.agents.trading_agents import create_trading_scenario_agent
 
 
 def test_identity_is_can_slim_only_en():
-    agent = create_trading_scenario_agent(language="en")
+    agent = create_trading_scenario_agent()
     assert "creator of the CAN SLIM system" in agent.instruction
     assert "NOT value-investing" in agent.instruction
 
 
 def test_market_regime_uses_sp500_vix_en():
-    agent = create_trading_scenario_agent(language="en")
+    agent = create_trading_scenario_agent()
     assert "S&P 500 (^GSPC)" in agent.instruction
     assert "VIX < 18" in agent.instruction
     assert "VIX > 25" in agent.instruction
 
 
 def test_fundamental_gate_and_matrix_present_en():
-    agent = create_trading_scenario_agent(language="en")
+    agent = create_trading_scenario_agent()
     assert "Step 1 — Fundamental Gate (mandatory)" in agent.instruction
     assert "Step 2 — Market-Regime Entry Matrix" in agent.instruction
     for row in (
@@ -32,7 +32,7 @@ def test_fundamental_gate_and_matrix_present_en():
 
 
 def test_no_entry_forbidden_expressions_present_en():
-    agent = create_trading_scenario_agent(language="en")
+    agent = create_trading_scenario_agent()
     for forbidden in (
         "overheating concern",
         "inflection signal",
@@ -44,7 +44,7 @@ def test_no_entry_forbidden_expressions_present_en():
 
 
 def test_effective_score_and_json_schema_present_en():
-    agent = create_trading_scenario_agent(language="en")
+    agent = create_trading_scenario_agent()
     assert "effective_score ≥ min_score" in agent.instruction
     for key in (
         '"fundamental_check":',
@@ -60,14 +60,13 @@ def test_effective_score_and_json_schema_present_en():
 
 
 def test_uses_canonical_stock_holdings_table_en():
-    agent = create_trading_scenario_agent(language="en")
+    agent = create_trading_scenario_agent()
     assert "US portfolio table is `stock_holdings`." in agent.instruction
     assert "us_stock_holdings" not in agent.instruction
 
 
 def test_sector_constraint_applied_en():
     agent = create_trading_scenario_agent(
-        language="en",
         sector_names=["Technology", "Healthcare"],
     )
     assert "Technology, Healthcare" in agent.instruction

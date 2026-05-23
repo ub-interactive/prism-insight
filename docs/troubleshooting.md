@@ -1,6 +1,6 @@
 # Troubleshooting - PRISM-INSIGHT
 
-> **Note**: This is a detailed troubleshooting reference. For quick overview, see main [CLAUDE.md](../CLAUDE.md).
+> **Note**: Extended troubleshooting. Quick fixes: [CURSOR.md](../CURSOR.md) · [AGENTS.md](../AGENTS.md).
 
 ---
 
@@ -27,26 +27,7 @@ cd utils && chmod +x setup_playwright.sh && ./setup_playwright.sh
 
 ---
 
-### Issue 2: Korean Fonts Not Displaying in Charts
-
-**Symptoms**: Korean text shows as squares in generated charts
-
-**Solution**:
-```bash
-# Rocky Linux/CentOS
-sudo dnf install google-nanum-fonts
-
-# Ubuntu/Debian
-python3 cores/ubuntu_font_installer.py
-
-# Rebuild font cache
-sudo fc-cache -fv
-python3 -c "import matplotlib.font_manager as fm; fm.fontManager.rebuild()"
-```
-
----
-
-### Issue 3: Optional Firebase Bridge Not Sending Pushes
+### Issue 2: Optional Firebase Bridge Not Sending Pushes
 
 **Symptoms**: `firebase_bridge.notify` exits early or mobile QA devices never receive FCM traffic.
 
@@ -70,7 +51,7 @@ Error: MCP server 'yahoo_finance' not responding
 uvx --version
 
 # 2. Verify mcp_agent.config.yaml has the yahoo_finance entry
-grep -n "yahoo_finance" mcp_agent.config.yaml
+grep -n "yahoo_finance" src/config/mcp_agent.config.yaml
 
 # 3. Smoke-check the package (needs network).
 uvx --from yahoo-finance-mcp yahoo-finance-mcp --help || true
@@ -91,7 +72,7 @@ Error: KIS API authentication failed
 **Solution**:
 ```bash
 # 1. Verify kis_devlp.yaml configuration
-cat trading/config/kis_devlp.yaml
+cat src/prism/trading/config/kis_devlp.yaml
 
 # 2. Check credentials
 # - kis_app_key: Valid?
@@ -233,4 +214,4 @@ logging.basicConfig(
 
 ---
 
-*See also: [CLAUDE.md](../CLAUDE.md) | [CLAUDE_AGENTS.md](CLAUDE_AGENTS.md) | [CLAUDE_TASKS.md](CLAUDE_TASKS.md)*
+*See also: [CURSOR.md](../CURSOR.md) | [agent-reference.md](agent-reference.md) | [tasks-reference.md](tasks-reference.md)*

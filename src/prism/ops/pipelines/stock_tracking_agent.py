@@ -389,17 +389,16 @@ class USStockTrackingAgent:
         self.journal_manager = None
         self.compression_manager = None
 
-    async def initialize(self, language: str = "ko", sector_names: list = None):
+    async def initialize(self, sector_names: list = None):
         """
         Create necessary tables and initialize.
 
         Args:
-            language: Language code for agents (default: "ko")
             sector_names: List of valid sector names for trading agent (optional)
         """
         logger.info("Starting US tracking agent initialization")
 
-        self.language = language
+        self.language = "en"
 
         # Initialize SQLite connection
         self.conn = sqlite3.connect(self.db_path)
@@ -407,10 +406,10 @@ class USStockTrackingAgent:
         self.cursor = self.conn.cursor()
 
         # Initialize trading scenario agent for US
-        self.trading_agent = create_trading_scenario_agent(language=language, sector_names=sector_names)
+        self.trading_agent = create_trading_scenario_agent(sector_names=sector_names)
 
         # Initialize sell decision agent for US
-        self.sell_decision_agent = create_sell_decision_agent(language=language)
+        self.sell_decision_agent = create_sell_decision_agent()
 
         # Create US database tables
         await self._create_tables()
@@ -419,7 +418,6 @@ class USStockTrackingAgent:
         self.journal_manager = USJournalManager(
             cursor=self.cursor,
             conn=self.conn,
-            language=language,
             enable_journal=self.enable_journal
         )
 
@@ -2454,7 +2452,6 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
     async def run(
         self,
         pdf_report_paths: List[str],
-        language: str = "en",
         *,
         trigger_results_file: str = None,
         sector_names: list = None,
@@ -2464,7 +2461,6 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
 
         Args:
             pdf_report_paths: List of analysis report file paths
-            language: Locale hint forwarded to downstream agents (US pipeline defaults to English)
             trigger_results_file: Path to trigger results JSON file
             sector_names: Optional explicit sector whitelist for scenario agents
 
@@ -2499,7 +2495,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                     logger.warning(f"Failed to load trigger results file: {e}")
 
             # Initialize
-            await self.initialize(language, sector_names=sector_names)
+            await self.initialize(sector_names=sector_names)
 
             try:
                 # Process reports
@@ -2533,7 +2529,6 @@ async def main():
 
     parser = argparse.ArgumentParser(description="US Stock tracking and trading agent")
     parser.add_argument("--reports", nargs="+", help="List of analysis report file paths")
-    parser.add_argument("--language", default="en", help="Agent locale hint (default: en)")
     parser.add_argument(
         "--enable-journal",
         action="store_true",
@@ -2550,7 +2545,7 @@ async def main():
         agent = USStockTrackingAgent(
             enable_journal=args.enable_journal,
         )
-        success = await agent.run(args.reports, language=args.language)
+        success = await agent.run(args.reports)
         return success
 
 

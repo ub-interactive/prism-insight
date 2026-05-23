@@ -17,7 +17,7 @@ GICS_SECTORS = [
 ]
 
 
-def create_trading_scenario_agent(language: str = "en", sector_names: list = None):
+def create_trading_scenario_agent(sector_names: list = None):
     """
     Create US trading scenario generation agent.
 
@@ -26,7 +26,6 @@ def create_trading_scenario_agent(language: str = "en", sector_names: list = Non
     stocks with active momentum, scaled by US market regime (S&P 500 + VIX).
 
     Args:
-        language: Legacy language argument retained for callers (English JSON strings).
         sector_names: List of valid sector names. Falls back to GICS_SECTORS.
 
     Returns:
@@ -34,7 +33,6 @@ def create_trading_scenario_agent(language: str = "en", sector_names: list = Non
     """
     sectors = sector_names or GICS_SECTORS
     sector_constraint = ", ".join(sectors)
-    _ = language
 
     instruction = """## SYSTEM CONSTRAINTS
 
@@ -345,20 +343,15 @@ Prohibited: `"$170"`, `"about $170"`, `"minimum 170"`.
     )
 
 
-def create_sell_decision_agent(language: str = "en"):
+def create_sell_decision_agent():
     """
     Create US sell decision agent
 
     Professional analyst agent that determines the selling timing for US stock holdings.
 
-    Args:
-        language: Legacy language argument retained for callers (English narratives).
-
     Returns:
         Agent: US sell decision agent
     """
-
-    _ = language
     instruction = """## 🎯 Your Identity
 You are William O'Neil. Your iron rule: "Cut losses at 7-8%, no exceptions."
 

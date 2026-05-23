@@ -5,7 +5,7 @@
 
 import type { Market } from "@/types/dashboard"
 
-export type Language = "ko" | "en"
+export type Language = "en"
 
 /**
  * Format currency value based on market
@@ -15,13 +15,13 @@ export type Language = "ko" | "en"
 export function formatCurrency(
   value: number | undefined | null,
   market: Market = "KR",
-  language: Language = "ko"
+  language: Language = "en"
 ): string {
   if (value === undefined || value === null) {
     return market === "US" ? "$0.00" : "₩0"
   }
 
-  const locale = language === "en" ? "en-US" : "ko-KR"
+  const locale = "en-US"
   const currency = market === "US" ? "USD" : "KRW"
   const decimals = market === "US" ? 2 : 0
 
@@ -40,7 +40,7 @@ export function formatCurrency(
 export function formatCurrencyCompact(
   value: number | undefined | null,
   market: Market = "KR",
-  language: Language = "ko"
+  language: Language = "en"
 ): string {
   if (value === undefined || value === null || value === 0) {
     return market === "US" ? "$0" : "₩0"
@@ -62,32 +62,6 @@ export function formatCurrencyCompact(
       return `${sign}${symbol}${(absValue / 1e3).toFixed(1)}K`
     } else {
       return `${sign}${symbol}${absValue.toFixed(2)}`
-    }
-  } else {
-    // KR: Use 조 (trillion), 억 (hundred million), 만 (ten thousand)
-    if (language === "ko") {
-      if (absValue >= 1e12) {
-        return `${sign}${symbol}${(absValue / 1e12).toFixed(1)}조`
-      } else if (absValue >= 1e8) {
-        return `${sign}${symbol}${(absValue / 1e8).toFixed(1)}억`
-      } else if (absValue >= 1e4) {
-        return `${sign}${symbol}${(absValue / 1e4).toFixed(1)}만`
-      } else {
-        return `${sign}${symbol}${absValue.toLocaleString()}`
-      }
-    } else {
-      // English mode for Korean market
-      if (absValue >= 1e12) {
-        return `${sign}${symbol}${(absValue / 1e12).toFixed(1)}T`
-      } else if (absValue >= 1e9) {
-        return `${sign}${symbol}${(absValue / 1e9).toFixed(1)}B`
-      } else if (absValue >= 1e6) {
-        return `${sign}${symbol}${(absValue / 1e6).toFixed(1)}M`
-      } else if (absValue >= 1e3) {
-        return `${sign}${symbol}${(absValue / 1e3).toFixed(1)}K`
-      } else {
-        return `${sign}${symbol}${absValue.toLocaleString()}`
-      }
     }
   }
 }

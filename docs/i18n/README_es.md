@@ -122,7 +122,7 @@ Esto genera un informe de analisis con IA para Apple (AAPL). Prueba con otras ac
 ```bash
 python3 demo.py MSFT              # Microsoft
 python3 demo.py NVDA              # NVIDIA
-python3 demo.py TSLA --language ko  # Tesla (informe en coreano)
+python3 demo.py TSLA              # Tesla
 ```
 
 > **Obtiene tu clave de API de OpenAI** en [OpenAI Platform](https://platform.openai.com/api-keys)
@@ -237,7 +237,7 @@ Mas de 13 agentes especializados colaboran en equipos:
 <img src="docs/images/aiagent/agent_workflow2.png" alt="Flujo de Trabajo de Agentes" width="700">
 </details>
 
-**Documentacion Detallada de Agentes**: [docs/CLAUDE_AGENTS.md](docs/CLAUDE_AGENTS.md)
+**Documentacion Detallada de Agentes**: [docs/agent-reference.md](docs/agent-reference.md)
 
 ---
 
@@ -299,7 +299,7 @@ python stock_analysis_orchestrator.py --mode morning --language en
 | Documento | Descripcion |
 |-----------|-------------|
 | [docs/SETUP.md](docs/SETUP.md) | Guia de instalacion completa |
-| [docs/CLAUDE_AGENTS.md](docs/CLAUDE_AGENTS.md) | Detalles del sistema de agentes de IA |
+| [docs/agent-reference.md](docs/agent-reference.md) | Detalles del sistema de agentes de IA |
 | [docs/TRIGGER_BATCH_ALGORITHMS.md](docs/TRIGGER_BATCH_ALGORITHMS.md) | Algoritmos de deteccion de movimientos inusuales |
 | [docs/TRADING_JOURNAL.md](docs/TRADING_JOURNAL.md) | Sistema de memoria de trading |
 

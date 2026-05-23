@@ -8,7 +8,7 @@ Thank you for contributing to the PRISM-INSIGHT project! 🎉
 Please report through GitHub Issues for:
 - 🐛 **Bug Found**: When something doesn't work as expected
 - 💡 **Feature Suggestion**: New feature ideas
-- 📚 **Documentation Improvement**: Suggestions for improving README or code comments
+- 📚 **Documentation Improvement**: Suggestions for improving README, `CURSOR.md`, or code comments
 - ❓ **Questions**: Inquiries about usage or configuration
 
 ### 2. Pull Request Submission

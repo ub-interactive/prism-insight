@@ -20,7 +20,7 @@ export function TradingHistoryPage({ history, summary, prismPerformance = [], ma
   const { t, language } = useLanguage()
 
   const formatCurrency = (value: number) => {
-    return formatCurrencyUtil(value, market, language as "ko" | "en")
+    return formatCurrencyUtil(value, market, "en")
   }
 
   const formatPercent = (value: number) => {
@@ -29,7 +29,7 @@ export function TradingHistoryPage({ history, summary, prismPerformance = [], ma
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString(language === "ko" ? "ko-KR" : "en-US", {
+    return date.toLocaleDateString(en-US, {
       year: "numeric",
       month: "long",
       day: "numeric"

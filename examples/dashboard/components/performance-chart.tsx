@@ -19,7 +19,7 @@ export function PerformanceChart({ data, prismPerformance = [], holdings = [], s
   const seasonInfo = getSeasonInfo(market)
 
   const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("ko-KR", {
+    return new Intl.NumberFormat("en-US", {
       maximumFractionDigits: 0,
     }).format(value)
   }
@@ -45,14 +45,12 @@ export function PerformanceChart({ data, prismPerformance = [], holdings = [], s
       <Card className="border-border/50">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
-            {language === "ko"
-              ? `수익률 비교 (${seasonInfo.seasonName} 시작 이후)`
-              : `Return Comparison (Since ${seasonInfo.seasonName})`}
+            {`Return Comparison (Since ${seasonInfo.seasonName})`}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-            {language === "ko" ? "데이터가 없습니다." : "No data available."}
+            {No data available.}
           </div>
         </CardContent>
       </Card>
@@ -278,13 +276,9 @@ export function PerformanceChart({ data, prismPerformance = [], holdings = [], s
   }
 
   const index1Title =
-    language === "ko"
-      ? `S&P 500 대비 수익률 (${seasonInfo.seasonName})`
-      : `Return vs S&P 500 (${seasonInfo.seasonName})`
+    `Return vs S&P 500 (${seasonInfo.seasonName})`
   const index2Title =
-    language === "ko"
-      ? `NASDAQ 대비 수익률 (${seasonInfo.seasonName})`
-      : `Return vs NASDAQ (${seasonInfo.seasonName})`
+    `Return vs NASDAQ (${seasonInfo.seasonName})`
 
   return (
     <div className="space-y-4">
@@ -321,7 +315,7 @@ function IndexCharts({ data, market = "US" }: { data: MarketCondition[], market?
   const { t, language } = useLanguage()
 
   const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("ko-KR", {
+    return new Intl.NumberFormat("en-US", {
       maximumFractionDigits: 0,
     }).format(value)
   }

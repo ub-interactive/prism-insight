@@ -20,7 +20,7 @@ export function StockDetailModal({ stock, onClose, isRealTrading = false, market
   const { t, language } = useLanguage()
 
   const formatCurrency = (value: number) => {
-    return formatCurrencyUtil(value ?? 0, market, language as "ko" | "en")
+    return formatCurrencyUtil(value ?? 0, market, "en")
   }
 
   const formatPercent = (value: number) => {
@@ -31,7 +31,7 @@ export function StockDetailModal({ stock, onClose, isRealTrading = false, market
   const formatDate = (dateString?: string) => {
     if (!dateString) return "-"
     const date = new Date(dateString)
-    return date.toLocaleDateString(language === "ko" ? "ko-KR" : "en-US", {
+    return date.toLocaleDateString(en-US, {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -323,8 +323,7 @@ export function StockDetailModal({ stock, onClose, isRealTrading = false, market
                     <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-3">{t("modal.keyPriceLevels")}</p>
                     <div className="grid grid-cols-2 gap-2">
                       {Object.entries(scenario.trading_scenarios.key_levels).map(([key, value]) => {
-                        // 한글 레이블 매핑
-                        const labelMap: Record<string, string> = {
+                                                const labelMap: Record<string, string> = {
                           'primary_support': t("modal.primarySupport"),
                           'secondary_support': t("modal.secondarySupport"),
                           'primary_resistance': t("modal.primaryResistance"),

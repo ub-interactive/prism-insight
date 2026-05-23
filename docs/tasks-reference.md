@@ -1,6 +1,6 @@
 # Common Tasks - PRISM-INSIGHT
 
-> **Note**: This is a detailed task reference. For quick overview, see main [CLAUDE.md](../CLAUDE.md).
+> **Note**: Task playbooks. Overview: [CURSOR.md](../CURSOR.md) · [AGENTS.md](../AGENTS.md).
 
 ---
 
@@ -8,23 +8,21 @@
 
 ```python
 # 1. Create agent file
-# File: cores/agents/your_agent.py
+# File: src/prism/core/agents/your_agent.py
 
 from mcp_agent import Agent
 
-def create_your_agent(company_name, company_code, reference_date, language="ko"):
-    if language == "en":
-        instruction = """Your English instruction..."""
-    else:
-        instruction = """한국어 지시사항..."""
+def create_your_agent(company_name, company_code, reference_date, language="en"):
+    _ = language
+    instruction = """Your English instruction..."""
 
     return Agent(
         instruction=instruction,
         description=f"Your Agent for {company_name}",
-        mcp_servers=["kospi_kosdaq"],  # Add required MCP servers
+        mcp_servers=["yahoo_finance"],  # Add required MCP servers
     )
 
-# 2. Register in cores/agents/__init__.py
+# 2. Register in src/prism/core/agents/__init__.py
 from .your_agent import create_your_agent
 
 def get_agent_directory(...):
@@ -34,14 +32,14 @@ def get_agent_directory(...):
     }
     return agents
 
-# 3. Add to base_sections in cores/analysis.py
+# 3. Add to base_sections in src/prism/core/analysis.py
 base_sections = [
     "price_volume_analysis",
     # ... existing sections
     "your_section",  # Add your section
 ]
 
-# 4. Add section template in cores/report_generation.py
+# 4. Add section template in src/prism/core/report_generation.py
 section_templates = {
     # ... existing templates
     "your_section": """
@@ -80,7 +78,7 @@ def detect_surge_stocks(mode="morning"):
 
 ## Task 3: Adding Multi-Language Support
 
-1. Extend templates in `cores/language_config.py` (or whichever localized template helper your section uses).
+1. Extend templates in `src/prism/core/config/language.py` (or whichever localized template helper your section uses).
 
 2. Run the orchestrator with an explicit `--language` flag:
 
@@ -96,7 +94,7 @@ python stock_analysis_orchestrator.py --mode morning --language en
 ## Task 4: Modifying Trading Strategy
 
 ```python
-# File: cores/agents/trading_agents.py
+# File: src/prism/core/agents/trading_agents.py
 
 def create_trading_scenario_agent(...):
     instruction = """
@@ -132,7 +130,7 @@ def create_trading_scenario_agent(...):
 ## Task 5: Customizing Report Format
 
 ```python
-# File: cores/report_generation.py
+# File: src/prism/core/report_generation.py
 
 # 1. Modify report template
 REPORT_TEMPLATE = """
@@ -257,12 +255,12 @@ python examples/generate_dashboard_json.py --no-translation
 ```
 
 **Output files:**
-- `examples/dashboard/public/dashboard_data.json` (Korean)
+- `examples/dashboard/public/us_dashboard_data_en.json` (English)
 - `examples/dashboard/public/dashboard_data_en.json` (English)
 
 **Features:**
 - Database to JSON conversion from trading history
-- Multi-language support via translation_utils.py
+- English dashboard JSON via `examples/generate_us_dashboard_json.py`
 - Market index data integration
 - Portfolio performance metrics
 - Trading Insights data (principles, journal, intuitions)
@@ -341,4 +339,4 @@ python utils/migrate_lessons_to_principles.py
 
 ---
 
-*See also: [CLAUDE.md](../CLAUDE.md) | [CLAUDE_AGENTS.md](CLAUDE_AGENTS.md) | [CLAUDE_TROUBLESHOOTING.md](CLAUDE_TROUBLESHOOTING.md)*
+*See also: [CURSOR.md](../CURSOR.md) | [agent-reference.md](agent-reference.md) | [troubleshooting.md](troubleshooting.md)*

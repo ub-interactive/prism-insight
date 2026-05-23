@@ -23,7 +23,7 @@ export function HoldingsTable({ holdings, onStockClick, title = "보유 종목",
 
   const formatCurrency = (value: number | undefined) => {
     if (value === undefined || value === null) return isUSMarket ? "$0.00" : "₩0"
-    return formatCurrencyUtil(value, market, language as "ko" | "en")
+    return formatCurrencyUtil(value, market, "en")
   }
 
   const formatPercent = (value: number | undefined) => {
@@ -59,7 +59,7 @@ export function HoldingsTable({ holdings, onStockClick, title = "보유 종목",
             {isRealTrading ? (
               <div className="flex items-center gap-2">
                 <Badge variant="default" className={badgeGradientClass}>
-                  {isUSMarket ? (language === "ko" ? "미국 실전투자" : "US Real") : t("badge.realTrading")}
+                  {isUSMarket ? (US Real) : t("badge.realTrading")}
                 </Badge>
                 <Badge variant="outline" className={badgeOutlineClass}>
                   {isUSMarket ? "Season 1" : t("badge.season2")}
@@ -67,7 +67,7 @@ export function HoldingsTable({ holdings, onStockClick, title = "보유 종목",
               </div>
             ) : (
               <Badge variant="outline" className={simulatorBadgeClass}>
-                {isUSMarket ? (language === "ko" ? "미국 시뮬레이션" : "US Simulation") : t("badge.aiSimulation")}
+                {isUSMarket ? (US Simulation) : t("badge.aiSimulation")}
               </Badge>
             )}
           </div>

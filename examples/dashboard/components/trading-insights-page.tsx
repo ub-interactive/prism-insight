@@ -77,7 +77,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
   const formatDate = (dateString: string) => {
     if (!dateString) return "-"
     const date = new Date(dateString)
-    return date.toLocaleDateString(language === "ko" ? "ko-KR" : "en-US", {
+    return date.toLocaleDateString(en-US, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -172,7 +172,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                 }
               `}
             >
-              {language === "ko" ? "전체" : "All"}
+              {All}
             </button>
             <button
               onClick={() => setMarketFilter("US")}
@@ -185,7 +185,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
               `}
             >
               <span>🇺🇸</span>
-              <span>{language === "ko" ? "미국" : "US"}</span>
+              <span>{US}</span>
             </button>
           </div>
         </div>
@@ -207,26 +207,26 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
               </div>
               <span className="font-semibold">{t("insights.category.performance")}</span>
               <Badge variant="outline" className="text-xs ml-auto">
-                {language === "ko" ? "최근 1개월" : "Last 30d"}
+                {Last 30d}
               </Badge>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <span className="text-muted-foreground text-xs">
-                  {language === "ko" ? "실제 매매" : "Actual Trades"}
+                  {Actual Trades}
                 </span>
                 <p className="font-bold text-green-600">
-                  {data.performance_analysis?.actual_trading?.count || 0}{language === "ko" ? "건" : ""}
+                  {data.performance_analysis?.actual_trading?.count || 0}{}
                   {data.performance_analysis?.actual_trading?.win_rate !== undefined && (
                     <span className="text-muted-foreground font-normal text-xs ml-1">
-                      ({language === "ko" ? "승률" : "WR"} {(data.performance_analysis.actual_trading.win_rate * 100).toFixed(0)}%)
+                      ({WR} {(data.performance_analysis.actual_trading.win_rate * 100).toFixed(0)}%)
                     </span>
                   )}
                 </p>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">
-                  {language === "ko" ? "평균 수익률" : "Avg Return"}
+                  {Avg Return}
                 </span>
                 <p className={`font-bold ${
                   (data.performance_analysis?.actual_trading?.avg_profit_rate || 0) >= 0
@@ -240,20 +240,18 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
               <TooltipProvider>
                 <div>
                   <span className="text-muted-foreground text-xs flex items-center gap-1">
-                    {language === "ko" ? "관망 종목" : "Watched Stocks"}
+                    {Watched Stocks}
                     <Tooltip>
                       <TooltipTrigger>
                         <HelpCircle className="w-3 h-3" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p>{language === "ko"
-                          ? "분석 후 매수하지 않고 관망한 종목. 30일 추적 완료된 종목만 성과 분석에 포함."
-                          : "Stocks analyzed but not purchased. Only 30-day completed stocks included in analysis."}</p>
+                        <p>{"Stocks analyzed but not purchased. Only 30-day completed stocks included in analysis."}</p>
                       </TooltipContent>
                     </Tooltip>
                   </span>
                   <p className="font-bold">
-                    {data.performance_analysis?.overview.total || 0}{language === "ko" ? "건" : ""}
+                    {data.performance_analysis?.overview.total || 0}{}
                     <span className="text-muted-foreground font-normal text-xs ml-1">
                       ({t("insights.performance.completed")} {data.performance_analysis?.overview.completed || 0})
                     </span>
@@ -261,15 +259,13 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                 </div>
                 <div>
                   <span className="text-muted-foreground text-xs flex items-center gap-1">
-                    {language === "ko" ? "관망 승률" : "Watched Win Rate"}
+                    {Watched Win Rate}
                     <Tooltip>
                       <TooltipTrigger>
                         <HelpCircle className="w-3 h-3" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p>{language === "ko"
-                          ? "관망 종목 중 30일 후 수익인 종목 비율 (30일 추적 완료 기준)"
-                          : "Percentage of watched stocks profitable after 30 days"}</p>
+                        <p>{"Percentage of watched stocks profitable after 30 days"}</p>
                       </TooltipContent>
                     </Tooltip>
                   </span>
@@ -297,7 +293,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
               <span className="font-semibold">{t("insights.category.wisdom")}</span>
               {marketFilter !== "all" && (
                 <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">
-                  🇺🇸 {language === "ko" ? "필터 적용" : "Filtered"}
+                  🇺🇸 {Filtered}
                 </Badge>
               )}
             </div>
@@ -305,7 +301,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
               <div>
                 <span className="text-muted-foreground text-xs">{t("insights.summary.totalPrinciples")}</span>
                 <p className="font-bold">
-                  {filteredPrinciples.length}{language === "ko" ? "개" : ""}
+                  {filteredPrinciples.length}{}
                   {marketFilter !== "all" && filteredPrinciples.length !== data.principles.length && (
                     <span className="text-muted-foreground font-normal text-xs ml-1">
                       / {data.principles.length}
@@ -316,13 +312,13 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
               <div>
                 <span className="text-muted-foreground text-xs">{t("insights.summary.highPriority")}</span>
                 <p className="font-bold text-red-600">
-                  {filteredPrinciples.filter(p => p.priority === "high").length}{language === "ko" ? "개" : ""}
+                  {filteredPrinciples.filter(p => p.priority === "high").length}{}
                 </p>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">{t("insights.summary.totalIntuitions")}</span>
                 <p className="font-bold">
-                  {filteredIntuitions.length}{language === "ko" ? "개" : ""}
+                  {filteredIntuitions.length}{}
                   {marketFilter !== "all" && filteredIntuitions.length !== data.intuitions.length && (
                     <span className="text-muted-foreground font-normal text-xs ml-1">
                       / {data.intuitions.length}
@@ -373,15 +369,13 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium flex items-center gap-2">
                       <Eye className="w-4 h-4 text-cyan-500" />
-                      {language === "ko" ? "관망종목의 트리거 유형별 성과" : "Watched Stocks by Trigger Type"}
+                      {Watched Stocks by Trigger Type}
                       <Tooltip>
                         <TooltipTrigger>
                           <HelpCircle className="w-3 h-3 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">
-                          <p>{language === "ko"
-                            ? "분석 후 관망한 종목들의 7/14/30일 가격 변화 추적 결과"
-                            : "Price tracking results for stocks analyzed but not traded"}</p>
+                          <p>{"Price tracking results for stocks analyzed but not traded"}</p>
                         </TooltipContent>
                       </Tooltip>
                     </h4>
@@ -390,7 +384,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                         <thead>
                           <tr className="border-b">
                             <th className="text-left py-2 px-3 font-medium text-muted-foreground">
-                              {language === "ko" ? "트리거" : "Trigger"}
+                              {Trigger}
                             </th>
                             <th className="text-center py-2 px-3 font-medium text-muted-foreground">
                               {t("insights.performance.count")}
@@ -412,9 +406,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                     <HelpCircle className="w-3 h-3 text-muted-foreground" />
                                   </TooltipTrigger>
                                   <TooltipContent className="max-w-xs">
-                                    <p>{language === "ko"
-                                      ? "30일 후에도 수익인 종목의 비율"
-                                      : "Percentage of stocks still profitable after 30 days"}</p>
+                                    <p>{"Percentage of stocks still profitable after 30 days"}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
@@ -461,15 +453,13 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium flex items-center gap-2">
                       <BarChart3 className="w-4 h-4 text-cyan-500" />
-                      {language === "ko" ? "관망종목의 손익비 구간별 분석" : "Watched Stocks by R/R Ratio"}
+                      {Watched Stocks by R/R Ratio}
                       <Tooltip>
                         <TooltipTrigger>
                           <HelpCircle className="w-3 h-3 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">
-                          <p>{language === "ko"
-                            ? "관망 종목의 손익비(목표가÷손절가) 구간별 30일 후 수익률. 30일 추적 완료된 종목 기준."
-                            : "30-day returns of watched stocks by Risk/Reward ratio range."}</p>
+                          <p>{"30-day returns of watched stocks by Risk/Reward ratio range."}</p>
                         </TooltipContent>
                       </Tooltip>
                     </h4>
@@ -515,28 +505,26 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-green-500" />
-                      {language === "ko" ? "실제 매매 성과 (최근 30일)" : "Actual Trading (Last 30 Days)"}
+                      {Actual Trading (Last 30 Days)}
                       <Tooltip>
                         <TooltipTrigger>
                           <HelpCircle className="w-3 h-3 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">
-                          <p>{language === "ko"
-                            ? "최근 30일간 매도 완료된 거래 기준. 현재 보유중인 종목은 제외."
-                            : "Based on trades sold in the last 30 days. Current holdings excluded."}</p>
+                          <p>{"Based on trades sold in the last 30 days. Current holdings excluded."}</p>
                         </TooltipContent>
                       </Tooltip>
                     </h4>
                     <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
                       <div className="flex items-center justify-between mb-3">
                         <span className="font-medium text-green-700 dark:text-green-400">
-                          {data.performance_analysis.actual_trading.count || 0}{language === "ko" ? "건 완료" : " trades"}
+                          {data.performance_analysis.actual_trading.count || 0}{ trades}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         {/* 평균 수익률 */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{language === "ko" ? "평균 수익률" : "Avg Return"}</span>
+                          <span className="text-muted-foreground text-xs">{Avg Return}</span>
                           <p className={`font-bold text-lg ${
                             (data.performance_analysis.actual_trading.avg_profit_rate || 0) >= 0 ? "text-green-600" : "text-red-600"
                           }`}>
@@ -545,7 +533,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                         </div>
                         {/* 승률 */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{language === "ko" ? "승률" : "Win Rate"}</span>
+                          <span className="text-muted-foreground text-xs">{Win Rate}</span>
                           <p className="font-bold text-lg">
                             {data.performance_analysis.actual_trading.win_rate !== null
                               ? `${(data.performance_analysis.actual_trading.win_rate * 100).toFixed(0)}%`
@@ -557,28 +545,28 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                         </div>
                         {/* 평균 수익 (수익건) */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{language === "ko" ? "평균 수익 (수익건)" : "Avg Profit (wins)"}</span>
+                          <span className="text-muted-foreground text-xs">{Avg Profit (wins)}</span>
                           <p className="font-bold text-green-600">
                             {formatPercent(data.performance_analysis.actual_trading.avg_profit)}
                           </p>
                         </div>
                         {/* 평균 손실 (손실건) */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{language === "ko" ? "평균 손실 (손실건)" : "Avg Loss (losses)"}</span>
+                          <span className="text-muted-foreground text-xs">{Avg Loss (losses)}</span>
                           <p className="font-bold text-red-600">
                             {formatPercent(data.performance_analysis.actual_trading.avg_loss)}
                           </p>
                         </div>
                         {/* 최대 수익 */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{language === "ko" ? "최대 수익" : "Max Profit"}</span>
+                          <span className="text-muted-foreground text-xs">{Max Profit}</span>
                           <p className="font-bold text-green-600">
                             {formatPercent(data.performance_analysis.actual_trading.max_profit)}
                           </p>
                         </div>
                         {/* 최대 손실 */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{language === "ko" ? "최대 손실" : "Max Loss"}</span>
+                          <span className="text-muted-foreground text-xs">{Max Loss}</span>
                           <p className="font-bold text-red-600">
                             {formatPercent(data.performance_analysis.actual_trading.max_loss)}
                           </p>
@@ -592,9 +580,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                 <HelpCircle className="w-3 h-3" />
                               </TooltipTrigger>
                               <TooltipContent className="max-w-xs">
-                                <p>{language === "ko"
-                                  ? "총수익 ÷ 총손실. 1.0 이상이면 수익, 2.0 이상이면 우수"
-                                  : "Total Profit ÷ Total Loss. Above 1.0 is profitable, above 2.0 is excellent"}</p>
+                                <p>{"Total Profit ÷ Total Loss. Above 1.0 is profitable, above 2.0 is excellent"}</p>
                               </TooltipContent>
                             </Tooltip>
                           </span>
@@ -617,15 +603,13 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium flex items-center gap-2">
                       <Filter className="w-4 h-4 text-purple-500" />
-                      {language === "ko" ? "실제 매매 종목의 트리거 유형별 성과 (2026.01.12~)" : "Actual Trading by Trigger Type (Since 2026.01.12)"}
+                      {Actual Trading by Trigger Type (Since 2026.01.12)}
                       <Tooltip>
                         <TooltipTrigger>
                           <HelpCircle className="w-3 h-3 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">
-                          <p>{language === "ko"
-                            ? "2026.01.12부터 트리거 유형 추적 시작. 어떤 트리거로 진입한 매매가 성과가 좋은지 비교."
-                            : "Trigger type tracking started from 2026.01.12. Compare performance by entry trigger type."}</p>
+                          <p>{"Trigger type tracking started from 2026.01.12. Compare performance by entry trigger type."}</p>
                         </TooltipContent>
                       </Tooltip>
                     </h4>
@@ -635,29 +619,29 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                           <tr className="border-b">
                             <th className="text-left py-2 px-3 font-medium text-muted-foreground">{t("insights.performance.triggerType")}</th>
                             <th className="text-center py-2 px-3 font-medium text-muted-foreground">{t("insights.performance.count")}</th>
-                            <th className="text-center py-2 px-3 font-medium text-muted-foreground">{language === "ko" ? "승률" : "Win Rate"}</th>
+                            <th className="text-center py-2 px-3 font-medium text-muted-foreground">{Win Rate}</th>
                             <th className="text-center py-2 px-3 font-medium text-muted-foreground">
                               <div className="flex items-center justify-center gap-1">
-                                {language === "ko" ? "평균 수익" : "Avg Profit"}
+                                {Avg Profit}
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <HelpCircle className="w-3 h-3" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{language === "ko" ? "수익 거래만의 평균" : "Average of winning trades only"}</p>
+                                    <p>{Average of winning trades only}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
                             </th>
                             <th className="text-center py-2 px-3 font-medium text-muted-foreground">
                               <div className="flex items-center justify-center gap-1">
-                                {language === "ko" ? "평균 손실" : "Avg Loss"}
+                                {Avg Loss}
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <HelpCircle className="w-3 h-3" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{language === "ko" ? "손실 거래만의 평균" : "Average of losing trades only"}</p>
+                                    <p>{Average of losing trades only}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
@@ -714,9 +698,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                             <HelpCircle className="w-3 h-3 text-muted-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
-                            <p>{language === "ko"
-                              ? "관망했지만 30일 후 +10% 이상 상승한 종목. 분석 시점 가격 기준."
-                              : "Stocks skipped but rose +10%+ after 30 days from analysis price."}</p>
+                            <p>{"Stocks skipped but rose +10%+ after 30 days from analysis price."}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Badge variant="destructive" className="text-xs">
@@ -737,15 +719,15 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                             </div>
                             <div className="mt-2 text-xs text-muted-foreground grid grid-cols-3 gap-2">
                               <div>
-                                <span>{language === "ko" ? "분석일" : "Analyzed"}: </span>
+                                <span>{Analyzed}: </span>
                                 <span>{opp.analyzed_date?.split(' ')[0] || '-'}</span>
                               </div>
                               <div>
-                                <span>{language === "ko" ? "트리거" : "Trigger"}: </span>
+                                <span>{Trigger}: </span>
                                 <span>{opp.trigger_type}</span>
                               </div>
                               <div>
-                                <span>{language === "ko" ? "판정" : "Decision"}: </span>
+                                <span>{Decision}: </span>
                                 <span className="text-red-600">{opp.decision || opp.skip_reason || '-'}</span>
                               </div>
                             </div>
@@ -766,9 +748,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                             <HelpCircle className="w-3 h-3 text-muted-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
-                            <p>{language === "ko"
-                              ? "관망하여 30일 후 -10% 이상 하락을 피한 종목. 분석 시점 가격 기준."
-                              : "Stocks skipped that fell -10%+ after 30 days. Avoided loss from analysis price."}</p>
+                            <p>{"Stocks skipped that fell -10%+ after 30 days. Avoided loss from analysis price."}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Badge variant="default" className="bg-green-500 text-xs">
@@ -789,15 +769,15 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                             </div>
                             <div className="mt-2 text-xs text-muted-foreground grid grid-cols-3 gap-2">
                               <div>
-                                <span>{language === "ko" ? "분석일" : "Analyzed"}: </span>
+                                <span>{Analyzed}: </span>
                                 <span>{loss.analyzed_date?.split(' ')[0] || '-'}</span>
                               </div>
                               <div>
-                                <span>{language === "ko" ? "트리거" : "Trigger"}: </span>
+                                <span>{Trigger}: </span>
                                 <span>{loss.trigger_type}</span>
                               </div>
                               <div>
-                                <span>{language === "ko" ? "판정" : "Decision"}: </span>
+                                <span>{Decision}: </span>
                                 <span className="text-green-600">{loss.decision || loss.skip_reason || '-'}</span>
                               </div>
                             </div>
@@ -936,7 +916,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
             <BookOpen className="w-5 h-5 text-blue-500" />
             <CardTitle>{t("insights.journal")}</CardTitle>
             <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-xs">
-              {language === "ko" ? "통합 트레이딩 저널" : "Trading journal"}
+              {Trading journal}
             </Badge>
           </div>
           <CardDescription>{t("insights.journalDescription")}</CardDescription>
@@ -994,7 +974,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                         </div>
                         <div>
                           <span className="text-muted-foreground">{t("insights.holdingDays")}</span>
-                          <p className="font-medium">{entry.holding_days}{language === "ko" ? "일" : " days"}</p>
+                          <p className="font-medium">{entry.holding_days}{ days}</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground">{t("insights.profitRate")}</span>
@@ -1030,7 +1010,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                   <div className="flex items-center gap-2 mb-1">
                                     <TrendingUp className="w-4 h-4 text-green-600" />
                                     <span className="font-medium text-green-700 dark:text-green-400">
-                                      {language === "ko" ? "매수 컨텍스트" : "Buy Context"}
+                                      {Buy Context}
                                     </span>
                                   </div>
                                   <p className="text-muted-foreground">{parsed.buy_context_summary}</p>
@@ -1041,7 +1021,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                   <div className="flex items-center gap-2 mb-1">
                                     <TrendingDown className="w-4 h-4 text-red-600" />
                                     <span className="font-medium text-red-700 dark:text-red-400">
-                                      {language === "ko" ? "매도 컨텍스트" : "Sell Context"}
+                                      {Sell Context}
                                     </span>
                                   </div>
                                   <p className="text-muted-foreground">{parsed.sell_context_summary}</p>
@@ -1051,13 +1031,13 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                 <div className="grid md:grid-cols-2 gap-3">
                                   {parsed.market_at_buy && (
                                     <div className="p-2 rounded bg-muted/30">
-                                      <span className="text-xs text-muted-foreground">{language === "ko" ? "매수시점 시장" : "Market at Buy"}</span>
+                                      <span className="text-xs text-muted-foreground">{Market at Buy}</span>
                                       <p className="text-sm">{parsed.market_at_buy}</p>
                                     </div>
                                   )}
                                   {parsed.market_at_sell && (
                                     <div className="p-2 rounded bg-muted/30">
-                                      <span className="text-xs text-muted-foreground">{language === "ko" ? "매도시점 시장" : "Market at Sell"}</span>
+                                      <span className="text-xs text-muted-foreground">{Market at Sell}</span>
                                       <p className="text-sm">{parsed.market_at_sell}</p>
                                     </div>
                                   )}
@@ -1068,7 +1048,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                   <div className="flex items-center gap-2 mb-2">
                                     <Zap className="w-4 h-4 text-blue-600" />
                                     <span className="font-medium text-blue-700 dark:text-blue-400">
-                                      {language === "ko" ? "핵심 변화" : "Key Changes"}
+                                      {Key Changes}
                                     </span>
                                   </div>
                                   <ul className="space-y-1 text-muted-foreground">
@@ -1111,7 +1091,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                         ? "bg-green-500/10 text-green-600 border-green-500/20"
                                         : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
                                     }>
-                                      {language === "ko" ? "매수" : "Buy"}: {parsed.buy_quality}
+                                      {Buy}: {parsed.buy_quality}
                                     </Badge>
                                   </div>
                                   {parsed.buy_quality_reason && (
@@ -1127,7 +1107,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                         ? "bg-green-500/10 text-green-600 border-green-500/20"
                                         : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
                                     }>
-                                      {language === "ko" ? "매도" : "Sell"}: {parsed.sell_quality}
+                                      {Sell}: {parsed.sell_quality}
                                     </Badge>
                                   </div>
                                   {parsed.sell_quality_reason && (
@@ -1141,7 +1121,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                 <div className="flex items-center gap-2 mb-2">
                                   <AlertCircle className="w-4 h-4 text-orange-600" />
                                   <span className="font-medium text-orange-700 dark:text-orange-400 text-sm">
-                                    {language === "ko" ? "놓친 신호" : "Missed Signals"}
+                                    {Missed Signals}
                                   </span>
                                 </div>
                                 <ul className="space-y-1 text-xs text-muted-foreground">
@@ -1159,7 +1139,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                 <div className="flex items-center gap-2 mb-2">
                                   <Target className="w-4 h-4 text-purple-600" />
                                   <span className="font-medium text-purple-700 dark:text-purple-400 text-sm">
-                                    {language === "ko" ? "과잉 반응 신호" : "Overreacted Signals"}
+                                    {Overreacted Signals}
                                   </span>
                                 </div>
                                 <ul className="space-y-1 text-xs text-muted-foreground">
@@ -1204,21 +1184,21 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                     {normalizedLesson.condition && (
                                       <div>
                                         <span className="text-muted-foreground font-medium">
-                                          {language === "ko" ? "조건" : "Condition"}:
+                                          {Condition}:
                                         </span>
                                         <p className="mt-0.5">{normalizedLesson.condition}</p>
                                       </div>
                                     )}
                                     <div>
                                       <span className="text-muted-foreground font-medium">
-                                        {language === "ko" ? "행동" : "Action"}:
+                                        {Action}:
                                       </span>
                                       <p className="mt-0.5 text-primary">{normalizedLesson.action}</p>
                                     </div>
                                     {normalizedLesson.reason && (
                                       <div>
                                         <span className="text-muted-foreground font-medium">
-                                          {language === "ko" ? "이유" : "Reason"}:
+                                          {Reason}:
                                         </span>
                                         <p className="mt-0.5 text-muted-foreground text-xs">{normalizedLesson.reason}</p>
                                       </div>

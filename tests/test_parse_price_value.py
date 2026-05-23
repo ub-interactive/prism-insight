@@ -109,11 +109,11 @@ def run_tests():
         (None, 0.0, "None input"),
         ("abc", 0.0, "String without number"),
         ("price: 2000", 2000.0, "Text included (extract number)"),
-        ("약 1,700원", 1700.0, "Korean text included (extract number)"),
+        ("approx $1,700", 1700.0, "Text included (extract number)"),
 
         # 9. Complex patterns
-        ("1,700원~2,000원", 1850.0, "Range with unit"),
-        ("최소 1,500 ~ 최대 2,000", 1750.0, "Range with description"),
+        ("$1,700-$2,000", 1850.0, "USD range with symbols"),
+        ("min 1,500 ~ max 2,000", 1750.0, "Range with description"),
     ]
 
     # Run tests

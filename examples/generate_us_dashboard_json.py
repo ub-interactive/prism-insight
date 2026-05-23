@@ -7,8 +7,7 @@ Usage:
     python generate_us_dashboard_json.py
 
 Output:
-    ./dashboard/public/us_dashboard_data.json - Korean language US market data
-    ./dashboard/public/us_dashboard_data_en.json - English language US market data
+    ./dashboard/public/us_dashboard_data_en.json - English US market dashboard data
 """
 from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env
@@ -56,14 +55,6 @@ except Exception as exc:
     USStockTrading = None
     logger.warning(f"KIS US Stock Trading module not available: {exc}. Real portfolio will be empty.")
 
-# Translation utility import (after path setup)
-try:
-    from translation_utils import DashboardTranslator
-    TRANSLATION_AVAILABLE = True
-except ImportError:
-    TRANSLATION_AVAILABLE = False
-    logger.warning("Translation utility not found. English translation will be disabled.")
-
 # Config file loading (same as KR dashboard - shared KIS credentials)
 CONFIG_FILE = TRADING_CONFIG_DIR / "kis_devlp.yaml"
 try:
@@ -102,7 +93,6 @@ class USDashboardDataGenerator:
         db_path: str = None,
         output_path: str = None,
         trading_mode: str = None,
-        enable_translation: bool = True
     ):
         # Default db_path: project root stock_tracking_db.sqlite
         if db_path is None:
@@ -115,19 +105,7 @@ class USDashboardDataGenerator:
         self.db_path = db_path
         self.output_path = output_path
         self.trading_mode = trading_mode if trading_mode is not None else _cfg.get("default_mode", "demo")
-        self.enable_translation = enable_translation and TRANSLATION_AVAILABLE
         self._primary_account_key = self._get_primary_account_key()
-
-        # Initialize translator
-        if self.enable_translation:
-            try:
-                self.translator = DashboardTranslator()
-                logger.info("Translation feature enabled.")
-            except Exception as e:
-                self.enable_translation = False
-                logger.error(f"Translator initialization failed: {str(e)}")
-        else:
-            logger.info("Translation feature disabled.")
 
     def get_kis_us_trading_data(self) -> Dict[str, Any]:
         """Get real trading data from KIS US Stock API"""
@@ -1433,45 +1411,19 @@ def main():
     parser = argparse.ArgumentParser(description="US Dashboard JSON Generation")
     parser.add_argument("--mode", choices=["demo", "real"],
                        help=f"Trading mode (demo: simulation, real: live trading, default: {_cfg.get('default_mode', 'demo')})")
-    parser.add_argument("--no-translation", action="store_true",
-                       help="Disable English translation (generate Korean version only)")
-
     args = parser.parse_args()
 
     async def async_main():
         try:
             logger.info("=== US Dashboard JSON Generation Start ===")
 
-            enable_translation = not args.no_translation
-            generator = USDashboardDataGenerator(
-                trading_mode=args.mode,
-                enable_translation=enable_translation
-            )
+            generator = USDashboardDataGenerator(trading_mode=args.mode)
 
-            # Generate Korean data
-            logger.info("Generating Korean data...")
-            dashboard_data_ko = generator.generate()
+            logger.info("Generating English dashboard data...")
+            dashboard_data = generator.generate()
 
-            # Save Korean JSON file
-            ko_output = str(SCRIPT_DIR / "dashboard" / "public" / "us_dashboard_data.json")
-            generator.save(dashboard_data_ko, ko_output)
-
-            # English translation and save
-            if generator.enable_translation:
-                try:
-                    logger.info("Starting English translation...")
-                    dashboard_data_en = await generator.translator.translate_dashboard_data(dashboard_data_ko)
-
-                    # Save English JSON file
-                    en_output = str(SCRIPT_DIR / "dashboard" / "public" / "us_dashboard_data_en.json")
-                    generator.save(dashboard_data_en, en_output)
-
-                    logger.info("English translation complete!")
-                except Exception as e:
-                    logger.error(f"Error during English translation: {str(e)}")
-                    logger.warning("Only Korean version was generated.")
-            else:
-                logger.info("Translation disabled. Only Korean version generated.")
+            en_output = str(SCRIPT_DIR / "dashboard" / "public" / "us_dashboard_data_en.json")
+            generator.save(dashboard_data, en_output)
 
             logger.info("=== US Dashboard JSON Generation Complete ===")
 

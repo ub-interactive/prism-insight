@@ -14,7 +14,7 @@ Key Features:
 from mcp_agent.agents.agent import Agent
 
 
-def create_trading_journal_agent(language: str = "en"):
+def create_trading_journal_agent():
     """
     Create trading journal retrospective agent.
 
@@ -24,14 +24,9 @@ def create_trading_journal_agent(language: str = "en"):
     - Extracting actionable lessons
     - Tagging patterns for future retrieval
 
-    Args:
-        language: Legacy language argument retained for callers.
-
     Returns:
         Agent: Trading journal agent
     """
-
-    _ = language
     instruction = """## 🎯 Your Identity
     You are a **Trading Journal Writer** - an experienced investor's retrospective analyst.
     Your role is to review each completed trade and extract valuable lessons for future decisions.
@@ -131,7 +126,7 @@ def create_trading_journal_agent(language: str = "en"):
     )
 
 
-def create_context_retriever_agent(language: str = "en"):
+def create_context_retriever_agent():
     """
     Create context retriever agent for buy decisions.
 
@@ -142,14 +137,9 @@ def create_context_retriever_agent(language: str = "en"):
     - Similar market conditions
     - Relevant intuitions/lessons
 
-    Args:
-        language: Legacy language argument retained for callers.
-
     Returns:
         Agent: Context retriever agent
     """
-
-    _ = language
     instruction = """## 🎯 Your Identity
     You are a **Trading Memory Retriever** - you search past trading experiences
     to provide relevant context for current buy decisions.

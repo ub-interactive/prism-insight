@@ -122,7 +122,7 @@ cd prism-insight
 ```bash
 python3 demo.py MSFT              # Microsoft
 python3 demo.py NVDA              # NVIDIA
-python3 demo.py TSLA --language ko  # Tesla（韓国語レポート）
+python3 demo.py TSLA              # Tesla
 ```
 
 > **OpenAI APIキーの取得**は [OpenAI Platform](https://platform.openai.com/api-keys) から行えます
@@ -237,7 +237,7 @@ PRISM-INSIGHTは、**米国株式市場（NYSE/NASDAQ）** を対象とする、
 <img src="docs/images/aiagent/agent_workflow2.png" alt="エージェントワークフロー" width="700">
 </details>
 
-**エージェント詳細ドキュメント**: [docs/CLAUDE_AGENTS.md](docs/CLAUDE_AGENTS.md)
+**エージェント詳細ドキュメント**: [docs/agent-reference.md](docs/agent-reference.md)
 
 ---
 
@@ -299,7 +299,7 @@ python stock_analysis_orchestrator.py --mode morning --language en
 | ドキュメント | 説明 |
 |-------------|------|
 | [docs/SETUP.md](docs/SETUP.md) | 完全なインストールガイド |
-| [docs/CLAUDE_AGENTS.md](docs/CLAUDE_AGENTS.md) | AIエージェントシステムの詳細 |
+| [docs/agent-reference.md](docs/agent-reference.md) | AIエージェントシステムの詳細 |
 | [docs/TRIGGER_BATCH_ALGORITHMS.md](docs/TRIGGER_BATCH_ALGORITHMS.md) | 急騰検出アルゴリズム |
 | [docs/TRADING_JOURNAL.md](docs/TRADING_JOURNAL.md) | トレーディングメモリシステム |
 

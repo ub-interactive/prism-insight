@@ -122,7 +122,7 @@ cd prism-insight
 ```bash
 python3 demo.py MSFT              # Microsoft
 python3 demo.py NVDA              # NVIDIA
-python3 demo.py TSLA --language ko  # Tesla (Korean report)
+python3 demo.py TSLA              # Tesla
 ```
 
 > **获取 OpenAI API 密钥**：访问 [OpenAI Platform](https://platform.openai.com/api-keys)
@@ -237,7 +237,7 @@ PRISM-INSIGHT 是一个**完全开源、免费**的 AI 驱动**美股分析**系
 <img src="docs/images/aiagent/agent_workflow2.png" alt="Agent Workflow" width="700">
 </details>
 
-**代理系统详细文档**：[docs/CLAUDE_AGENTS.md](docs/CLAUDE_AGENTS.md)
+**代理系统详细文档**：[docs/agent-reference.md](docs/agent-reference.md)
 
 ---
 
@@ -299,7 +299,7 @@ python stock_analysis_orchestrator.py --mode morning --language en
 | 文档 | 说明 |
 |------|------|
 | [docs/SETUP.md](docs/SETUP.md) | 完整安装指南 |
-| [docs/CLAUDE_AGENTS.md](docs/CLAUDE_AGENTS.md) | AI 代理系统详情 |
+| [docs/agent-reference.md](docs/agent-reference.md) | AI 代理系统详情 |
 | [docs/TRIGGER_BATCH_ALGORITHMS.md](docs/TRIGGER_BATCH_ALGORITHMS.md) | 异动检测算法 |
 | [docs/TRADING_JOURNAL.md](docs/TRADING_JOURNAL.md) | 交易记忆系统 |
 

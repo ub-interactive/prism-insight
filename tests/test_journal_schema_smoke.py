@@ -19,7 +19,7 @@ async def test_journal_tables_created_with_enable_journal():
     try:
         agent = StockTrackingAgent(db_path=path, enable_journal=True)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
         conn = sqlite3.connect(path)
         cur = conn.cursor()
         cur.execute(
@@ -45,7 +45,7 @@ async def test_compression_stats_shape_with_enable_journal():
     try:
         agent = StockTrackingAgent(db_path=path, enable_journal=True)
         agent.trading_agent = MagicMock()
-        await agent.initialize(language="ko")
+        await agent.initialize()
 
         stats = agent.get_compression_stats()
         assert "entries_by_layer" in stats

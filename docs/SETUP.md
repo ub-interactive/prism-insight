@@ -177,12 +177,6 @@ npm install -g @perplexity-ai/mcp-server
 # Tracked `mcp_agent.config.yaml` already uses `npx` for Perplexity
 ```
 
-### Step 8: Install Korean Fonts (Linux Only)
-
-Required for Korean text in charts. See [Platform-Specific Setup](#platform-specific-setup).
-
----
-
 ## Configuration Files
 
 ### Core Settings (Required)
@@ -243,7 +237,6 @@ kis_account_code: "01"
 pip3 install playwright
 python3 -m playwright install chromium
 
-# Korean fonts: Built-in support, no installation needed
 ```
 
 ### Ubuntu / Debian
@@ -253,12 +246,6 @@ python3 -m playwright install chromium
 pip install playwright
 python3 -m playwright install --with-deps chromium
 
-# Korean fonts
-./cores/ubuntu_font_installer.py
-
-# Refresh font cache
-sudo fc-cache -fv
-python3 -c "import matplotlib.font_manager as fm; fm.fontManager.rebuild()"
 ```
 
 ### Rocky Linux 8 / CentOS / RHEL
@@ -279,12 +266,6 @@ cd utils
 chmod +x setup_playwright.sh
 ./setup_playwright.sh
 
-# Korean fonts
-sudo dnf install google-nanum-fonts
-
-# Refresh font cache
-sudo fc-cache -fv
-python3 -c "import matplotlib.font_manager as fm; fm.fontManager.rebuild()"
 ```
 
 ### Windows
@@ -294,7 +275,6 @@ python3 -c "import matplotlib.font_manager as fm; fm.fontManager.rebuild()"
 pip install playwright
 python -m playwright install chromium
 
-# Korean fonts: Built-in support, no installation needed
 ```
 
 For detailed Playwright setup, see [tools/PLAYWRIGHT_SETUP.md](../tools/PLAYWRIGHT_SETUP.md).
@@ -383,7 +363,6 @@ Successful run will create:
 | Issue | Solution |
 |-------|----------|
 | Playwright PDF fails | Run `python3 -m playwright install chromium` |
-| Korean fonts missing | Install fonts and run `fc-cache -fv` |
 | MCP server fails | Check API keys in `.env` and process environment |
 | Kakao auth fails | Disable 2-step verification or confirm in app |
 | JSON parsing error | Library auto-repairs; check logs for details |

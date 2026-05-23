@@ -32,19 +32,17 @@ class USJournalManager:
 
     MARKET = "US"  # Market identifier for shared tables
 
-    def __init__(self, cursor, conn, language: str = "ko", enable_journal: bool = False):
+    def __init__(self, cursor, conn, enable_journal: bool = False):
         """
         Initialize USJournalManager.
 
         Args:
             cursor: SQLite cursor
             conn: SQLite connection
-            language: Language code (en/ko)
             enable_journal: Whether journal feature is enabled
         """
         self.cursor = cursor
         self.conn = conn
-        self.language = language
         self.enable_journal = enable_journal
 
     async def create_entry(
@@ -92,8 +90,7 @@ class USJournalManager:
                 except:
                     scenario_data = {}
 
-            # Create journal agent (uses yahoo_finance instead of kospi_kosdaq)
-            journal_agent = create_trading_journal_agent(self.language, market="US")
+            journal_agent = create_trading_journal_agent()
 
             async with journal_agent:
                 llm = await journal_agent.attach_llm(OpenAIAugmentedLLM)
@@ -146,37 +143,7 @@ class USJournalManager:
         holding_days: int, sell_reason: str
     ) -> str:
         """Build prompt for retrospective analysis."""
-        if self.language == "ko":
-            return f"""
-Please review the following completed US stock trade:
-
-## Buy Information
-- Stock: {company_name}({ticker})
-- Buy Price: ${buy_price:,.2f}
-- Buy Date: {buy_date}
-- Buy Scenario:
-  - Buy Score: {scenario_data.get('buy_score', 'N/A')}
-  - Investment Rationale: {scenario_data.get('rationale', 'N/A')}
-  - Target Price: ${scenario_data.get('target_price', 'N/A')}
-  - Stop Loss: ${scenario_data.get('stop_loss', 'N/A')}
-  - Investment Period: {scenario_data.get('investment_period', 'N/A')}
-  - Sector: {scenario_data.get('sector', 'N/A')}
-  - Market Condition: {scenario_data.get('market_condition', 'N/A')}
-
-## Sell Information
-- Sell Price: ${sell_price:,.2f}
-- Return: {profit_rate:.2f}%
-- Holding Days: {holding_days} days
-- Sell Reason: {sell_reason}
-
-## Analysis Request
-1. Use yahoo_finance tool to check current market conditions and recent stock trends
-2. Compare and analyze buy and sell timing situations
-3. Evaluate decision appropriateness and extract lessons
-4. Assign pattern tags
-"""
-        else:
-            return f"""
+        return f"""
 Please review the following completed US stock trade:
 
 ## Buy Information

@@ -47,10 +47,10 @@ proudly sponsors **PRISM-INSIGHT** - the AI assistant for investors.
 
 ```bash
 # One-time login (browser will open for ChatGPT auth)
-python -m cores.chatgpt_proxy.oauth_login
+python -m prism.core.chatgpt_proxy.oauth_login
 
 # Re-authenticate (switch account, or refresh expired tokens)
-python -m cores.chatgpt_proxy.oauth_login --force
+python -m prism.core.chatgpt_proxy.oauth_login --force
 
 # Run with your ChatGPT subscription
 PRISM_OPENAI_AUTH_MODE=chatgpt_oauth python stock_analysis_orchestrator.py --mode morning
@@ -122,7 +122,7 @@ This generates an AI analysis report for Apple (AAPL). Try other stocks:
 ```bash
 python3 demo.py MSFT              # Microsoft
 python3 demo.py NVDA              # NVIDIA
-python3 demo.py TSLA --language ko  # Tesla (Korean report)
+python3 demo.py TSLA              # Tesla
 ```
 
 > **Get your OpenAI API key** from [OpenAI Platform](https://platform.openai.com/api-keys)
@@ -239,7 +239,7 @@ PRISM-INSIGHT is a **completely open-source, free** AI-powered stock analysis sy
 <img src="docs/images/aiagent/agent_workflow2.png" alt="Agent Workflow" width="700">
 </details>
 
-**Detailed Agent Documentation**: [docs/CLAUDE_AGENTS.md](docs/CLAUDE_AGENTS.md)
+**Detailed Agent Documentation**: [docs/agent-reference.md](docs/agent-reference.md)
 
 ---
 
@@ -305,7 +305,9 @@ python stock_analysis_orchestrator.py --mode morning --language en
 | Document | Description |
 |----------|-------------|
 | [docs/SETUP.md](docs/SETUP.md) | Complete installation guide |
-| [docs/CLAUDE_AGENTS.md](docs/CLAUDE_AGENTS.md) | AI agent system details |
+| [docs/agent-reference.md](docs/agent-reference.md) | AI agent system details |
+| [CURSOR.md](CURSOR.md) | Cursor / agent project guide |
+| [AGENTS.md](AGENTS.md) | Short agent entry point |
 | [docs/TRIGGER_BATCH_ALGORITHMS.md](docs/TRIGGER_BATCH_ALGORITHMS.md) | Surge detection algorithms |
 | [docs/TRADING_JOURNAL.md](docs/TRADING_JOURNAL.md) | Trading memory system |
 

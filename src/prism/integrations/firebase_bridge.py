@@ -276,7 +276,7 @@ async def _send_push(
     body: str,
     msg_type: str,
     market: str,
-    lang: str = "ko",
+    lang: str = "en",
     report_link: str = "",
     pdf_report_link: str = "",
 ):

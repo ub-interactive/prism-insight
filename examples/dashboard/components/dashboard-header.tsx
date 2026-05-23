@@ -1,6 +1,6 @@
 "use client"
 
-import { Moon, Sun, TrendingUp, Github, Send, Languages, Sparkles } from "lucide-react"
+import { Moon, Sun, TrendingUp, Github, Send, Sparkles } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/components/language-provider"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,7 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ activeTab, onTabChange, lastUpdated, market = "US", onMarketChange }: DashboardHeaderProps) {
   const { theme, setTheme } = useTheme()
-  const { language, setLanguage, t } = useLanguage()
+  const { t } = useLanguage()
 
   const formatLastUpdated = () => {
     if (!lastUpdated) return t("header.realtimeUpdate")
@@ -31,7 +31,7 @@ export function DashboardHeader({ activeTab, onTabChange, lastUpdated, market = 
     try {
       const date = new Date(lastUpdated)
       if (isNaN(date.getTime())) return t("header.realtimeUpdate")
-      return date.toLocaleString(language === "ko" ? "ko-KR" : "en-US", {
+      return date.toLocaleString("en-US", {
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
@@ -166,17 +166,6 @@ export function DashboardHeader({ activeTab, onTabChange, lastUpdated, market = 
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-
-            {/* Language Toggle - Prominent Button */}
-            <button
-              onClick={() => setLanguage(language === "ko" ? "en" : "ko")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors font-medium text-sm"
-            >
-              <Languages className="h-4 w-4" />
-              <span className={language === "ko" ? "text-muted-foreground" : "text-foreground font-semibold"}>EN</span>
-              <span className="text-muted-foreground/50">/</span>
-              <span className={language === "ko" ? "text-foreground font-semibold" : "text-muted-foreground"}>한</span>
-            </button>
 
             <Button
               variant="ghost"

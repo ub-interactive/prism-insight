@@ -22,8 +22,8 @@ type TabType = "dashboard" | "ai-decisions" | "trading" | "watchlist" | "insight
 const VALID_TABS: TabType[] = ["dashboard", "ai-decisions", "trading", "watchlist", "insights"]
 
 // Get localized US dashboard fixture path (US-only product)
-function getDataFilePath(_market: Market, language: string): string {
-  return language === "en" ? "/us_dashboard_data_en.json" : "/us_dashboard_data.json"
+function getDataFilePath(_market: Market, _language: string): string {
+  return "/us_dashboard_data_en.json"
 }
 
 // Suspense 경계를 위한 로딩 컴포넌트
@@ -79,9 +79,7 @@ function DashboardContent() {
 
         if (!response.ok) {
           if (response.status === 404) {
-            setDataError(language === "ko"
-              ? "대시보드 데이터 파일을 찾을 수 없습니다."
-              : "Dashboard data file not found."
+            setDataError("Dashboard data file not found."
             )
             setData(null)
             return
@@ -93,9 +91,7 @@ function DashboardContent() {
         setData(jsonData)
       } catch (error) {
         console.error("[v0] Failed to fetch dashboard data:", error)
-        setDataError(language === "ko"
-          ? "대시보드 데이터를 불러올 수 없습니다."
-          : "Failed to load dashboard data."
+        setDataError("Failed to load dashboard data."
         )
       }
     }
@@ -125,9 +121,7 @@ function DashboardContent() {
             <div className="text-4xl mb-4">🇺🇸</div>
             <p className="text-muted-foreground">{dataError}</p>
             <p className="text-sm text-muted-foreground/70 mt-2">
-              {language === "ko"
-                ? "설정 또는 네트워크를 확인한 뒤 다시 시도해 주세요."
-                : "Please check your setup or network and try again."
+              {"Please check your setup or network and try again."
               }
             </p>
           </div>

@@ -13,7 +13,7 @@ interface PerformanceChartProps {
 
 export function PerformanceChart({ data, prismPerformance = [], holdings = [], summary }: PerformanceChartProps) {
   const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("ko-KR", {
+    return new Intl.NumberFormat("en-US", {
       maximumFractionDigits: 0,
     }).format(value)
   }
@@ -314,7 +314,7 @@ export function PerformanceChart({ data, prismPerformance = [], holdings = [], s
 // 기존 KOSPI/KOSDAQ 지수 차트를 별도 컴포넌트로 분리
 function IndexCharts({ data }: { data: MarketCondition[] }) {
   const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("ko-KR", {
+    return new Intl.NumberFormat("en-US", {
       maximumFractionDigits: 0,
     }).format(value)
   }

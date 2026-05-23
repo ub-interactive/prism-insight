@@ -3,7 +3,7 @@ import logging
 import httpx
 from openai import BadRequestError, RateLimitError
 
-from cores.openai.error_logging import extract_openai_error_details, log_openai_error
+from prism.core.openai.error_logging import extract_openai_error_details, log_openai_error
 
 
 def _build_response(status_code: int, request_id: str) -> httpx.Response:

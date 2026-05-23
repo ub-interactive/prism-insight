@@ -1,10 +1,31 @@
-"""
-Canonical repository root for resolving reports, logs, SQLite, and configs.
+"""Backward-compatible shim. Canonical paths: prism.paths."""
 
-Imports use `repo_paths.REPO_ROOT` instead of Path(__file__).parent so code
-still resolves correctly when living under scripts/, reporting/, integrations/.
-"""
-
+import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent
+_root = Path(__file__).resolve().parent
+_src = _root / "src"
+if str(_src) not in sys.path:
+    sys.path.insert(0, str(_src))
+
+from prism.paths import (  # noqa: E402
+    CONFIG_DIR,
+    HTML_REPORTS_DIR,
+    LOGS_DIR,
+    PDF_REPORTS_DIR,
+    REPORTS_DIR,
+    REPO_ROOT,
+    TRIGGER_RESULTS_DIR,
+    VAR_ROOT,
+)
+
+__all__ = [
+    "CONFIG_DIR",
+    "HTML_REPORTS_DIR",
+    "LOGS_DIR",
+    "PDF_REPORTS_DIR",
+    "REPORTS_DIR",
+    "REPO_ROOT",
+    "TRIGGER_RESULTS_DIR",
+    "VAR_ROOT",
+]

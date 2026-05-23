@@ -15,35 +15,20 @@ Scale: ~75,000+ LOC, specialized analysis agents & trading loop, US-only pipelin
 
 ```
 prism-insight/
-├── cores/                     # AI analysis engine
-│   ├── agents/                # Analysis & trading agents
-│   ├── config/                # models.py, language.py
-│   ├── data/                  # prefetch, surge_detector, yfinance client
-│   ├── openai/                # error logging, quota helpers
-│   ├── visualization/         # charts
-│   ├── chatgpt_proxy/         # ChatGPT OAuth Proxy (Codex endpoint)
-│   ├── analysis.py            # Core orchestration
-│   └── report_generation.py   # Shared markdown section templates / prompts
-├── ops/                       # Operational CLIs (canonical)
-│   ├── pipelines/             # orchestrator, trigger_batch, tracking agent
-│   ├── batches/               # pending orders, performance tracker
-│   ├── reports/               # weekly insight / Firecrawl
-│   ├── maintenance/           # compression, prices, market calendar
-│   └── dev/                   # demo, debug utilities
-├── scripts/                   # Backward-compatible shims → ops/*
-├── integrations/              # firebase, firecrawl
-├── reporting/                 # report_generator, pdf_converter, analysis_manager
-├── trading/                   # KIS API trading (US)
-├── tracking/                  # SQLite helpers, journal, compression
-├── messaging/                 # Redis / GCP publishers
-├── tools/                     # migrations, cron/playwright setup scripts
-├── examples/                  # Dashboards, subscriber examples
-├── tests/                     # pytest (pyproject.toml pythonpath)
-├── repo_paths.py              # REPO_ROOT — resolve reports/DB vs cwd
-└── *.py (repo root)           # Thin shims: same CLI names, delegate into scripts/ → ops/
+├── deploy/                    # Dockerfile, docker/, quickstart.sh
+├── src/
+│   ├── config/                # mcp_agent.config.yaml
+│   ├── var/                   # gitignored: reports, pdf_reports, logs
+│   ├── vendor/sqlite/         # MCP sqlite server
+│   └── prism/                 # Application package
+│       ├── core/, ops/, reporting/, integrations/, trading/, tracking/, messaging/
+│       └── paths.py           # REPO_ROOT, SRC_ROOT, config/var paths
+├── tests/, examples/, assets/, tools/
+├── demo.py, stock_analysis_orchestrator.py, …  # root CLI shims (5 files)
+└── repo_paths.py              # → prism.paths
 ```
 
-Legacy commands like `python stock_analysis_orchestrator.py` still work via root shims; implementations live under `ops/`.
+Legacy commands like `python stock_analysis_orchestrator.py` still work via root shims; implementations live under `src/prism/ops/`.
 
 ## Analysis Pipeline
 
@@ -107,8 +92,8 @@ Specialized agents are organized across `cores/agents/` and orchestrated sequent
 | File | Purpose |
 |------|---------|
 | `.env` | Redis/GCP/Firebase toggles, `OPENAI_*` / `ANTHROPIC_*` / MCP vendor keys, `PRISM_OPENAI_AUTH_MODE`, optional Adanos signals |
-| `mcp_agent.config.yaml` | Tracked MCP server configuration (no API keys inside) |
-| `trading/config/kis_devlp.yaml` | KIS trading API credentials |
+| `src/config/mcp_agent.config.yaml` | Tracked MCP server configuration (no API keys inside) |
+| `src/prism/trading/config/kis_devlp.yaml` | KIS trading API credentials |
 
 **Setup**: Copy `.env.example` → `.env` and fill in secrets. Repo ships default `mcp_agent.config.yaml`.
 
@@ -125,7 +110,7 @@ Specialized agents are organized across `cores/agents/` and orchestrated sequent
 ### Multi-Account Setup (v2.9.0)
 
 ```yaml
-# trading/config/kis_devlp.yaml
+# src/prism/trading/config/kis_devlp.yaml
 accounts:
   - id: primary       # Logical default account label for tooling and migrations
     app_key: ...
@@ -236,7 +221,7 @@ result = await trading.async_sell_stock(ticker=ticker, limit_price=current_price
 | `could not convert string to float: ''` | Fixed in v2.2 - use `_safe_float()` |
 | Playwright PDF fails | `python3 -m playwright install chromium` |
 | Korean fonts missing | `sudo dnf install google-nanum-fonts && fc-cache -fv` |
-| KIS auth fails | Check `trading/config/kis_devlp.yaml` |
+| KIS auth fails | Check `src/prism/trading/config/kis_devlp.yaml` |
 | import path error | Ensure root modules are imported directly (no legacy namespace shim) |
 | US 예약주문 시간외 실패 | v2.7.1 - 10시 이전 주문은 자동 큐잉 → 10:05 KST 배치 실행 |
 | ChatGPT OAuth 404 | Codex 엔드포인트 미지원 모델 → `_MODEL_MAP` 자동 매핑 (v2.7.0) |

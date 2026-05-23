@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "prism-insight"
 version = "2.9.0"
@@ -6,42 +10,56 @@ requires-python = ">=3.10"
 readme = "README.md"
 license = {text = "MIT"}
 
+[project.scripts]
+prism-demo = "prism.ops.dev.demo:main"
+prism-orchestrator = "prism.ops.pipelines.stock_analysis_orchestrator:cli_main"
+prism-tracking = "prism.ops.pipelines.stock_tracking_agent:cli_main"
+prism-pending-orders = "prism.ops.batches.pending_order_batch:main"
+prism-trigger-batch = "prism.ops.pipelines.trigger_batch:run_cli"
+prism-performance-tracker = "prism.ops.batches.performance_tracker_batch:main"
+prism-weekly-insight = "prism.ops.reports.weekly_insight_report:main"
+prism-compress-memory = "prism.ops.maintenance.compress_trading_memory:main"
+prism-update-prices = "prism.ops.maintenance.update_current_prices:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 120
-src = ["cores", "ops", "scripts", "integrations", "reporting", "trading", "tracking", "messaging", "tools", "tests"]
+src = ["src", "tests", "tools", "examples"]
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "I",   # isort
-    "UP",  # pyupgrade
-    "B",   # flake8-bugbear
-    "SIM", # flake8-simplify
-    "RUF", # ruff-specific
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "SIM",
+    "RUF",
 ]
 ignore = [
-    "E501",    # line too long — handled by formatter
-    "F403",    # wildcard imports — used by backward-compat shims
-    "F405",    # undefined names from wildcard — same reason
-    "E402",    # module-level import not at top — sys.path usage in scripts
-    "RUF012",  # mutable class attributes — not enforced in this codebase
-    "B008",    # function call in default argument — used in FastAPI
-    "SIM108",  # ternary operator — readability preference
-    "UP007",   # use X | Y for union types — keep Optional for 3.10 compat
+    "E501",
+    "F403",
+    "F405",
+    "E402",
+    "RUF012",
+    "B008",
+    "SIM108",
+    "UP007",
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["cores", "ops", "scripts", "integrations", "reporting", "trading", "tracking", "messaging", "tools", "repo_paths"]
+known-first-party = ["prism", "repo_paths"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B", "SIM"]
 "examples/*" = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
-"scripts/*" = ["E402"]
+"src/prism/ops/*" = ["E402"]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = ["src"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [

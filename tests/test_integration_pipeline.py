@@ -20,7 +20,7 @@ def _sample_snapshot() -> pd.DataFrame:
 
 
 def test_trigger_to_agents_flow_smoke():
-    from cores.agents import get_agent_directory
+    from prism.core.agents import get_agent_directory
     from trigger_batch import trigger_morning_volume_surge
 
     snapshot = _sample_snapshot()

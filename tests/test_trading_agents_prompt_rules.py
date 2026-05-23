@@ -1,6 +1,6 @@
 """Prompt-rule regression tests for the US trading scenario agent."""
 
-from cores.agents.trading_agents import create_trading_scenario_agent
+from prism.core.agents.trading_agents import create_trading_scenario_agent
 
 
 def test_identity_is_can_slim_only_en():

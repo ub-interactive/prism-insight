@@ -92,7 +92,7 @@ def setup_logging(log_file: str = None) -> logging.Logger:
 async def execute_buy_trade(ticker: str, company_name: str, logger: logging.Logger) -> Dict[str, Any]:
     """Execute US buy via KIS overseas API."""
     try:
-        from trading.stock_trading import USStockTrading
+        from prism.trading.stock_trading import USStockTrading
 
         trading = USStockTrading()
         price_info = trading.get_current_price(ticker)
@@ -117,7 +117,7 @@ async def execute_buy_trade(ticker: str, company_name: str, logger: logging.Logg
 async def execute_sell_trade(ticker: str, company_name: str, logger: logging.Logger) -> Dict[str, Any]:
     """Execute US sell via KIS overseas API."""
     try:
-        from trading.stock_trading import USStockTrading
+        from prism.trading.stock_trading import USStockTrading
 
         trading = USStockTrading()
         price_info = trading.get_current_price(ticker)

@@ -7,7 +7,7 @@ on top, producing two near-identical disclaimers.
 before the canonical one is appended.
 """
 
-from cores.disclaimer_utils import strip_trailing_disclaimer as _strip
+from prism.core.disclaimer_utils import strip_trailing_disclaimer as _strip
 
 
 # --- Cases that MUST be stripped (the gh #263 reproductions) ----------------

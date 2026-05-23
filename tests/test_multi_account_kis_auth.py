@@ -4,9 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from repo_paths import REPO_ROOT
-
-CONFIG_DIR = REPO_ROOT / "trading" / "config"
+from prism.paths import REPO_ROOT, TRADING_CONFIG_DIR as CONFIG_DIR
 CONFIG_FILE = CONFIG_DIR / "kis_devlp.yaml"
 _CREATED_TEST_CONFIG = False
 
@@ -48,7 +46,7 @@ if not CONFIG_FILE.exists():
 if _CREATED_TEST_CONFIG:
     atexit.register(lambda: CONFIG_FILE.unlink(missing_ok=True))
 
-from trading import kis_auth as ka
+from prism.trading import kis_auth as ka
 
 
 def _patch_cfg(monkeypatch, cfg):

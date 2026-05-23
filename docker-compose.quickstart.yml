@@ -19,7 +19,7 @@ services:
   prism-insight:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: deploy/Dockerfile
     image: prism-insight:quickstart-local
     container_name: prism-quickstart
 
@@ -33,14 +33,14 @@ services:
     # Mount only essential volumes
     volumes:
       # Output directory for reports
-      - ./quickstart-output/reports:/app/prism-insight/reports
-      - ./quickstart-output/pdf_reports:/app/prism-insight/pdf_reports
+      - ./quickstart-output/reports:/app/prism-insight/src/var/reports
+      - ./quickstart-output/pdf_reports:/app/prism-insight/src/var/pdf_reports
 
       # Persistent quickstart config (generated on first run)
       - ./quickstart-config:/app/prism-insight/quickstart-config
 
     working_dir: /app/prism-insight
 
-    entrypoint: ["/app/prism-insight/docker/quickstart-entrypoint.sh"]
+    entrypoint: ["/app/prism-insight/deploy/docker/quickstart-entrypoint.sh"]
 
     restart: "no"

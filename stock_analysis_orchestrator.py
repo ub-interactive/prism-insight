@@ -1,14 +1,9 @@
-"""
-Backward-compatible shim. Implementation: scripts.stock_analysis_orchestrator.
-"""
+"""Backward-compatible CLI shim → prism.ops.pipelines.stock_analysis_orchestrator."""
 
-import pathlib
 import runpy
+import sys
+from pathlib import Path
 
-_IMPL = pathlib.Path(__file__).resolve().parent / "scripts" / "stock_analysis_orchestrator.py"
-
-
-if __name__ == "__main__":
-    runpy.run_path(str(_IMPL), run_name="__main__")
-else:
-    from scripts.stock_analysis_orchestrator import *  # noqa: F403
+_root = Path(__file__).resolve().parent
+sys.path.insert(0, str(_root / "src"))
+runpy.run_module("prism.ops.pipelines.stock_analysis_orchestrator", run_name="__main__")

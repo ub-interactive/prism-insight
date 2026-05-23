@@ -4,7 +4,7 @@ import sqlite3
 
 import pytest
 
-from tracking.db_schema import create_all_tables, create_indexes
+from prism.tracking.db_schema import create_all_tables, create_indexes
 
 
 @pytest.fixture

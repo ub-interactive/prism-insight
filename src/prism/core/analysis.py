@@ -1,0 +1,462 @@
+"""
+US Stock Analysis Module
+
+Generate comprehensive stock analysis reports for US stocks.
+Uses yfinance MCP server for market data and US-specific agents.
+"""
+import os
+import asyncio
+from datetime import datetime
+from pathlib import Path
+
+from dotenv import load_dotenv
+load_dotenv()
+
+from mcp_agent.app import MCPApp
+
+from prism.paths import MCP_CONFIG_PATH
+
+# Set up import paths
+import sys
+from prism.core.agents import get_agent_directory
+from prism.core.data.prefetch import prefetch_us_analysis_data
+from prism.core.config.models import get_configured_model
+from prism.core.report_generation import (
+    generate_investment_strategy,
+    generate_market_report,
+    generate_report,
+    generate_summary,
+    get_disclaimer,
+)
+from prism.core.data.social_sentiment import USSocialSentimentClient
+from prism.core.visualization.chart import (
+    get_us_institutional_chart_html,
+    get_us_price_chart_html,
+    get_us_technical_chart_html,
+)
+from prism.core.utils import clean_markdown
+
+# Market analysis cache storage (global variable)
+_us_market_analysis_cache = {}
+
+US_REPORT_FILENAME_MODEL = get_configured_model("us_report_filename", "gpt-5.4-mini")
+
+
+def _model_slug(model_name: str) -> str:
+    """Create a safe filename suffix from model name."""
+    import re
+
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", (model_name or "").strip())
+    return slug.strip("-") or "model"
+
+
+async def analyze_us_stock(
+    ticker: str = "AAPL",
+    company_name: str = "Apple Inc.",
+    reference_date: str = None,
+    language: str = "en",
+    include_news: bool = True,
+    macro_context: dict = None
+) -> str:
+    """
+    Generate comprehensive stock analysis report for US stock.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., "AAPL", "MSFT")
+        company_name: Company name (e.g., "Apple Inc.")
+        reference_date: Analysis reference date (YYYYMMDD format)
+        language: Legacy language code forwarded across synthesis helpers.
+        include_news: Whether to include news analysis (requires Perplexity API)
+
+    Returns:
+        str: Generated final report markdown text
+    """
+    # 1. Initial setup and preprocessing
+    app = MCPApp(name="us_stock_analysis", settings=str(MCP_CONFIG_PATH))
+
+    # Use today's date if reference_date is not provided
+    if reference_date is None:
+        reference_date = datetime.now().strftime("%Y%m%d")
+
+    async with app.run() as parallel_app:
+        logger = parallel_app.logger
+        logger.info(f"Starting: {company_name}({ticker}) US analysis - reference date: {reference_date}")
+
+        # 2. Create dictionary to store data as shared resource
+        section_reports = {}
+
+        # 3. Define sections to analyze (US-specific)
+        # yfinance sections: run sequentially to avoid rate limits
+        yfinance_sections = [
+            "price_volume_analysis",           # Technical analysis (yfinance OHLCV)
+            "institutional_holdings_analysis",  # yfinance holders
+            "company_status",                  # yfinance financials
+            "company_overview",                # yfinance info
+            "market_index_analysis"            # yfinance indices
+        ]
+        # Non-yfinance sections: can run in parallel
+        parallel_sections = []
+        if include_news:
+            parallel_sections.append("news_analysis")  # perplexity (requires API key)
+        else:
+            # Add placeholder for skipped news section
+            section_reports["news_analysis"] = "_News analysis requires Perplexity API key. Technical and fundamental analysis are provided normally._"
+            logger.info("Skipping news_analysis (Perplexity API not configured)")
+        # Always include news_analysis in base_sections for report structure
+        base_sections = yfinance_sections + ["news_analysis"]
+
+        # 4. Prefetch data to reduce MCP tool call overhead
+        try:
+            prefetched = prefetch_us_analysis_data(ticker)
+            logger.info(f"Prefetched US data for {ticker}: {list(prefetched.keys()) if prefetched else 'none'}")
+        except Exception as e:
+            logger.warning(f"US data prefetch failed, falling back to MCP: {e}")
+            prefetched = {}
+
+        if include_news and os.getenv("ADANOS_API_KEY"):
+            try:
+                social_client = USSocialSentimentClient()
+                social_snapshot = await asyncio.to_thread(
+                    social_client.get_social_sentiment_markdown,
+                    ticker,
+                    7,
+                )
+                if social_snapshot:
+                    prefetched["social_sentiment"] = social_snapshot
+                    logger.info(f"Prefetched social sentiment for {ticker}")
+            except Exception as e:
+                logger.warning(f"US social sentiment prefetch failed, continuing without it: {e}")
+
+        # 5. Get US-specific agents (with prefetched data)
+        agents = get_agent_directory(company_name, ticker, reference_date, base_sections, language, prefetched_data=prefetched)
+
+        # 6. Execute base analysis using HYBRID mode
+        # - yfinance sections: sequential with 2 sec delay (rate limit friendly)
+        # - news_analysis: parallel with yfinance sections (uses perplexity, not yfinance)
+        logger.info(f"Running US analysis in HYBRID mode for {company_name}...")
+        logger.info(f"  - yfinance sections (sequential): {yfinance_sections}")
+        logger.info(f"  - parallel sections: {parallel_sections}")
+
+        async def process_yfinance_sections():
+            """Process yfinance-dependent sections sequentially"""
+            results = {}
+            for section in yfinance_sections:
+                if section in agents:
+                    logger.info(f"Processing {section} for {company_name}...")
+                    try:
+                        agent = agents[section]
+                        if section == "market_index_analysis":
+                            if "report" in _us_market_analysis_cache:
+                                logger.info(f"Using cached US market analysis")
+                                report = _us_market_analysis_cache["report"]
+                            else:
+                                logger.info(f"Generating new US market analysis")
+                                report = await generate_market_report(
+                                    agent, section, reference_date, logger, language
+                                )
+                                _us_market_analysis_cache["report"] = report
+                        else:
+                            report = await generate_report(
+                                agent, section, company_name, ticker, reference_date, logger, language
+                            )
+                        results[section] = report
+                        # Add delay between yfinance calls to avoid rate limits
+                        # 3 seconds gives yfinance time to reset rate limits
+                        await asyncio.sleep(3)
+                    except Exception as e:
+                        logger.error(f"Error processing {section}: {e}")
+                        results[section] = f"Analysis failed: {section}"
+            return results
+
+        async def process_parallel_section(section):
+            """Process a non-yfinance section with its own MCPApp context"""
+            if section not in agents:
+                return section, None
+
+            section_app = MCPApp(name=f"us_stock_analysis_{section}", settings=str(MCP_CONFIG_PATH))
+            async with section_app.run() as section_context:
+                section_logger = section_context.logger
+                section_logger.info(f"Processing {section} for {company_name}...")
+                try:
+                    agent = agents[section]
+                    report = await generate_report(
+                        agent, section, company_name, ticker, reference_date, section_logger, language
+                    )
+                    return section, report
+                except Exception as e:
+                    section_logger.error(f"Error processing {section}: {e}")
+                    return section, f"Analysis failed: {section}"
+
+        # Execute hybrid: yfinance sequential + parallel sections concurrently
+        parallel_tasks = [process_parallel_section(s) for s in parallel_sections]
+        yfinance_task = process_yfinance_sections()
+
+        # Run both concurrently
+        all_results = await asyncio.gather(yfinance_task, *parallel_tasks)
+
+        # Collect results
+        # First result is yfinance sections dict
+        yfinance_results = all_results[0]
+        section_reports.update(yfinance_results)
+
+        # Remaining results are (section, report) tuples from parallel sections
+        for result in all_results[1:]:
+            if result and result[1] is not None:
+                section_reports[result[0]] = result[1]
+
+        # 6. Integrate content from other reports
+        combined_reports = ""
+        for section in base_sections:
+            if section in section_reports:
+                combined_reports += f"\n\n--- {section.upper()} ---\n\n"
+                combined_reports += section_reports[section]
+
+        # 7. Generate investment strategy
+        try:
+            logger.info(f"Processing investment_strategy for {company_name}...")
+
+            investment_strategy = await generate_investment_strategy(
+                section_reports, combined_reports, company_name, ticker, reference_date, logger, language
+            )
+            section_reports["investment_strategy"] = investment_strategy.lstrip('\n')
+            logger.info(f"Completed investment_strategy - {len(investment_strategy)} characters")
+        except Exception as e:
+            logger.error(f"Error processing investment_strategy: {e}")
+            section_reports["investment_strategy"] = "Investment strategy analysis failed"
+
+        # 8. Generate executive summary
+        try:
+            logger.info(f"Processing summary for {company_name}...")
+            summary = await generate_summary(
+                section_reports, company_name, ticker, reference_date, logger, language
+            )
+            # Remove duplicate title/date if the agent added them
+            # Pattern: "# Company Name (TICKER) Analysis Report\n**Publication Date:** ..."
+            import re
+            summary = summary.lstrip('\n')
+            # Remove any leading H1 title that matches the report title pattern
+            summary = re.sub(
+                r'^#\s*' + re.escape(company_name) + r'\s*\(' + re.escape(ticker) + r'\)[^\n]*\n+',
+                '',
+                summary,
+                flags=re.IGNORECASE
+            )
+            # Remove any publication date line right after title removal
+            summary = re.sub(
+                r'^\*{0,2}Publication Date\*{0,2}\s*:\s*[^\n]+\n+',
+                '',
+                summary,
+                flags=re.IGNORECASE
+            )
+            # Remove leading separators (---)
+            summary = re.sub(r'^-{3,}\s*\n+', '', summary)
+            section_reports["summary"] = summary.lstrip('\n')
+            logger.info(f"Completed summary - {len(summary)} characters")
+        except Exception as e:
+            logger.error(f"Error processing summary: {e}")
+            section_reports["summary"] = "Summary generation failed"
+
+        # 9. Generate charts (optional - may fail if yfinance data unavailable)
+        # Charts are inserted into specific sections:
+        # - Price chart → 1-1. Price and Volume Analysis
+        # - Institutional chart → 1-2. Institutional Ownership Analysis
+        # - Technical indicators chart → 4. Market Analysis
+        price_chart_html = ""
+        institutional_chart_html = ""
+        technical_chart_html = ""
+
+        try:
+            import yfinance as yf
+
+            # Get stock data for charts
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="1y")
+
+            if not hist.empty:
+                # 1. Price Chart (Candlestick with MA and Volume)
+                price_chart_html = get_us_price_chart_html(
+                    ticker, company_name, hist, width=900, dpi=80
+                )
+                if price_chart_html:
+                    logger.info(f"Generated price chart for {ticker}")
+                else:
+                    logger.warning(f"Failed to generate price chart for {ticker}")
+
+                # 2. Institutional Holdings Chart
+                major_holders = stock.major_holders
+                institutional_holders = stock.institutional_holders
+                institutional_chart_html = get_us_institutional_chart_html(
+                    ticker, company_name, major_holders, institutional_holders, width=900, dpi=80
+                )
+                if institutional_chart_html:
+                    logger.info(f"Generated institutional chart for {ticker}")
+                else:
+                    logger.warning(f"Failed to generate institutional chart for {ticker}")
+
+                # 3. Technical Indicators Chart (RSI + MACD)
+                technical_chart_html = get_us_technical_chart_html(
+                    ticker, company_name, hist, width=900, dpi=80
+                )
+                if technical_chart_html:
+                    logger.info(f"Generated technical indicators chart for {ticker}")
+                else:
+                    logger.warning(f"Failed to generate technical indicators chart for {ticker}")
+
+        except Exception as e:
+            logger.warning(f"Chart generation skipped: {e}")
+
+        # 10. Compile final report
+        # Header
+        formatted_date = f"{reference_date[:4]}.{reference_date[4:6]}.{reference_date[6:]}"
+
+        # Build chart sections with fallback messages
+        price_chart_section = ""
+        if price_chart_html:
+            price_chart_section = f"\n\n#### Price Chart\n\n{price_chart_html}\n"
+
+        institutional_chart_section = ""
+        if institutional_chart_html:
+            institutional_chart_section = f"\n\n#### Institutional Holdings Chart\n\n{institutional_chart_html}\n"
+
+        technical_chart_section = ""
+        if technical_chart_html:
+            technical_chart_section = f"\n\n#### Technical Indicators (RSI & MACD)\n\n{technical_chart_html}\n"
+
+        # Build macro section before final report composition
+        macro_section = ""
+        if macro_context:
+            report_prose = macro_context.get("report_prose", "")
+            if report_prose:
+                macro_header = "### Macroeconomic Environment\n\n"
+                macro_section = macro_header + report_prose + "\n\n"
+            else:
+                # Fallback: build from structured fields if report_prose is empty
+                regime = macro_context.get("market_regime", "sideways")
+                regime_rationale = macro_context.get("regime_rationale", "")
+                leading = macro_context.get("leading_sectors", [])
+                lagging = macro_context.get("lagging_sectors", [])
+                risks = macro_context.get("risk_events", [])
+
+                macro_section += "### Macroeconomic Environment\n\n"
+                macro_section += f"**Market Regime**: {regime.replace('_', ' ').title()}\n\n"
+                if regime_rationale:
+                    macro_section += f"**Rationale**: {regime_rationale}\n\n"
+                if leading:
+                    sectors_str = ", ".join([s.get("sector", "") for s in leading[:3]])
+                    macro_section += f"**Leading Sectors**: {sectors_str}\n\n"
+                if lagging:
+                    sectors_str = ", ".join([s.get("sector", "") for s in lagging[:3]])
+                    macro_section += f"**Lagging Sectors**: {sectors_str}\n\n"
+                if risks:
+                    for r in risks[:3]:
+                        macro_section += f"- ⚠️ {r.get('event', '')} (Severity: {r.get('severity', 'medium')})\n"
+                    macro_section += "\n"
+
+        # Language-specific headers
+        headers = {
+            "title": f"# {company_name} ({ticker}) Analysis Report",
+            "pub_date": "Publication Date",
+            "exec_summary": "## Executive Summary",
+            "tech_analysis": "## 1. Technical Analysis",
+            "fundamental": "## 2. Fundamental Analysis",
+            "news": "## 3. Recent Major News Summary",
+            "market": "## 4. Market Analysis",
+            "strategy": "## 5. Investment Strategy and Opinion",
+        }
+
+        final_report = f"""{headers["title"]}
+
+**{headers["pub_date"]}:** {formatted_date}
+
+---
+
+{section_reports.get("summary", headers["exec_summary"] + " - Summary not available")}
+
+---
+
+{headers["tech_analysis"]}
+
+{section_reports.get("price_volume_analysis", "Analysis not available")}
+{price_chart_section}
+{section_reports.get("institutional_holdings_analysis", "Analysis not available")}
+{institutional_chart_section}
+---
+
+{headers["fundamental"]}
+
+{section_reports.get("company_status", "Analysis not available")}
+
+{section_reports.get("company_overview", "Analysis not available")}
+
+---
+
+{headers["news"]}
+
+{section_reports.get("news_analysis", "Analysis not available")}
+
+---
+
+{headers["market"]}
+
+{section_reports.get("market_index_analysis", "Analysis not available")}
+{technical_chart_section}
+{macro_section}
+---
+
+{headers["strategy"]}
+
+{section_reports.get("investment_strategy", "Strategy not available")}
+
+---
+
+{get_disclaimer(language)}
+"""
+
+        # 11. Clean up markdown formatting
+        final_report = clean_markdown(final_report)
+
+        logger.info(f"Final report generated: {company_name}({ticker}) - {len(final_report)} characters")
+
+        return final_report
+
+
+def clear_us_market_cache():
+    """Clear the US market analysis cache"""
+    global _us_market_analysis_cache
+    _us_market_analysis_cache = {}
+
+
+if __name__ == "__main__":
+    import time
+    import threading
+    import signal
+
+    # Timeout after 60 minutes
+    def exit_after_timeout():
+        time.sleep(3600)
+        print("60-minute timeout reached: forcefully terminating process")
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    # Start timer as background thread
+    timer_thread = threading.Thread(target=exit_after_timeout, daemon=True)
+    timer_thread.start()
+
+    start = time.time()
+
+    # Run analysis for Apple Inc.
+    result = asyncio.run(analyze_us_stock(
+        ticker="AAPL",
+        company_name="Apple Inc.",
+        reference_date=datetime.now().strftime("%Y%m%d"),
+        language="en"
+    ))
+
+    # Save result
+    output_path = f"AAPL_Apple Inc_{datetime.now().strftime('%Y%m%d')}_{_model_slug(US_REPORT_FILENAME_MODEL)}.md"
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(result)
+
+    end = time.time()
+    print(f"Total execution time: {end - start:.2f} seconds")
+    print(f"Final report length: {len(result):,} characters")
+    print(f"Report saved to: {output_path}")

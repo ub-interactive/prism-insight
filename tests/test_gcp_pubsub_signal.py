@@ -25,11 +25,11 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime
 
 from dotenv import load_dotenv
-from repo_paths import REPO_ROOT
+from prism.paths import REPO_ROOT
 
 load_dotenv(REPO_ROOT / ".env")
 
-from messaging.gcp_pubsub_signal_publisher import (
+from prism.messaging.gcp_pubsub_signal_publisher import (
     SignalPublisher,
     get_signal_publisher,
     publish_buy_signal,

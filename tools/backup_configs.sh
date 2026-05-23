@@ -35,7 +35,7 @@ else
 fi
 
 # mcp_agent config files
-for file in mcp_agent.*.yaml; do
+for file in src/config/mcp_agent.*.yaml; do
     if [ -f "$file" ]; then
         cp "$file" $BACKUP_DIR/
         log "✓ $file backup complete"
@@ -54,11 +54,11 @@ fi
 log "Backing up trading directory..."
 mkdir -p $BACKUP_DIR/trading/config
 
-if [ -f trading/config/kis_devlp.yaml ]; then
-    cp trading/config/kis_devlp.yaml $BACKUP_DIR/trading/config/
-    log "✓ trading/config/kis_devlp.yaml backup complete"
+if [ -f src/prism/trading/config/kis_devlp.yaml ]; then
+    cp src/prism/trading/config/kis_devlp.yaml $BACKUP_DIR/trading/config/
+    log "✓ src/prism/trading/config/kis_devlp.yaml backup complete"
 else
-    log "⚠ trading/config/kis_devlp.yaml file not found"
+    log "⚠ src/prism/trading/config/kis_devlp.yaml file not found"
 fi
 
 # 3. Backup examples directory

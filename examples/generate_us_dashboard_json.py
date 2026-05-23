@@ -33,9 +33,12 @@ logger = logging.getLogger(__name__)
 # Path setup (before importing other modules)
 SCRIPT_DIR = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-TRADING_DIR = PROJECT_ROOT / "trading"
-sys.path.insert(0, str(SCRIPT_DIR))  # examples/ folder (for translation_utils)
-sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(SCRIPT_DIR))
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+from prism.paths import TRADING_CONFIG_DIR
+
+TRADING_DIR = TRADING_CONFIG_DIR.parent
 
 # yfinance import for market index data
 try:
@@ -47,7 +50,7 @@ except ImportError:
 
 KIS_US_AVAILABLE = False
 try:
-    from trading.stock_trading import USStockTrading
+    from prism.trading.stock_trading import USStockTrading
     KIS_US_AVAILABLE = True
 except Exception as exc:
     USStockTrading = None
@@ -62,7 +65,7 @@ except ImportError:
     logger.warning("Translation utility not found. English translation will be disabled.")
 
 # Config file loading (same as KR dashboard - shared KIS credentials)
-CONFIG_FILE = TRADING_DIR / "config" / "kis_devlp.yaml"
+CONFIG_FILE = TRADING_CONFIG_DIR / "kis_devlp.yaml"
 try:
     with open(CONFIG_FILE, encoding="UTF-8") as f:
         _cfg = yaml.safe_load(f)
@@ -70,7 +73,7 @@ except FileNotFoundError:
     _cfg = {"default_mode": "demo"}
     logger.warning(f"Config file not found: {CONFIG_FILE}. Using default mode (demo).")
 
-from trading import kis_auth as ka
+from prism.trading import kis_auth as ka
 
 
 class USDashboardDataGenerator:

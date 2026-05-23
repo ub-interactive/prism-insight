@@ -2,7 +2,7 @@
 
 import json
 import pytest
-from cores.chatgpt_proxy.api_translator import (
+from prism.core.chatgpt_proxy.api_translator import (
     translate_request,
     translate_response,
     translate_error,

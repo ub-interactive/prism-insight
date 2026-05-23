@@ -16,21 +16,6 @@ config.py
 # Logs
 *.log
 
-# Jeon Ingu Trading 출력 파일 및 데이터
-events/*
-!events/JEONINGU_TRADING.md
-!events/jeoningu_trading.py
-!events/jeoningu_trading_db.py
-!events/jeoningu_price_fetcher.py
-!events/logs/
-!events/transcripts/
-!events/audio_temp/
-
-# 하위 디렉토리 안의 실제 파일들은 무시
-events/logs/*
-events/transcripts/*
-events/audio_temp/*
-
 # Python cache files
 __pycache__/
 *.py[cod]
@@ -43,14 +28,15 @@ __pycache__/
 .github/
 .venv/
 
-# trading/.gitignore
-trading/config/KIS*
-trading/config/*.token*
-trading/config/*.key
-trading/config/kis_devlp.yaml
-trading/config/kis_*.yaml
+# KIS credentials (any path under trading package)
+**/trading/config/KIS*
+**/trading/config/*.token*
+**/trading/config/*.key
+**/trading/config/kis_devlp.yaml
+**/trading/config/kis_*.yaml
 
 # Build artifacts
+*.egg-info/
 .next/
 dist/
 node_modules/
@@ -61,9 +47,11 @@ examples/dashboard/build/
 examples/dashboard/dist/
 examples/dashboard/node_modules/
 
-# Generated reports & data
+# Generated reports & data (legacy root paths + src/var/)
 reports/
 pdf_reports/
+html_reports/
+src/var/
 *.sqlite
 *.pdf
 *_report*.md
@@ -77,7 +65,7 @@ examples/dashboard/public/dashboard_data*.json
 perplexity-ask/
 
 # Generated docs
-# Logs directory
+# Logs directory (legacy)
 logs/
 
 # tests generated files
@@ -92,8 +80,8 @@ youtube_cookies.txt
 # Generated trigger results
 trigger_results_*.json
 
-# SQLite MCP server data files (keep Dockerfile, README, pyproject.toml, src/)
-sqlite/stock_tracking_db
+# SQLite MCP vendor data files
+src/vendor/sqlite/stock_tracking_db
 
 # Backup files
 *.bak

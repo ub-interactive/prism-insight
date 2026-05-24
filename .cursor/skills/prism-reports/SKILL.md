@@ -14,4 +14,7 @@ description: >-
 
 ## Language
 
-Reports are **English only**. Code comments and logs: English.
+- Analysis agents and synthesis prompts run in **English**.
+- Non-English output uses `prism.reporting.translation` (`apply_report_output_language`) after the final markdown is assembled.
+- Model key: `openai.models.us_translation` in `src/config/mcp_agent.config.yaml`.
+- Code comments and logs: English.

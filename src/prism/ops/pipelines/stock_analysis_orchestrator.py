@@ -598,8 +598,14 @@ async def main():
     parser = argparse.ArgumentParser(description="US stock analysis orchestrator")
     parser.add_argument("--mode", choices=["morning", "midday", "afternoon", "both"], default="both",
                         help="Execution mode (morning, midday, afternoon, both)")
-    parser.add_argument("--language", choices=["en"], default="en",
-                        help="Analysis language (en: English)")
+    from prism.reporting.translation.languages import SUPPORTED_OUTPUT_LANGUAGES
+
+    parser.add_argument(
+        "--language",
+        choices=sorted(SUPPORTED_OUTPUT_LANGUAGES),
+        default="en",
+        help="Report output language (default: en). Non-English uses the translation layer.",
+    )
     parser.add_argument("--no-proxy", action="store_true",
                         help="Disable ChatGPT OAuth proxy (use standard OpenAI API key)")
     parser.add_argument("--force", action="store_true",

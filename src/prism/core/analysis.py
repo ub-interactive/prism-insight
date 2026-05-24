@@ -35,6 +35,11 @@ from prism.core.visualization.chart import (
     get_us_technical_chart_html,
 )
 from prism.core.utils import clean_markdown
+from prism.reporting.translation import apply_report_output_language
+from prism.reporting.translation.languages import normalize_output_language
+
+# Analysis agents and synthesis always run in English; localization is post-processed.
+_ANALYSIS_LANGUAGE = "en"
 
 # Market analysis cache storage (global variable)
 _us_market_analysis_cache = {}
@@ -65,12 +70,15 @@ async def analyze_us_stock(
         ticker: Stock ticker symbol (e.g., "AAPL", "MSFT")
         company_name: Company name (e.g., "Apple Inc.")
         reference_date: Analysis reference date (YYYYMMDD format)
-        language: Legacy language code forwarded across synthesis helpers.
+        language: Output language code (en, ja, ko, zh, es, fr, de). Analysis runs in
+            English; non-English values trigger the report translation output layer.
         include_news: Whether to include news analysis (requires Perplexity API)
 
     Returns:
         str: Generated final report markdown text
     """
+    output_language = normalize_output_language(language)
+
     # 1. Initial setup and preprocessing
     app = MCPApp(name="us_stock_analysis", settings=str(MCP_CONFIG_PATH))
 
@@ -128,7 +136,9 @@ async def analyze_us_stock(
                 logger.warning(f"US social sentiment prefetch failed, continuing without it: {e}")
 
         # 5. Get US-specific agents (with prefetched data)
-        agents = get_agent_directory(company_name, ticker, reference_date, base_sections, language, prefetched_data=prefetched)
+        agents = get_agent_directory(
+            company_name, ticker, reference_date, base_sections, _ANALYSIS_LANGUAGE, prefetched_data=prefetched
+        )
 
         # 6. Execute base analysis using HYBRID mode
         # - yfinance sections: sequential with 2 sec delay (rate limit friendly)
@@ -152,12 +162,12 @@ async def analyze_us_stock(
                             else:
                                 logger.info(f"Generating new US market analysis")
                                 report = await generate_market_report(
-                                    agent, section, reference_date, logger, language
+                                    agent, section, reference_date, logger, _ANALYSIS_LANGUAGE
                                 )
                                 _us_market_analysis_cache["report"] = report
                         else:
                             report = await generate_report(
-                                agent, section, company_name, ticker, reference_date, logger, language
+                                agent, section, company_name, ticker, reference_date, logger, _ANALYSIS_LANGUAGE
                             )
                         results[section] = report
                         # Add delay between yfinance calls to avoid rate limits
@@ -180,7 +190,7 @@ async def analyze_us_stock(
                 try:
                     agent = agents[section]
                     report = await generate_report(
-                        agent, section, company_name, ticker, reference_date, section_logger, language
+                        agent, section, company_name, ticker, reference_date, section_logger, _ANALYSIS_LANGUAGE
                     )
                     return section, report
                 except Exception as e:
@@ -216,7 +226,7 @@ async def analyze_us_stock(
             logger.info(f"Processing investment_strategy for {company_name}...")
 
             investment_strategy = await generate_investment_strategy(
-                section_reports, combined_reports, company_name, ticker, reference_date, logger, language
+                section_reports, combined_reports, company_name, ticker, reference_date, logger, _ANALYSIS_LANGUAGE
             )
             section_reports["investment_strategy"] = investment_strategy.lstrip('\n')
             logger.info(f"Completed investment_strategy - {len(investment_strategy)} characters")
@@ -228,7 +238,7 @@ async def analyze_us_stock(
         try:
             logger.info(f"Processing summary for {company_name}...")
             summary = await generate_summary(
-                section_reports, company_name, ticker, reference_date, logger, language
+                section_reports, company_name, ticker, reference_date, logger, _ANALYSIS_LANGUAGE
             )
             # Remove duplicate title/date if the agent added them
             # Pattern: "# Company Name (TICKER) Analysis Report\n**Publication Date:** ..."
@@ -409,13 +419,25 @@ async def analyze_us_stock(
 
 ---
 
-{get_disclaimer(language)}
+{get_disclaimer(_ANALYSIS_LANGUAGE)}
 """
 
         # 11. Clean up markdown formatting
         final_report = clean_markdown(final_report)
 
         logger.info(f"Final report generated: {company_name}({ticker}) - {len(final_report)} characters")
+
+        if output_language != _ANALYSIS_LANGUAGE:
+            logger.info(
+                "Applying output translation layer: %s -> %s",
+                _ANALYSIS_LANGUAGE,
+                output_language,
+            )
+            final_report = await apply_report_output_language(
+                final_report,
+                output_language,
+                log=logger,
+            )
 
         return final_report
 

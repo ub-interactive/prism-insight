@@ -21,13 +21,16 @@ except Exception:
     get_optional_reasoning_effort = _model_cfg_mod.get_optional_reasoning_effort
 
 
-# Language name mapping for report generation
+# Language name mapping for synthesis prompts (analysis pipeline uses English only;
+# non-English output is handled by prism.reporting.translation).
 LANGUAGE_NAMES = {
     "en": "English",
     "ja": "Japanese",
+    "ko": "Korean",
+    "zh": "Chinese (Simplified)",
     "es": "Spanish",
     "fr": "French",
-    "de": "German"
+    "de": "German",
 }
 
 REPORT_GENERATION_MODEL = get_configured_model("report_generation", "gpt-5.4-mini")

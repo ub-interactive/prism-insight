@@ -60,7 +60,7 @@ async def generate_report(ticker: str, company_name: str, language: str = "en") 
     Args:
         ticker: Stock ticker symbol (e.g., "AAPL")
         company_name: Company name (e.g., "Apple Inc.")
-        language: Language code ("en")
+        language: Output language code (en, ja, ko, zh, es, fr, de)
 
     Returns:
         tuple: (markdown_path, pdf_path)
@@ -74,7 +74,9 @@ async def generate_report(ticker: str, company_name: str, language: str = "en") 
     print(f"  PRISM-INSIGHT AI Stock Analysis")
     print(f"  Ticker: {ticker}")
     print(f"  Company: {company_name}")
-    language_labels = {"en": "English"}
+    from prism.reporting.translation.languages import LANGUAGE_DISPLAY_NAMES
+
+    language_labels = LANGUAGE_DISPLAY_NAMES
     print(f"  Language: {language_labels.get(language, language.upper())}")
     if not include_news:
         print(f"  Note: News analysis skipped (Perplexity API not configured)")
@@ -125,7 +127,7 @@ Examples:
   python demo.py                      # Analyze Apple (AAPL)
   python demo.py MSFT                 # Analyze Microsoft
   python demo.py NVDA "NVIDIA Corp"   # Analyze with custom name
-  python demo.py AAPL --language en   # English report
+  python demo.py AAPL --language ja   # Japanese report (translated output layer)
         """
     )
     parser.add_argument(
@@ -140,11 +142,13 @@ Examples:
         default=None,
         help="Company name (auto-detected if not provided)"
     )
+    from prism.reporting.translation.languages import SUPPORTED_OUTPUT_LANGUAGES
+
     parser.add_argument(
         "--language", "-l",
-        choices=["en"],
+        choices=sorted(SUPPORTED_OUTPUT_LANGUAGES),
         default="en",
-        help="Report language (default: en)"
+        help="Report output language (default: en). Non-English uses the translation layer.",
     )
 
     args = parser.parse_args()

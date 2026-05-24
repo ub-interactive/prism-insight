@@ -1,8 +1,7 @@
 """
 Language Configuration Module
 
-English-only language configuration and translation management
-for the PRISM-INSIGHT stock analysis system.
+Language configuration for report output and UI strings in PRISM-INSIGHT.
 """
 
 import os
@@ -12,8 +11,14 @@ from typing import Dict, Any
 
 
 class Language(Enum):
-    """Supported languages"""
+    """Supported report output languages (see reporting.translation.languages)."""
     ENGLISH = "en"
+    JAPANESE = "ja"
+    KOREAN = "ko"
+    CHINESE = "zh"
+    SPANISH = "es"
+    FRENCH = "fr"
+    GERMAN = "de"
 
 
 class LanguageConfig:

@@ -29,7 +29,7 @@ async def apply_report_output_language(
     if not needs_translation(normalized):
         return english_markdown
 
-    active_logger.info("Applying report output translation layer (target=%s)", normalized)
+    active_logger.info(f"Applying report output translation layer (target={normalized})")
     return await translate_report_markdown(
         english_markdown,
         normalized,

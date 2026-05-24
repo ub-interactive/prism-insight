@@ -428,11 +428,7 @@ async def analyze_us_stock(
         logger.info(f"Final report generated: {company_name}({ticker}) - {len(final_report)} characters")
 
         if output_language != _ANALYSIS_LANGUAGE:
-            logger.info(
-                "Applying output translation layer: %s -> %s",
-                _ANALYSIS_LANGUAGE,
-                output_language,
-            )
+            logger.info(f"Applying output translation layer: {_ANALYSIS_LANGUAGE} -> {output_language}")
             final_report = await apply_report_output_language(
                 final_report,
                 output_language,

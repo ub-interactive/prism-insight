@@ -127,12 +127,7 @@ async def translate_report_markdown(
 
     language_name = get_language_display_name(target_language)
     chunks = _split_markdown_for_translation(text)
-    active_logger.info(
-        "Translating report to %s (%d chunk(s), %d characters)",
-        language_name,
-        len(chunks),
-        len(text),
-    )
+    active_logger.info(f"Translating report to {language_name} ({len(chunks)} chunk(s), {len(text)} characters)")
 
     translated_parts: list[str] = []
     try:
@@ -149,5 +144,5 @@ async def translate_report_markdown(
         raise
 
     result = "\n".join(translated_parts).strip()
-    active_logger.info("Report translation complete — %d characters", len(result))
+    active_logger.info(f"Report translation complete — {len(result)} characters")
     return result

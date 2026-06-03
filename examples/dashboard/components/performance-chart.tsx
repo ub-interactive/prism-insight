@@ -50,7 +50,7 @@ export function PerformanceChart({ data, prismPerformance = [], holdings = [], s
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-            {No data available.}
+            No data available.
           </div>
         </CardContent>
       </Card>

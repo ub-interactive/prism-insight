@@ -1048,7 +1048,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                   <div className="flex items-center gap-2 mb-2">
                                     <Zap className="w-4 h-4 text-blue-600" />
                                     <span className="font-medium text-blue-700 dark:text-blue-400">
-                                      {Key Changes}
+                                      Key Changes
                                     </span>
                                   </div>
                                   <ul className="space-y-1 text-muted-foreground">
@@ -1121,7 +1121,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                 <div className="flex items-center gap-2 mb-2">
                                   <AlertCircle className="w-4 h-4 text-orange-600" />
                                   <span className="font-medium text-orange-700 dark:text-orange-400 text-sm">
-                                    {Missed Signals}
+                                    Missed Signals
                                   </span>
                                 </div>
                                 <ul className="space-y-1 text-xs text-muted-foreground">
@@ -1139,7 +1139,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                 <div className="flex items-center gap-2 mb-2">
                                   <Target className="w-4 h-4 text-purple-600" />
                                   <span className="font-medium text-purple-700 dark:text-purple-400 text-sm">
-                                    {Overreacted Signals}
+                                    Overreacted Signals
                                   </span>
                                 </div>
                                 <ul className="space-y-1 text-xs text-muted-foreground">

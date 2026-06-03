@@ -160,7 +160,7 @@ export function MetricsCards({
           <div className="flex items-center gap-2">
             <div className={`h-1 w-8 rounded-full bg-gradient-to-r ${sectionGradient}`} />
             <h2 className="text-sm font-semibold text-muted-foreground">
-              {isUSMarket ? (US Real Trading) : t("metrics.realTrading")}
+              {isUSMarket ? "US Real Trading" : t("metrics.realTrading")}
               {" "}({seasonInfo.seasonName})
             </h2>
           </div>
@@ -218,7 +218,7 @@ export function MetricsCards({
           <div className="flex items-center gap-2">
             <div className="h-1 w-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500" />
             <h2 className="text-sm font-semibold text-muted-foreground">
-              {isUSMarket ? (US Simulator) : t("metrics.simulator")}
+              {isUSMarket ? "US Simulator" : t("metrics.simulator")}
             </h2>
           </div>
           <div className="flex items-center gap-2">

@@ -59,7 +59,7 @@ export function HoldingsTable({ holdings, onStockClick, title = "보유 종목",
             {isRealTrading ? (
               <div className="flex items-center gap-2">
                 <Badge variant="default" className={badgeGradientClass}>
-                  {isUSMarket ? (US Real) : t("badge.realTrading")}
+                  {isUSMarket ? "US Real" : t("badge.realTrading")}
                 </Badge>
                 <Badge variant="outline" className={badgeOutlineClass}>
                   {isUSMarket ? "Season 1" : t("badge.season2")}
@@ -67,7 +67,7 @@ export function HoldingsTable({ holdings, onStockClick, title = "보유 종목",
               </div>
             ) : (
               <Badge variant="outline" className={simulatorBadgeClass}>
-                {isUSMarket ? (US Simulation) : t("badge.aiSimulation")}
+                {isUSMarket ? "US Simulation" : t("badge.aiSimulation")}
               </Badge>
             )}
           </div>

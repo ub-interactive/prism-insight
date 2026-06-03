@@ -84,7 +84,7 @@ export function TriggerReliabilityCard({ data, market = "KR" }: TriggerReliabili
                     {t("insights.triggerReliability.grade")}
                   </th>
                   <th className="text-left py-3 px-3 font-medium text-muted-foreground">
-                    {Trigger}
+                    Trigger
                   </th>
                   <th className="text-center py-3 px-3 font-medium text-muted-foreground">
                     <div className="flex items-center justify-center gap-1">
@@ -169,7 +169,7 @@ export function TriggerReliabilityCard({ data, market = "KR" }: TriggerReliabili
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Profit Factor: {Total Profit ÷ Total Loss}</p>
+                              <p>Profit Factor: Total Profit ÷ Total Loss</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
@@ -185,15 +185,15 @@ export function TriggerReliabilityCard({ data, market = "KR" }: TriggerReliabili
                         </TooltipTrigger>
                         <TooltipContent className="max-w-sm">
                           {item.related_principles.length === 0 ? (
-                            <p>{No related principles}</p>
+                            <p>No related principles</p>
                           ) : (
                             <div className="space-y-2 max-h-64 overflow-y-auto">
                               {item.related_principles.map((principle, i) => (
                                 <div key={i} className="text-xs border-b pb-2 last:border-b-0">
                                   <p className="font-medium">{principle.action}</p>
                                   <p className="text-muted-foreground mt-1">
-                                    {Confidence}: {(principle.confidence * 100).toFixed(0)}%
-                                    ({principle.supporting_trades} {trades})
+                                    Confidence: {(principle.confidence * 100).toFixed(0)}%
+                                    ({principle.supporting_trades} trades)
                                   </p>
                                 </div>
                               ))}

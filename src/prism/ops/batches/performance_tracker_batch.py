@@ -630,7 +630,7 @@ Examples:
         "--db",
         type=str,
         default=None,
-        help="SQLite DB path (default: src/var/stock_tracking_db.sqlite)"
+        help="SQLite DB path (default: var/stock_tracking_db.sqlite)"
     )
 
     args = parser.parse_args()

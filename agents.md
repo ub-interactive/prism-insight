@@ -18,7 +18,7 @@ Instructions and references for AI agents and assistants working in this reposit
 
 ```
 src/prism/{core,ops,trading,tracking,reporting,integrations,messaging}
-src/config/   src/var/   src/vendor/sqlite/
+src/config/   var/   src/vendor/sqlite/
 ```
 
 ### Import Rules
@@ -36,9 +36,9 @@ from prism.core.analysis import analyze_us_stock
 prism-insight/
 ├── agents.md                  # Comprehensive agent instructions (this file)
 ├── .cursor/skills/            # Project skills (prism-project, prism-python, …)
+├── var/                       # reports, pdf_reports, logs (gitignored)
 ├── src/
 │   ├── config/                # mcp_agent.config.yaml
-│   ├── var/                   # reports, pdf_reports, logs (gitignored)
 │   ├── vendor/sqlite/         # MCP sqlite server
 │   └── prism/                 # Application package
 └── docs/                      # setup, agent-reference, troubleshooting, …

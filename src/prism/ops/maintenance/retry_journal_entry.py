@@ -195,7 +195,7 @@ async def retry_all_missing(db_path: str):
 def main():
     parser = argparse.ArgumentParser(description='Trading journal retry script')
     parser.add_argument('--db-path', default=str(DB_PATH),
-                       help='Database path (default: src/var/stock_tracking_db.sqlite)')
+                       help='Database path (default: var/stock_tracking_db.sqlite)')
     parser.add_argument('--id', type=int, help='Trade ID')
     parser.add_argument('--ticker', help='Ticker code (recent trade)')
     parser.add_argument('--all-missing', action='store_true',

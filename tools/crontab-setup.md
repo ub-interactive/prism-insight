@@ -67,7 +67,7 @@ PROJECT_DIR=/opt/prism-insight PYTHON_PATH=/usr/bin/python3 ./setup_crontab.sh -
 
 #### 5. **Config Backup (02:00)**
 - Backup .env, mcp_agent.*.yaml files
-- Backup src/var/stock_tracking_db.sqlite
+- Backup var/stock_tracking_db.sqlite
 - Backup trading/config/kis_devlp.yaml
 - Auto-delete backups older than 7 days
 

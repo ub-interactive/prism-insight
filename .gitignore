@@ -43,11 +43,11 @@ node_modules/
 *.tsbuildinfo
 
 
-# Generated reports & data (legacy root paths + src/var/)
+# Generated reports & data (legacy root paths + var/)
 reports/
 pdf_reports/
 html_reports/
-src/var/
+var/
 *.sqlite
 *.pdf
 *_report*.md

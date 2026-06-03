@@ -77,7 +77,6 @@ openai:
     us_translation: deepseek-v4-flash
     archive_query_default: deepseek-v4-flash
     company_name_translation: deepseek-v4-flash
-    example_dashboard_translation: deepseek-v4-flash
   archive_query_allowed_models:
     - deepseek-v4-flash
     - deepseek-v4

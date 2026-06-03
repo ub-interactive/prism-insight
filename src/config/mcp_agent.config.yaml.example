@@ -75,7 +75,7 @@ mcp:
 openai:
   default_model: gpt-5.1
   reasoning_effort: high
-  # Optional model overrides by workflow (keys used by cores/model_config.py)
+  # Optional model overrides by workflow (keys used by src/prism/core/config/models.py)
   models:
     report_generation: gpt-5.4-mini
     us_journal: gpt-5.4-mini
@@ -87,7 +87,6 @@ openai:
     us_translation: gpt-5-nano
     archive_query_default: gpt-5.4-mini
     company_name_translation: gpt-5.4-mini
-    example_dashboard_translation: gpt-5-nano
   archive_query_allowed_models:
     - gpt-5.4-mini
     - gpt-4.1-mini

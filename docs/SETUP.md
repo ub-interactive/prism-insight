@@ -332,10 +332,10 @@ python stock_analysis_orchestrator.py --mode morning
 python trigger_batch.py morning INFO --output trigger_results.json
 
 # 2. Test PDF conversion
-python pdf_converter.py sample.md sample.pdf
+python src/prism/reporting/pdf_converter.py sample.md sample.pdf
 
 # 3. Test MCP server connection
-python cores/main.py
+python demo.py AAPL
 ```
 
 ### Expected Output
@@ -396,7 +396,7 @@ After successful setup:
 1. **Try the Quick Start**: Run `python stock_analysis_orchestrator.py --mode morning`
 2. **Explore the Dashboard**: Visit [analysis.stocksimulation.kr](https://analysis.stocksimulation.kr/)
 3. **Discuss on GitHub**: Open a thread in [Discussions](https://github.com/dragon1086/prism-insight/discussions)
-4. **Customize**: Modify agents in `cores/agents/` directory
+4. **Customize**: Modify agents in `src/prism/core/agents/` directory
 
 ---
 

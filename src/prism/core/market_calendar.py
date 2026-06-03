@@ -5,9 +5,9 @@ Pure library functions for NYSE/NASDAQ trading-day detection using
 pandas-market-calendars.  No CLI entry point, no logging side effects.
 
 Consumers:
-    - cores/data/surge_detector.py
-    - reporting/report_generator.py
-    - scripts/check_market_day.py  (CLI wrapper — re-exports these helpers)
+    - src/prism/core/data/surge_detector.py
+    - src/prism/reporting/report_generator.py
+    - src/prism/ops/maintenance/check_market_day.py  (CLI wrapper — re-exports these helpers)
 """
 
 import logging

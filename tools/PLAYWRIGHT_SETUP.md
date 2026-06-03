@@ -121,7 +121,7 @@ python3 -m playwright --version
 ### Test PDF Conversion
 
 ```python
-from pdf_converter import markdown_to_pdf
+from prism.reporting.pdf_converter import markdown_to_pdf
 
 # Simple test
 with open('test.md', 'w') as f:

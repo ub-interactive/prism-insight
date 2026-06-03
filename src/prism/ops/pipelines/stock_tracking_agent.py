@@ -652,7 +652,7 @@ class USStockTrackingAgent:
                 )
             )
 
-            # JSON parsing (consolidated in cores/utils.py)
+            # JSON parsing (consolidated in src/prism/core/utils.py)
             scenario_json = parse_llm_json(response, context='US trading scenario')
             if scenario_json is not None:
                 logger.info(f"Scenario parsed: {json.dumps(scenario_json, ensure_ascii=False)[:200]}")

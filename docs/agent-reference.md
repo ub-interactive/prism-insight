@@ -91,7 +91,7 @@ for any deep/asset links supplied by callers.
 
 ### Trading Simulation Team (3 Agents) - GPT-5 Based
 
-> **Note**: All agents now use GPT-5 (gpt-5) as the default model. GPT-5 output formatting requires additional cleanup in `cores/utils.py` (tool artifacts, headers).
+> **Note**: All agents now use GPT-5 (gpt-5) as the default model. GPT-5 output formatting requires additional cleanup in `src/prism/core/utils.py` (tool artifacts, headers).
 
 <img src="images/aiagent/buy_specialist.jpeg" alt="Buy Specialist" width="150" align="right"/>
 
@@ -133,7 +133,7 @@ for any deep/asset links supplied by callers.
 ## Agent Collaboration Pattern
 
 ```python
-# Pattern in cores/analysis.py
+# Pattern in src/prism/core/analysis.py
 async def analyze_stock(company_name, company_code, reference_date, language="en"):
     # 1. Get agent directory
     agents = get_agent_directory(company_name, company_code, reference_date,

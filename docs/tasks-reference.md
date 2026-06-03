@@ -239,42 +239,19 @@ python compress_trading_memory.py \
 - `stale-days`: 90 (default) - Deactivate unvalidated items
 - `archive-days`: 365 (default) - Delete old Layer 3 journals
 
----
-
-## Task 8: Performance Tracking Migration
-
-```bash
-# Migrate watchlist/trading history to performance tracker
-# (For analyzing 7/14/30 day returns of analyzed stocks)
-
-# Preview migration
-python utils/migrate_watchlist_to_performance_tracker.py --dry-run
-
-# Execute migration
-python utils/migrate_watchlist_to_performance_tracker.py
-
-# Reset and re-migrate (deletes existing tracker data)
-python utils/migrate_watchlist_to_performance_tracker.py --reset
-```
-
-**Features:**
-- Fetches 7/14/30 day prices from pykrx
-- Auto-detects trigger_type (volume_surge, gap_up, etc.)
-- Period unification: aligns trading history with watchlist dates
-- Duplicate prevention (ticker + date unique constraint)
 
 ---
 
-## Task 9: Lessons to Principles Migration
+## Task 8: Lessons to Principles Migration
 
 ```bash
 # Migrate trading_journal lessons to trading_principles table
 
 # Preview migration
-python utils/migrate_lessons_to_principles.py --dry-run
+python tools/migrate_lessons_to_principles.py --dry-run
 
 # Execute migration
-python utils/migrate_lessons_to_principles.py
+python tools/migrate_lessons_to_principles.py
 ```
 
 **What it does:**

@@ -41,13 +41,12 @@ pip install -r requirements.txt
 
 # Prepare configuration files
 cp .env.example .env
-cp config.py.example config.py
 ```
 
 ### Test Environment
 ```bash
 # Basic analysis test
-python cores/main.py
+python demo.py AAPL
 
 # Individual module test
 python trigger_batch.py morning INFO --output test_results.json

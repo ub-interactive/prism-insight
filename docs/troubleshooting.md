@@ -22,7 +22,7 @@ python3 -m playwright install chromium
 python3 -m playwright install --with-deps chromium
 
 # Or use setup script
-cd utils && chmod +x setup_playwright.sh && ./setup_playwright.sh
+cd tools && chmod +x setup_playwright.sh && ./setup_playwright.sh
 ```
 
 ---
@@ -32,7 +32,7 @@ cd utils && chmod +x setup_playwright.sh && ./setup_playwright.sh
 **Symptoms**: `firebase_bridge.notify` exits early or mobile QA devices never receive FCM traffic.
 
 **Checklist**:
-1. Confirm `.env`: `FIREBASE_BRIDGE_ENABLED=true` and `GOOGLE_APPLICATION_CREDENTIALS` resolves inside the runtime (absolute paths work best under Docker binds).
+1. Confirm `.env`: `FIREBASE_BRIDGE_ENABLED=true` and `GOOGLE_APPLICATION_CREDENTIALS` resolves inside the runtime (absolute paths work best).
 2. Validate the Firebase project + service-account JSON scopes in GCP/Firebase console.
 3. Tail application logs—the bridge absorbs most exceptions but still logs warnings once logging is WARNING+.
 
@@ -126,8 +126,8 @@ python tests/quick_json_test.py
 
 **Solution**:
 ```python
-# cores/utils.py provides automatic cleanup
-from cores.utils import clean_markdown
+# src/prism/core/utils.py provides automatic cleanup
+from prism.core.utils import clean_markdown
 
 # Automatic fixes applied:
 # - Remove GPT-5 tool call artifacts
@@ -138,7 +138,7 @@ from cores.utils import clean_markdown
 cleaned_text = clean_markdown(raw_output)
 ```
 
-**Note**: GPT-5 model output requires additional processing compared to GPT-4.1. The `cores/utils.py` file contains several fixes for GPT-5-specific formatting quirks.
+**Note**: GPT-5 model output requires additional processing compared to GPT-4.1. The `src/prism/core/utils.py` file contains several fixes for GPT-5-specific formatting quirks.
 
 ---
 
@@ -148,7 +148,7 @@ cleaned_text = clean_markdown(raw_output)
 
 **Symptoms**: `ImportError` / `ModuleNotFoundError` referencing `cores.*` even though the modules exist next to `stock_analysis_orchestrator.py`.
 
-**Cause**: Another `cores/` package resolves earlier on `sys.path`, shadowing this repository.
+**Cause**: Another `cores/` package (if existing in legacy path) resolves earlier on `sys.path`, shadowing this repository.
 
 **Fix**:
 1. Run tooling from this repository root only (avoid inserting `prism-us/` prefixes into `PYTHONPATH`).
@@ -177,7 +177,7 @@ MAX_CONCURRENT_ANALYSES = 3  # Reduce from 5
 
 # 4. Process stocks individually
 for stock_code in stock_list:
-    python cores/main.py --stock-code $stock_code
+    python demo.py $stock_code
 ```
 
 ---
@@ -209,8 +209,8 @@ logging.basicConfig(
 3. **Documentation**:
    - [README.md](../README.md)
    - [CONTRIBUTING.md](../CONTRIBUTING.md)
-   - [utils/CRONTAB_SETUP.md](../utils/CRONTAB_SETUP.md)
-   - [utils/PLAYWRIGHT_SETUP.md](../utils/PLAYWRIGHT_SETUP.md)
+   - [tools/CRONTAB_SETUP.md](../tools/CRONTAB_SETUP.md)
+   - [tools/PLAYWRIGHT_SETUP.md](../tools/PLAYWRIGHT_SETUP.md)
 
 ---
 

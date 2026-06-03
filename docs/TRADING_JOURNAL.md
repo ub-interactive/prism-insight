@@ -54,7 +54,7 @@
 
 ## 구성 요소
 
-### 1. Trading Journal Agent (`cores/agents/trading_journal_agent.py`)
+### 1. Trading Journal Agent (`src/prism/core/agents/trading_journal_agent.py`)
 
 매도 완료 후 호출되어 거래를 복기 분석합니다.
 
@@ -101,7 +101,7 @@
 | 실수 관련 | `손절지연`, `익절조급`, `재료과신`, `추격매수`, `패닉매도` |
 | 성공 관련 | `추세추종`, `눌림목매수`, `원칙준수`, `적정비중` |
 
-### 2. Memory Compressor Agent (`cores/agents/memory_compressor_agent.py`)
+### 2. Memory Compressor Agent (`src/prism/core/agents/memory_compressor_agent.py`)
 
 시간이 지난 일지를 계층적으로 압축합니다.
 

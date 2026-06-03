@@ -104,13 +104,13 @@ PYTHONPATH=/path/to/prism-insight
 # -----------------------------------------------------------------------------
 
 # Daily config & database backup at 2 AM
-0 2 * * * chmod +x /path/to/prism-insight/utils/backup_configs.sh && /path/to/prism-insight/utils/backup_configs.sh
+0 2 * * * chmod +x /path/to/prism-insight/tools/backup_configs.sh && /path/to/prism-insight/tools/backup_configs.sh
 
 # Weekly trading memory compression at 3 AM on Sundays
 0 3 * * 0 cd /path/to/prism-insight && python compress_trading_memory.py >> logs/compression.log 2>&1
 
 # Log cleanup (daily at 3 AM)
-0 3 * * * cd /path/to/prism-insight && utils/cleanup_logs.sh
+0 3 * * * cd /path/to/prism-insight && tools/cleanup_logs.sh
 
 # -----------------------------------------------------------------------------
 # 주식 분석 배치 (Stock Analysis Batch)

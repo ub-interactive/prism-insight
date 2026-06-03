@@ -377,9 +377,9 @@ async def execute_us_buy_trade(ticker: str, company_name: str, logger: logging.L
         limit_price: Limit price in USD for reserved orders (required for off-hours trading)
     """
     try:
-        USStockTrading = load_us_stock_trading_class()
+        us_stock_trading_class = load_us_stock_trading_class()
 
-        trading = USStockTrading()
+        trading = us_stock_trading_class()
 
         # Get current price for limit_price if not provided (needed for reserved orders)
         effective_limit_price = limit_price
@@ -415,9 +415,9 @@ async def execute_us_sell_trade(ticker: str, company_name: str, logger: logging.
         limit_price: Limit price in USD for reserved orders (required for off-hours trading)
     """
     try:
-        USStockTrading = load_us_stock_trading_class()
+        us_stock_trading_class = load_us_stock_trading_class()
 
-        trading = USStockTrading()
+        trading = us_stock_trading_class()
 
         # Get current price for limit_price if not provided (needed for reserved orders)
         effective_limit_price = limit_price

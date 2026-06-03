@@ -28,7 +28,7 @@ pytestmark = pytest.mark.skip(
     ),
 )
 
-from stock_tracking_agent import StockTrackingAgent
+from prism.ops.pipelines.stock_tracking_agent import StockTrackingAgent
 
 # Configure logging
 logging.basicConfig(

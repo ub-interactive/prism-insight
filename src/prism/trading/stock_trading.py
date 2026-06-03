@@ -265,7 +265,7 @@ class USStockTrading:
         )
 
         try:
-            self.trenv = ka.getTREnv()
+            self.trenv = ka.get_tr_env()
         except RuntimeError as e:
             print("❌ KIS API authentication failed!")
             print(f"Mode: {self.mode}, Error: {e}")
@@ -283,7 +283,7 @@ class USStockTrading:
 
     def _activate_account(self):
         """Ensure the shared KIS environment matches this trader's account."""
-        ka.changeTREnv(
+        ka.change_tr_env(
             self.trenv.my_token,
             svr=self.env,
             product=self.trenv.my_prod,
@@ -316,8 +316,8 @@ class USStockTrading:
             params = {"AUTH": "", "EXCD": price_excd, "SYMB": ticker_upper}
             try:
                 res = self._request(api_url, tr_id, params)
-                if res.isOK():
-                    data = res.getBody().output
+                if res.is_ok():
+                    data = res.get_body().output
                     last = _safe_float(data.get("last"))
                     base = _safe_float(data.get("base"))
                     if last > 0 or base > 0:
@@ -394,8 +394,8 @@ class USStockTrading:
         try:
             res = self._request(api_url, tr_id, params)
 
-            if res.isOK():
-                data = res.getBody().output
+            if res.is_ok():
+                data = res.get_body().output
 
                 # Use safe conversion helpers to handle empty strings from API
                 current_price = _safe_float(data.get('last'))
@@ -422,7 +422,7 @@ class USStockTrading:
                 logger.info(f"[{ticker}] Current price: ${result['current_price']:.2f} ({result['change_rate']:+.2f}%)")
                 return result
             else:
-                logger.error(f"Price query failed: {res.getErrorCode()} - {res.getErrorMessage()}")
+                logger.error(f"Price query failed: {res.get_error_code()} - {res.get_error_message()}")
                 return None
 
         except Exception as e:
@@ -533,10 +533,10 @@ class USStockTrading:
         }
 
         try:
-            res = self._request(api_url, tr_id, params, postFlag=True)
+            res = self._request(api_url, tr_id, params, post_flag=True)
 
-            if res.isOK():
-                output = res.getBody().output
+            if res.is_ok():
+                output = res.get_body().output
                 order_no = output.get('ODNO', '')
 
                 logger.info(f"[{ticker}] Market buy order success: {buy_quantity} shares, Order#: {order_no}")
@@ -549,7 +549,7 @@ class USStockTrading:
                     'message': f'Market buy order completed ({buy_quantity} shares)'
                 }
             else:
-                error_msg = f"{res.getErrorCode()} - {res.getErrorMessage()}"
+                error_msg = f"{res.get_error_code()} - {res.get_error_message()}"
                 logger.error(f"Buy order failed: {error_msg}")
 
                 return {
@@ -634,10 +634,10 @@ class USStockTrading:
         }
 
         try:
-            res = self._request(api_url, tr_id, params, postFlag=True)
+            res = self._request(api_url, tr_id, params, post_flag=True)
 
-            if res.isOK():
-                output = res.getBody().output
+            if res.is_ok():
+                output = res.get_body().output
                 order_no = output.get('ODNO', '')
 
                 logger.info(f"[{ticker}] Limit buy order success: {buy_quantity} shares x ${limit_price:.2f}, Order#: {order_no}")
@@ -651,8 +651,8 @@ class USStockTrading:
                     'message': f'Limit buy order completed ({buy_quantity} shares x ${limit_price:.2f})'
                 }
             else:
-                error_code = res.getErrorCode()
-                error_msg = f"{error_code} - {res.getErrorMessage()}"
+                error_code = res.get_error_code()
+                error_msg = f"{error_code} - {res.get_error_message()}"
                 if error_code == "APBK0656":
                     logger.error(f"Limit buy order failed: {error_msg} (exchange={exchange}, ticker={ticker.upper()}) — stock may not be in KIS universe for this exchange")
                 else:
@@ -775,10 +775,10 @@ class USStockTrading:
         }
 
         try:
-            res = self._request(api_url, tr_id, params, postFlag=True)
+            res = self._request(api_url, tr_id, params, post_flag=True)
 
-            if res.isOK():
-                output = res.getBody().output
+            if res.is_ok():
+                output = res.get_body().output
                 order_no = output.get('ODNO', '')
 
                 logger.info(f"[{ticker}] Market sell order success: {quantity} shares, Order#: {order_no}")
@@ -791,7 +791,7 @@ class USStockTrading:
                     'message': f'Market sell order completed ({quantity} shares)'
                 }
             else:
-                error_msg = f"{res.getErrorCode()} - {res.getErrorMessage()}"
+                error_msg = f"{res.get_error_code()} - {res.get_error_message()}"
                 logger.error(f"Sell order failed: {error_msg}")
 
                 return {
@@ -1035,10 +1035,10 @@ class USStockTrading:
         }
 
         try:
-            res = self._request(api_url, tr_id, params, postFlag=True)
+            res = self._request(api_url, tr_id, params, post_flag=True)
 
-            if res.isOK():
-                output = res.getBody().output
+            if res.is_ok():
+                output = res.get_body().output
                 order_no = output.get('ODNO', '') or output.get('RSVN_ORD_SEQ', '')
 
                 logger.info(f"[{ticker}] Reserved buy order success: {buy_quantity} shares x ${limit_price:.2f}, Order#: {order_no}")
@@ -1053,7 +1053,7 @@ class USStockTrading:
                     'message': f'Reserved buy order completed ({buy_quantity} shares x ${limit_price:.2f})'
                 }
             else:
-                error_msg = f"{res.getErrorCode()} - {res.getErrorMessage()}"
+                error_msg = f"{res.get_error_code()} - {res.get_error_message()}"
                 logger.error(f"Reserved buy order failed: {error_msg}")
 
                 return {
@@ -1163,10 +1163,10 @@ class USStockTrading:
         }
 
         try:
-            res = self._request(api_url, tr_id, params, postFlag=True)
+            res = self._request(api_url, tr_id, params, post_flag=True)
 
-            if res.isOK():
-                output = res.getBody().output
+            if res.is_ok():
+                output = res.get_body().output
                 order_no = output.get('ODNO', '') or output.get('RSVN_ORD_SEQ', '')
 
                 logger.info(f"[{ticker}] Reserved sell order success: {quantity} shares, {order_type_str}, Order#: {order_no}")
@@ -1181,7 +1181,7 @@ class USStockTrading:
                     'message': f'Reserved sell order completed ({quantity} shares, {order_type_str})'
                 }
             else:
-                error_msg = f"{res.getErrorCode()} - {res.getErrorMessage()}"
+                error_msg = f"{res.get_error_code()} - {res.get_error_message()}"
                 logger.error(f"Reserved sell order failed: {error_msg}")
 
                 return {
@@ -1606,8 +1606,8 @@ class USStockTrading:
             try:
                 res = self._request(api_url, tr_id, params)
 
-                if res.isOK():
-                    output1 = res.getBody().output1
+                if res.is_ok():
+                    output1 = res.get_body().output1
 
                     if not isinstance(output1, list):
                         output1 = [output1] if output1 else []
@@ -1677,8 +1677,8 @@ class USStockTrading:
         try:
             res = self._request(api_url, tr_id, params)
 
-            if res.isOK():
-                body = res.getBody()
+            if res.is_ok():
+                body = res.get_body()
                 output2 = body.output2 if hasattr(body, 'output2') else []
                 output3 = body.output3 if hasattr(body, 'output3') else {}
 
@@ -1715,7 +1715,7 @@ class USStockTrading:
 
                 return summary
 
-            logger.error(f"Account summary API failed: {res.getErrorCode()} - {res.getErrorMessage()}")
+            logger.error(f"Account summary API failed: {res.get_error_code()} - {res.get_error_message()}")
             return None
 
         except Exception as e:

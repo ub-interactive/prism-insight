@@ -320,7 +320,7 @@ async def _send_push(
         tokens = list(token_to_ref.keys())
 
         # FCM error codes that indicate a permanently invalid token
-        _INVALID_TOKEN_CODES = {
+        _invalid_token_codes = {
             'registration-token-not-registered',  # app uninstalled / token revoked
             'invalid-registration-token',          # malformed token
             'NOT_FOUND',                           # FCM v1 API: token not found / app uninstalled
@@ -358,7 +358,7 @@ async def _send_push(
                 error_code = getattr(resp.exception, 'code', '') or ''
                 # Strip 'messaging/' prefix if present
                 short_code = error_code.replace('messaging/', '')
-                if short_code in _INVALID_TOKEN_CODES:
+                if short_code in _invalid_token_codes:
                     try:
                         token_to_ref[token].delete()
                         cleaned += 1

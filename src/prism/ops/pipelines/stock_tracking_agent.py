@@ -448,7 +448,7 @@ class USStockTrackingAgent:
         migrate_us_watchlist_history_columns(self.cursor, self.conn)
 
     def _get_trading_accounts(self) -> List[Dict[str, Any]]:
-        default_mode = str(ka.getEnv().get("default_mode", "demo")).strip().lower()
+        default_mode = str(ka.get_env().get("default_mode", "demo")).strip().lower()
         svr = "vps" if default_mode == "demo" else "prod"
         return ka.get_configured_accounts(svr=svr, market="us")
 

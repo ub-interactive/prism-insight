@@ -728,7 +728,7 @@ def _get_primary_account_scope() -> tuple[str, str, str, str]:
     try:
         ka = kis_auth
 
-        default_mode = str(ka.getEnv().get("default_mode", "demo")).strip().lower()
+        default_mode = str(ka.get_env().get("default_mode", "demo")).strip().lower()
         svr = "vps" if default_mode == "demo" else "prod"
         primary_account = ka.resolve_account(svr=svr, market="us")
         mode = "demo" if primary_account["svr"] == "vps" else "real"

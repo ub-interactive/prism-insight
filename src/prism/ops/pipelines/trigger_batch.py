@@ -846,14 +846,14 @@ def trigger_contrarian_value(trade_date: str, snapshot: pd.DataFrame,
 
 def _get_regime_slots(market_regime: str) -> tuple:
     """Return (topdown_slots, bottomup_slots) based on market regime."""
-    REGIME_SLOTS = {
+    regime_slots = {
         "strong_bull": (2, 1),
         "moderate_bull": (1, 2),
         "sideways": (1, 2),
         "moderate_bear": (1, 2),
         "strong_bear": (0, 3),
     }
-    return REGIME_SLOTS.get(market_regime, (1, 2))  # default: sideways ratios
+    return regime_slots.get(market_regime, (1, 2))  # default: sideways ratios
 
 
 def _build_topdown_pool(trigger_candidates: dict, macro_context: dict, score_column: str, sector_map: dict = None) -> list:

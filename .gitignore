@@ -101,3 +101,5 @@ id_ed25519*
 archive.db
 archive.db-shm
 archive.db-wal
+
+.codegraph/

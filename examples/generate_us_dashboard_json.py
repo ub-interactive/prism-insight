@@ -784,7 +784,7 @@ class USDashboardDataGenerator:
 
             # 4. Actual trading by trigger type (from us_trading_history)
             actual_trading_by_trigger = []
-            US_TRIGGER_TRACKING_START_DATE = '2026-01-20'
+            us_trigger_tracking_start_date = '2026-01-20'
             try:
                 query = """
                     SELECT
@@ -801,7 +801,7 @@ class USDashboardDataGenerator:
                     FROM trading_history
                     WHERE sell_date >= ?
                 """
-                params = [US_TRIGGER_TRACKING_START_DATE]
+                params = [us_trigger_tracking_start_date]
                 if primary_account_key:
                     query += " AND account_key = ?"
                     params.append(primary_account_key)
@@ -1047,7 +1047,7 @@ class USDashboardDataGenerator:
 
             # 2. Actual trading data (us_trading_history)
             trading_data = {}
-            US_TRIGGER_TRACKING_START_DATE = '2026-01-20'
+            us_trigger_tracking_start_date = '2026-01-20'
             primary_account_key = self._get_cached_primary_account_key()
             try:
                 query = """
@@ -1061,7 +1061,7 @@ class USDashboardDataGenerator:
                     FROM trading_history
                     WHERE sell_date IS NOT NULL AND sell_date >= ?
                 """
-                params = [US_TRIGGER_TRACKING_START_DATE]
+                params = [us_trigger_tracking_start_date]
                 if primary_account_key:
                     query += " AND account_key = ?"
                     params.append(primary_account_key)

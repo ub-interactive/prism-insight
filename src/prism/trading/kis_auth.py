@@ -68,7 +68,7 @@ class TokenRequestError(KISAuthError):
         self.status_code = status_code
         self.response_text = response_text
 
-clearConsole = lambda: os.system("cls" if os.name in ("nt", "dos") else "clear")
+clear_console = lambda: os.system("cls" if os.name in ("nt", "dos") else "clear")
 
 key_bytes = 32
 # Find config folder based on kis_auth.py file directory
@@ -389,10 +389,10 @@ def resolve_account(
 _TRENV = None
 _TRENV_LOCK = threading.RLock()
 _last_auth_time = datetime.now()
-_autoReAuth = False
+_auto_re_auth = False
 _DEBUG = False
-_isPaper = False
-_smartSleep = 0.1
+_is_paper = False
+_smart_sleep = 0.1
 
 # Define default header values
 _base_headers = {
@@ -940,9 +940,9 @@ def _atomic_write(file_path_str: str, data: bytes) -> bool:
 
 
 # Check token validity time and reissue if expired
-def _getBaseHeader():
-    if _autoReAuth:
-        reAuth()
+def _get_base_header():
+    if _auto_re_auth:
+        re_auth()
     headers = copy.deepcopy(_base_headers)  # static fields only (Content-Type, User-Agent, etc.)
     if _TRENV is not None:
         headers["authorization"] = f"Bearer {_TRENV.my_token}"
@@ -956,7 +956,7 @@ def get_trading_env_lock():
 
 
 # Get: App key, App secret, Account number (8 digits), Account product code (2 digits), Token, Domain
-def _setTRENV(cfg):
+def _set_tr_env(cfg):
     nt1 = namedtuple(
         "KISEnv",
         ["my_app", "my_sec", "my_acct", "my_prod", "my_htsid", "my_token", "my_url", "my_url_ws"],
@@ -979,12 +979,12 @@ def _setTRENV(cfg):
     _TRENV = nt1(**d)
 
 
-def isPaperTrading():  # Paper trading
-    return _isPaper
+def is_paper_trading():  # Paper trading
+    return _is_paper
 
 
 # Set 'prod' for live trading, 'vps' for paper trading
-def changeTREnv(
+def change_tr_env(
     token_key,
     svr="prod",
     product=DEFAULT_PRODUCT_CODE,
@@ -994,17 +994,17 @@ def changeTREnv(
 ):
     cfg = dict()
 
-    global _isPaper, _smartSleep
+    global _is_paper, _smart_sleep
     if svr == "prod":  # Live trading
         ak1 = "my_app"  # App key for live trading
         ak2 = "my_sec"  # App secret for live trading
-        _isPaper = False
-        _smartSleep = 0.05
+        _is_paper = False
+        _smart_sleep = 0.05
     elif svr == "vps":  # Paper trading
         ak1 = "paper_app"  # App key for paper trading
         ak2 = "paper_sec"  # App secret for paper trading
-        _isPaper = True
-        _smartSleep = 0.5
+        _is_paper = True
+        _smart_sleep = 0.5
 
     account = resolve_account(
         svr=svr,
@@ -1031,10 +1031,10 @@ def changeTREnv(
     cfg["my_url_ws"] = _cfg["ops" if svr == "prod" else "vops"]
 
     # print(cfg)
-    _setTRENV(cfg)
+    _set_tr_env(cfg)
 
 
-def _getResultObject(json_data):
+def _get_result_object(json_data):
     _tc_ = namedtuple("res", json_data.keys())
 
     return _tc_(**json_data)
@@ -1180,7 +1180,7 @@ def auth(
 
 # end of initialize, token reissue, token validity 1 day on issuance
 # Saves to _last_auth_time on program execution to check validity, reissues token on expiry
-def reAuth(svr="prod", product=DEFAULT_PRODUCT_CODE, account_name=None, account_index=None, account_key=None):
+def re_auth(svr="prod", product=DEFAULT_PRODUCT_CODE, account_name=None, account_index=None, account_key=None):
     n2 = datetime.now()
     # BUG FIX: Changed .seconds to .total_seconds()
     # .seconds only returns seconds within the current day (0-86399)
@@ -1191,18 +1191,18 @@ def reAuth(svr="prod", product=DEFAULT_PRODUCT_CODE, account_name=None, account_
         auth(svr, product, account_name=account_name, account_index=account_index, account_key=account_key)
 
 
-def getEnv():
+def get_env():
     return _cfg
 
 
 def smart_sleep():
     if _DEBUG:
-        print(f"[RateLimit] Sleeping {_smartSleep}s ")
+        print(f"[RateLimit] Sleeping {_smart_sleep}s ")
 
-    time.sleep(_smartSleep)
+    time.sleep(_smart_sleep)
 
 
-def getTREnv():
+def get_tr_env():
     if _TRENV is None:
         raise RuntimeError("Authentication not completed. Call auth() function first.")
     return _TRENV
@@ -1228,15 +1228,15 @@ class APIResp:
     def __init__(self, resp):
         self._rescode = resp.status_code
         self._resp = resp
-        self._header = self._setHeader()
-        self._body = self._setBody()
+        self._header = self._set_header()
+        self._body = self._set_body()
         self._err_code = self._body.msg_cd
         self._err_message = self._body.msg1
 
-    def getResCode(self):
+    def get_res_code(self):
         return self._rescode
 
-    def _setHeader(self):
+    def _set_header(self):
         fld = dict()
         for x in self._resp.headers.keys():
             if x.islower():
@@ -1245,57 +1245,57 @@ class APIResp:
 
         return _th_(**fld)
 
-    def _setBody(self):
+    def _set_body(self):
         _tb_ = namedtuple("body", self._resp.json().keys())
 
         return _tb_(**self._resp.json())
 
-    def getHeader(self):
+    def get_header(self):
         return self._header
 
-    def getBody(self):
+    def get_body(self):
         return self._body
 
-    def getResponse(self):
+    def get_response(self):
         return self._resp
 
-    def isOK(self):
+    def is_ok(self):
         try:
-            if self.getBody().rt_cd == "0":
+            if self.get_body().rt_cd == "0":
                 return True
             else:
                 return False
         except:
             return False
 
-    def getErrorCode(self):
+    def get_error_code(self):
         return self._err_code
 
-    def getErrorMessage(self):
+    def get_error_message(self):
         return self._err_message
 
-    def printAll(self):
+    def print_all(self):
         print("<Header>")
-        for x in self.getHeader()._fields:
-            print(f"\t-{x}: {getattr(self.getHeader(), x)}")
+        for x in self.get_header()._fields:
+            print(f"\t-{x}: {getattr(self.get_header(), x)}")
         print("<Body>")
-        for x in self.getBody()._fields:
-            print(f"\t-{x}: {getattr(self.getBody(), x)}")
+        for x in self.get_body()._fields:
+            print(f"\t-{x}: {getattr(self.get_body(), x)}")
 
-    def printError(self, url):
+    def print_error(self, url):
         print(
             "-------------------------------\nError in response: ",
-            self.getResCode(),
+            self.get_res_code(),
             " url=",
             url,
         )
         print(
             "rt_cd : ",
-            self.getBody().rt_cd,
+            self.get_body().rt_cd,
             "/ msg_cd : ",
-            self.getErrorCode(),
+            self.get_error_code(),
             "/ msg1 : ",
-            self.getErrorMessage(),
+            self.get_error_message(),
         )
         print("-------------------------------")
 
@@ -1310,16 +1310,16 @@ class APIRespError(APIResp):
         self._error_code = str(status_code)
         self._error_message = error_text
 
-    def isOK(self):
+    def is_ok(self):
         return False
 
-    def getErrorCode(self):
+    def get_error_code(self):
         return self._error_code
 
-    def getErrorMessage(self):
+    def get_error_message(self):
         return self._error_message
 
-    def getBody(self):
+    def get_body(self):
         # Return empty object (prevents AttributeError on attribute access)
         class EmptyBody:
             def __getattr__(self, name):
@@ -1327,7 +1327,7 @@ class APIRespError(APIResp):
 
         return EmptyBody()
 
-    def getHeader(self):
+    def get_header(self):
         # Return empty object
         class EmptyHeader:
             tr_cont = ""
@@ -1337,13 +1337,13 @@ class APIRespError(APIResp):
 
         return EmptyHeader()
 
-    def printAll(self):
+    def print_all(self):
         print(f"=== ERROR RESPONSE ===")
         print(f"Status Code: {self.status_code}")
         print(f"Error Message: {self.error_text}")
         print(f"======================")
 
-    def printError(self, url=""):
+    def print_error(self, url=""):
         print(f"Error Code : {self.status_code} | {self.error_text}")
         if url:
             print(f"URL: {url}")
@@ -1353,26 +1353,26 @@ class APIRespError(APIResp):
 
 
 def _url_fetch(
-        api_url, ptr_id, tr_cont, params, appendHeaders=None, postFlag=False, hashFlag=True
+        api_url, ptr_id, tr_cont, params, append_headers=None, post_flag=False, hash_flag=True
 ):
-    url = f"{getTREnv().my_url}{api_url}"
+    url = f"{get_tr_env().my_url}{api_url}"
 
-    headers = _getBaseHeader()  # Organize basic header values
+    headers = _get_base_header()  # Organize basic header values
 
     # Set additional Headers
     tr_id = ptr_id
     if ptr_id[0] in ("T", "J", "C"):  # Check TR id for live trading
-        if isPaperTrading():  # Identify TR id for paper trading
+        if is_paper_trading():  # Identify TR id for paper trading
             tr_id = "V" + ptr_id[1:]
 
     headers["tr_id"] = tr_id  # Transaction TR id
     headers["custtype"] = "P"  # General (individual/corporate customer) "P", affiliate "B"
     headers["tr_cont"] = tr_cont  # Transaction TR id
 
-    if appendHeaders is not None:
-        if len(appendHeaders) > 0:
-            for x in appendHeaders.keys():
-                headers[x] = appendHeaders.get(x)
+    if append_headers is not None:
+        if len(append_headers) > 0:
+            for x in append_headers.keys():
+                headers[x] = append_headers.get(x)
 
     if _DEBUG:
         print("< Sending Info >")
@@ -1380,8 +1380,8 @@ def _url_fetch(
         print(f"<header>\n{headers}")
         print(f"<body>\n{params}")
 
-    if postFlag:
-        # if (hashFlag): set_order_hash_key(headers, params)
+    if post_flag:
+        # if (hash_flag): set_order_hash_key(headers, params)
         res = requests.post(url, headers=headers, data=json.dumps(params))
     else:
         res = requests.get(url, headers=headers, params=params)
@@ -1389,7 +1389,7 @@ def _url_fetch(
     if res.status_code == 200:
         ar = APIResp(res)
         if _DEBUG:
-            ar.printAll()
+            ar.print_all()
         return ar
     else:
         print("Error Code : " + str(res.status_code) + " | " + res.text)
@@ -1407,9 +1407,9 @@ _base_headers_ws = {
 }
 
 
-def _getBaseHeader_ws():
-    if _autoReAuth:
-        reAuth_ws()
+def _get_base_header_ws():
+    if _auto_re_auth:
+        re_auth_ws()
 
     return copy.deepcopy(_base_headers_ws)
 
@@ -1427,15 +1427,15 @@ def auth_ws(svr="prod", product=DEFAULT_PRODUCT_CODE, account_name=None, account
     p["secretkey"] = _cfg[ak2]
 
     url = f"{_cfg[svr]}/oauth2/Approval"
-    res = requests.post(url, data=json.dumps(p), headers=_getBaseHeader())  # Token issuance
+    res = requests.post(url, data=json.dumps(p), headers=_get_base_header())  # Token issuance
     rescode = res.status_code
     if rescode == 200:  # Token issued successfully
-        approval_key = _getResultObject(res.json()).approval_key
+        approval_key = _get_result_object(res.json()).approval_key
     else:
         print("Get Approval token fail!\nYou have to restart your app!!!")
         return
 
-    changeTREnv(None, svr, product, account_name=account_name, account_index=account_index, account_key=account_key)
+    change_tr_env(None, svr, product, account_name=account_name, account_index=account_index, account_key=account_key)
 
     _base_headers_ws["approval_key"] = approval_key
 
@@ -1446,22 +1446,22 @@ def auth_ws(svr="prod", product=DEFAULT_PRODUCT_CODE, account_name=None, account
         print(f"[{_last_auth_time}] => get AUTH Key completed!")
 
 
-def reAuth_ws(svr="prod", product=DEFAULT_PRODUCT_CODE, account_name=None, account_index=None, account_key=None):
+def re_auth_ws(svr="prod", product=DEFAULT_PRODUCT_CODE, account_name=None, account_index=None, account_key=None):
     n2 = datetime.now()
     if (n2 - _last_auth_time).total_seconds() >= 82800:
         auth_ws(svr, product, account_name=account_name, account_index=account_index, account_key=account_key)
 
 
-def data_fetch(tr_id, tr_type, params, appendHeaders=None) -> dict:
-    headers = _getBaseHeader_ws()  # Organize basic header values
+def data_fetch(tr_id, tr_type, params, append_headers=None) -> dict:
+    headers = _get_base_header_ws()  # Organize basic header values
 
     headers["tr_type"] = tr_type
     headers["custtype"] = "P"
 
-    if appendHeaders is not None:
-        if len(appendHeaders) > 0:
-            for x in appendHeaders.keys():
-                headers[x] = appendHeaders.get(x)
+    if append_headers is not None:
+        if len(append_headers) > 0:
+            for x in append_headers.keys():
+                headers[x] = append_headers.get(x)
 
     if _DEBUG:
         print("< Sending Info >")
@@ -1478,9 +1478,9 @@ def data_fetch(tr_id, tr_type, params, appendHeaders=None) -> dict:
 
 # Return iv, ekey, encrypt in dict so they can be saved to each function method file
 def system_resp(data):
-    isPingPong = False
-    isUnSub = False
-    isOk = False
+    is_ping_pong = False
+    is_unsub = False
+    is_ok = False
     tr_msg = None
     tr_key = None
     encrypt, iv, ekey = None, None, None
@@ -1492,24 +1492,24 @@ def system_resp(data):
         tr_key = rdic["header"]["tr_key"]
         encrypt = rdic["header"]["encrypt"]
     if rdic.get("body", None) is not None:
-        isOk = True if rdic["body"]["rt_cd"] == "0" else False
+        is_ok = True if rdic["body"]["rt_cd"] == "0" else False
         tr_msg = rdic["body"]["msg1"]
         # Extract key for decryption
         if "output" in rdic["body"]:
             iv = rdic["body"]["output"]["iv"]
             ekey = rdic["body"]["output"]["key"]
-        isUnSub = True if tr_msg[:5] == "UNSUB" else False
+        is_unsub = True if tr_msg[:5] == "UNSUB" else False
     else:
-        isPingPong = True if tr_id == "PINGPONG" else False
+        is_ping_pong = True if tr_id == "PINGPONG" else False
 
     nt2 = namedtuple(
         "SysMsg",
         [
-            "isOk",
+            "is_ok",
             "tr_id",
             "tr_key",
-            "isUnSub",
-            "isPingPong",
+            "is_unsub",
+            "is_ping_pong",
             "tr_msg",
             "iv",
             "ekey",
@@ -1517,12 +1517,12 @@ def system_resp(data):
         ],
     )
     d = {
-        "isOk": isOk,
+        "is_ok": is_ok,
         "tr_id": tr_id,
         "tr_key": tr_key,
         "tr_msg": tr_msg,
-        "isUnSub": isUnSub,
-        "isPingPong": isPingPong,
+        "is_unsub": is_unsub,
+        "is_ping_pong": is_ping_pong,
         "iv": iv,
         "ekey": ekey,
         "encrypt": encrypt,
@@ -1637,7 +1637,7 @@ class KISWebSocket:
                     tr_id=rsp.tr_id, encrypt=rsp.encrypt, key=rsp.ekey, iv=rsp.iv
                 )
 
-                if rsp.isPingPong:
+                if rsp.is_ping_pong:
                     print(f"### RECV [PINGPONG] [{raw}]")
                     await ws.pong(raw)
                     print(f"### SEND [PINGPONG] [{raw}]")

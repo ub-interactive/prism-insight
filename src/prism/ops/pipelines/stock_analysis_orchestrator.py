@@ -380,11 +380,11 @@ class USStockAnalysisOrchestrator:
         bottomup_count = metadata.get("bottomup_count", 0)
 
         # Regime display names (English alerts only)
-        REGIME_EN = {
+        regime_en = {
             "strong_bull": "Strong Bull", "moderate_bull": "Moderate Bull",
             "sideways": "Sideways", "moderate_bear": "Moderate Bear", "strong_bear": "Strong Bear",
         }
-        CHANNEL_EN = {"top-down": "Top-Down (Leading Sector)", "bottom-up": "Bottom-Up (Individual)"}
+        channel_en = {"top-down": "Top-Down (Leading Sector)", "bottom-up": "Bottom-Up (Individual)"}
         if mode == "morning":
             title = "🔔 US Stock Morning Prism Signal Alert"
             time_desc = "10 minutes after market open"
@@ -398,8 +398,8 @@ class USStockAnalysisOrchestrator:
         volume_label = "Volume Increase"
         gap_label = "Gap Up"
         footer = "📋 Detailed analysis report will be available in 10-30 minutes\n※ This is for investment reference only. Investment decisions are your responsibility."
-        channel_map = CHANNEL_EN
-        regime_map = REGIME_EN
+        channel_map = channel_en
+        regime_map = regime_en
         score_label = "Score"
         rr_label = "R/R"
         sl_label = "SL"

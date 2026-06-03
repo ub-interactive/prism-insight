@@ -6,7 +6,7 @@ Processes queued reserved orders that were placed outside the KIS API time windo
 KIS reserved order window: 10:00~23:20 KST (except 16:30~16:45)
 
 This script is intended to run via cron at 10:05 KST (Tue-Sat):
-  5 10 * * 2-6 cd /app/prism-insight && python3 pending_order_batch.py
+  5 10 * * 2-6 cd /app/prism-insight && python3 -m prism.ops.batches.pending_order_batch
 
 Flow:
   1. Check if reserved order window is currently open

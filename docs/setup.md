@@ -81,7 +81,7 @@ docker-compose logs -f
 ### Step 4: Run Analysis
 
 ```bash
-docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mode morning
+docker exec prism-insight-container python3 -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 ```
 
 ### Docker Commands Reference
@@ -293,11 +293,11 @@ See [tools/crontab-setup.md](../tools/crontab-setup.md) for details.
 
 ### Morning Analysis
 
-Run analysis from the canonical root entry point:
+Run analysis using the package module directly:
 
 ```bash
 # Run analysis
-python stock_analysis_orchestrator.py --mode morning
+python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 ```
 
 ### Event-Driven Trading Signals
@@ -322,20 +322,20 @@ GCP_CREDENTIALS_PATH="/path/to/service-account.json"
 ### Quick Test
 
 ```bash
-python stock_analysis_orchestrator.py --mode morning
+python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 ```
 
 ### Test Individual Components
 
 ```bash
 # 1. Test surge stock detection
-python trigger_batch.py morning INFO --output trigger_results.json
+python -m prism.ops.pipelines.trigger_batch morning INFO --output trigger_results.json
 
 # 2. Test PDF conversion
 python src/prism/reporting/pdf_converter.py sample.md sample.pdf
 
 # 3. Test MCP server connection
-python demo.py AAPL
+python -m prism.ops.dev.demo AAPL
 ```
 
 ### Expected Output
@@ -366,7 +366,7 @@ Enable verbose logging:
 ```bash
 # Set log level in code or environment
 export LOG_LEVEL=DEBUG
-python stock_analysis_orchestrator.py --mode morning
+python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 ```
 
 ### Log Files
@@ -393,7 +393,7 @@ tail -f stock_analysis_*.log
 
 After successful setup:
 
-1. **Try the Quick Start**: Run `python stock_analysis_orchestrator.py --mode morning`
+1. **Try the Quick Start**: Run `python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning`
 2. **Explore the Dashboard**: Visit [analysis.stocksimulation.kr](https://analysis.stocksimulation.kr/)
 3. **Discuss on GitHub**: Open a thread in [Discussions](https://github.com/dragon1086/prism-insight/discussions)
 4. **Customize**: Modify agents in `src/prism/core/agents/` directory

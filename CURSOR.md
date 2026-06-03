@@ -25,7 +25,6 @@ prism-insight/
 │   ├── var/                   # reports, pdf_reports, logs (gitignored)
 │   ├── vendor/sqlite/         # MCP sqlite server
 │   └── prism/                 # Application package
-├── demo.py, stock_analysis_orchestrator.py, …  # root CLI shims (5 files)
 └── docs/                      # SETUP, agent-reference, troubleshooting, …
 ```
 
@@ -34,9 +33,9 @@ Paths: `src/prism/paths.py` (`REPO_ROOT`, `CONFIG_DIR`, `VAR_ROOT`, `MCP_CONFIG_
 ## Analysis pipeline
 
 ```
-trigger_batch.py → candidates JSON
-stock_analysis_orchestrator.py → prefetch → 6 analysts (sequential) → strategist → PDF
-stock_tracking_agent.py → buy/sell (cron, multi-account)
+prism.ops.pipelines.trigger_batch → candidates JSON
+prism.ops.pipelines.stock_analysis_orchestrator → prefetch → 6 analysts (sequential) → strategist → PDF
+prism.ops.pipelines.stock_tracking_agent → buy/sell (cron, multi-account)
 ```
 
 Agent table and prompts: [`docs/agent-reference.md`](docs/agent-reference.md).
@@ -55,10 +54,10 @@ Orchestration: `src/prism/core/analysis.py`.
 
 | Command | Purpose |
 |---------|---------|
-| `python demo.py AAPL` | Single-stock report |
-| `python stock_analysis_orchestrator.py --mode morning` | Morning batch |
-| `python trigger_batch.py morning INFO` | Surge detection only |
-| `python pending_order_batch.py --dry-run` | Pending orders dry run |
+| `python -m prism.ops.dev.demo AAPL` | Single-stock report |
+| `python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning` | Morning batch |
+| `python -m prism.ops.pipelines.trigger_batch morning INFO` | Surge detection only |
+| `python -m prism.ops.batches.pending_order_batch --dry-run` | Pending orders dry run |
 | `prism-demo AAPL` | Same as demo (after `pip install -e .`) |
 
 ## Configuration

@@ -6,9 +6,9 @@ Generate a single AI-powered stock analysis report (PDF).
 No brokerage integration in this script—only the analysis and PDF export.
 
 Usage:
-    python demo.py                    # Analyze Apple (AAPL)
-    python demo.py MSFT               # Analyze Microsoft
-    python demo.py NVDA "NVIDIA Corp" # Analyze with custom company name
+    python -m prism.ops.dev.demo                    # Analyze Apple (AAPL)
+    python -m prism.ops.dev.demo MSFT               # Analyze Microsoft
+    python -m prism.ops.dev.demo NVDA "NVIDIA Corp" # Analyze with custom company name
 
 Reports are saved to: pdf_reports/
 """
@@ -130,10 +130,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python demo.py                      # Analyze Apple (AAPL)
-  python demo.py MSFT                 # Analyze Microsoft
-  python demo.py NVDA "NVIDIA Corp"   # Analyze with custom name
-  python demo.py AAPL --language en   # English report
+  python -m prism.ops.dev.demo                      # Analyze Apple (AAPL)
+  python -m prism.ops.dev.demo MSFT                 # Analyze Microsoft
+  python -m prism.ops.dev.demo NVDA "NVIDIA Corp"   # Analyze with custom name
+  python -m prism.ops.dev.demo AAPL --language en   # English report
         """
     )
     parser.add_argument(

@@ -14,8 +14,8 @@ Key Differences from Korean Version:
 - Market hours: 09:30-16:00 EST (vs 09:00-15:30 KST)
 
 Usage:
-    python trigger_batch.py morning INFO --output trigger_results_us.json
-    python trigger_batch.py afternoon INFO --output trigger_results_us.json
+    python -m prism.ops.pipelines.trigger_batch morning INFO --output trigger_results_us.json
+    python -m prism.ops.pipelines.trigger_batch afternoon INFO --output trigger_results_us.json
 """
 
 from dotenv import load_dotenv

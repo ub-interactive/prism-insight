@@ -12,7 +12,7 @@ The system will automatically attempt to download the browser on first run.
 
 ```bash
 # Simply run - it will attempt automatic installation
-python3 stock_analysis_orchestrator.py --mode afternoon
+python3 -m prism.ops.pipelines.stock_analysis_orchestrator --mode afternoon
 ```
 
 ---
@@ -194,7 +194,7 @@ sudo dnf install -y \
 Now you can use PDF generation:
 
 ```bash
-python3 stock_analysis_orchestrator.py --mode afternoon
+python3 -m prism.ops.pipelines.stock_analysis_orchestrator --mode afternoon
 ```
 
 For questions, please open an issue!

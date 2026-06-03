@@ -16,7 +16,6 @@ US stock analysis + KIS trading. Python 3.10+, `mcp-agent`, SQLite, `src/prism` 
 - `src/config/mcp_agent.config.yaml` — MCP servers (no secrets)
 - `src/var/` — gitignored outputs (reports, PDFs, logs)
 - `src/prism/paths.py` — `REPO_ROOT`, `CONFIG_DIR`, `VAR_ROOT`, `MCP_CONFIG_PATH`
-- Root `demo.py`, `stock_analysis_orchestrator.py`, … — thin shims → `prism.ops.*`
 - `pip install -e .` — `prism-demo`, `prism-orchestrator`, …
 
 ## Imports
@@ -34,8 +33,8 @@ from prism.core.analysis import analyze_us_stock
 
 ```bash
 pip install -e .
-python demo.py AAPL
-python stock_analysis_orchestrator.py --mode morning
+python -m prism.ops.dev.demo AAPL
+python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 pytest tests/test_multi_account_us.py
 ```
 

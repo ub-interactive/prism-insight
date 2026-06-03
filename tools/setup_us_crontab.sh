@@ -133,9 +133,9 @@ validate_environment() {
 
     # Check for US-specific files
     local us_files=(
-        "stock_analysis_orchestrator.py"
-        "trigger_batch.py"
-        "check_market_day.py"
+        "src/prism/ops/pipelines/stock_analysis_orchestrator.py"
+        "src/prism/ops/pipelines/trigger_batch.py"
+        "src/prism/ops/maintenance/check_market_day.py"
     )
 
     for file in "${us_files[@]}"; do
@@ -215,17 +215,17 @@ PYTHONPATH=$PROJECT_DIR
 # Current mode: $TIMEZONE_MODE
 # EST: 10:15 EST = 00:15 KST | EDT: 10:15 EDT = 23:15 KST
 # Runs Tuesday-Saturday (Mon-Fri US time crosses midnight in KST)
-$US_MORNING_BATCH_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH stock_analysis_orchestrator.py --mode morning >> $LOG_DIR/us_morning_\$(date +\%Y\%m\%d).log 2>&1
+$US_MORNING_BATCH_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning >> $LOG_DIR/us_morning_\$(date +\%Y\%m\%d).log 2>&1
 
 # US Midday batch: Lunch time monitoring for intraday movements
 # Current mode: $TIMEZONE_MODE
 # EST: 12:30 EST = 02:30 KST | EDT: 12:30 EDT = 01:30 KST
-$US_MIDDAY_BATCH_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH stock_analysis_orchestrator.py --mode midday >> $LOG_DIR/us_midday_\$(date +\%Y\%m\%d).log 2>&1
+$US_MIDDAY_BATCH_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH -m prism.ops.pipelines.stock_analysis_orchestrator --mode midday >> $LOG_DIR/us_midday_\$(date +\%Y\%m\%d).log 2>&1
 
 # US Afternoon batch: 30 min after market close
 # Current mode: $TIMEZONE_MODE
 # EST: 16:30 EST = 06:30 KST | EDT: 16:30 EDT = 05:30 KST
-$US_AFTERNOON_BATCH_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH stock_analysis_orchestrator.py --mode afternoon >> $LOG_DIR/us_afternoon_\$(date +\%Y\%m\%d).log 2>&1
+$US_AFTERNOON_BATCH_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH -m prism.ops.pipelines.stock_analysis_orchestrator --mode afternoon >> $LOG_DIR/us_afternoon_\$(date +\%Y\%m\%d).log 2>&1
 
 # -----------------------------------------------------------------------------
 # Performance Tracking & Dashboard
@@ -234,7 +234,7 @@ $US_AFTERNOON_BATCH_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH stock_analysis_
 # US Performance tracker: 1 hour after market close
 # Tracks 7/14/30 day performance of analyzed stocks
 # EST: 17:30 EST = 07:30 KST | EDT: 17:30 EDT = 06:30 KST
-$US_PERFORMANCE_TRACKER_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH performance_tracker_batch.py >> $LOG_DIR/us_performance_\$(date +\%Y\%m\%d).log 2>&1
+$US_PERFORMANCE_TRACKER_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH -m prism.ops.batches.performance_tracker_batch >> $LOG_DIR/us_performance_\$(date +\%Y\%m\%d).log 2>&1
 
 
 # -----------------------------------------------------------------------------
@@ -245,7 +245,8 @@ $US_PERFORMANCE_TRACKER_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH performance
 $US_LOG_CLEANUP_TIME * * * find $LOG_DIR -name "us_*.log" -mtime +30 -delete
 
 # Memory compression for US trading data (Sunday 04:00 KST)
-$US_MEMORY_COMPRESSION_TIME * * 0 cd $PROJECT_DIR && $PYTHON_PATH compress_trading_memory.py >> $LOG_DIR/us_compression.log 2>&1 || true
+# v1.16.6: Graceful exit code handler added to ignore warning output
+$US_MEMORY_COMPRESSION_TIME * * 0 cd $PROJECT_DIR && $PYTHON_PATH -m prism.ops.maintenance.compress_trading_memory >> $LOG_DIR/us_compression.log 2>&1 || true
 
 # =============================================================================
 # Optional: Uncomment to enable additional features

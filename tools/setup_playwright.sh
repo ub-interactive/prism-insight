@@ -30,7 +30,7 @@ if [ $? -eq 0 ]; then
     echo "✅ Playwright browser installation complete!"
     echo ""
     echo "You can now use PDF conversion:"
-    echo "  python3 stock_analysis_orchestrator.py --mode afternoon"
+    echo "  python3 -m prism.ops.pipelines.stock_analysis_orchestrator --mode afternoon"
 else
     echo "❌ Browser installation failed"
     exit 1

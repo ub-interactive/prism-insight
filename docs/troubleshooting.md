@@ -177,7 +177,7 @@ MAX_CONCURRENT_ANALYSES = 3  # Reduce from 5
 
 # 4. Process stocks individually
 for stock_code in stock_list:
-    python demo.py $stock_code
+    python -m prism.ops.dev.demo $stock_code
 ```
 
 ---

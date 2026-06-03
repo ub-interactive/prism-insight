@@ -120,10 +120,10 @@ PYTHONPATH=/path/to/prism-insight
 0 7 * * 1-5 cd /path/to/prism-insight && python update_stock_data.py >> logs/update.log 2>&1
 
 # Morning analysis (Mon-Fri 9:30 AM)
-30 9 * * 1-5 cd /path/to/prism-insight && python stock_analysis_orchestrator.py --mode morning >> logs/morning.log 2>&1
+30 9 * * 1-5 cd /path/to/prism-insight && python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning >> logs/morning.log 2>&1
 
 # Afternoon analysis (Mon-Fri 3:40 PM)
-40 15 * * 1-5 cd /path/to/prism-insight && python stock_analysis_orchestrator.py --mode afternoon >> logs/afternoon.log 2>&1
+40 15 * * 1-5 cd /path/to/prism-insight && python -m prism.ops.pipelines.stock_analysis_orchestrator --mode afternoon >> logs/afternoon.log 2>&1
 
 # -----------------------------------------------------------------------------
 # 성과 추적 (Performance Tracking)
@@ -286,7 +286,7 @@ crontab -e
 ```bash
 # Manual execution test
 cd /path/to/prism-insight
-python stock_analysis_orchestrator.py --mode morning
+python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 
 # Simulate cron environment
 env -i SHELL=/bin/bash PATH=/usr/bin:/bin python script.py

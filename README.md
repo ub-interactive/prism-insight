@@ -99,9 +99,9 @@ cd prism-insight
 
 This generates an AI analysis report for Apple (AAPL). Try other stocks:
 ```bash
-python3 demo.py MSFT              # Microsoft
-python3 demo.py NVDA              # NVIDIA
-python3 demo.py TSLA              # Tesla
+python3 -m prism.ops.dev.demo MSFT              # Microsoft
+python3 -m prism.ops.dev.demo NVDA              # NVIDIA
+python3 -m prism.ops.dev.demo TSLA              # Tesla
 ```
 
 > **Get your OpenAI API key** from [OpenAI Platform](https://platform.openai.com/api-keys)
@@ -159,7 +159,7 @@ cp .env.example .env
 # Edit .env with OPENAI_API_KEY and optional MCP keys (Anthropic, Firecrawl, Perplexity, SEC_EDGAR_USER_AGENT…)
 
 # 5. Run analysis
-python stock_analysis_orchestrator.py --mode morning
+python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 ```
 
 ### Option B: Docker (Recommended for Production)
@@ -175,7 +175,7 @@ cp .env.example .env
 docker compose up -d
 
 # 3. Run analysis manually (optional)
-docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mode morning
+docker exec prism-insight-container python3 -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 ```
 
 **Full Setup Guide**: [docs/setup.md](docs/setup.md)
@@ -269,10 +269,10 @@ Run the US pipeline from canonical root entry points:
 
 ```bash
 # Run morning analysis
-python stock_analysis_orchestrator.py --mode morning
+python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 
 # With English reports
-python stock_analysis_orchestrator.py --mode morning --language en
+python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning --language en
 ```
 
 **Data Sources**: yahoo-finance-mcp, sec-edgar-mcp (SEC filings, insider trading)

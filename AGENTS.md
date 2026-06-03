@@ -23,8 +23,8 @@ Import `prism.*` only (not `cores`, `scripts`, or root `trading`).
 
 ```bash
 pip install -e .
-python demo.py AAPL
-python stock_analysis_orchestrator.py --mode morning
+python -m prism.ops.dev.demo AAPL
+python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 pytest tests/test_multi_account_us.py tests/test_trading_journal.py
 ```
 

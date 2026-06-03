@@ -5,7 +5,6 @@
   <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python">
   <img src="https://img.shields.io/badge/OpenAI-GPT--5-green.svg" alt="OpenAI">
   <img src="https://img.shields.io/badge/Anthropic-Claude--Sonnet--4.6-green.svg" alt="Anthropic">
-  <img src="https://img.shields.io/badge/ChatGPT_Plus-Codex_OAuth-ff6b35.svg" alt="ChatGPT Plus">
 </div>
 
 # PRISM-INSIGHT
@@ -16,13 +15,6 @@
 > **AI-Powered Stock Market Analysis & Trading System**
 >
 > 13+ specialized AI agents collaborate to detect surge stocks, generate analyst-grade reports, and execute trades automatically.
-
-<p align="center">
-  <a href="README.md">English</a> |
-  <a href="README_ja.md">日本語</a> |
-  <a href="README_zh.md">中文</a> |
-  <a href="README_es.md">Español</a>
-</p>
 
 ---
 
@@ -74,9 +66,8 @@ proudly sponsors **PRISM-INSIGHT** - the AI assistant for investors.
 See AI trading performance in real-time:
 **[analysis.stocksimulation.kr](https://analysis.stocksimulation.kr/)**
 
-### 2. Community & project updates
-
-- **Live dashboards & examples**: [analysis.stocksimulation.kr](https://analysis.stocksimulation.kr/) and GitHub Sponsors banner above  
+### 2. Community & Project Updates
+- **Live dashboards & examples**: [analysis.stocksimulation.kr](https://analysis.stocksimulation.kr/)
 - **Discussions**: [GitHub Discussions](https://github.com/dragon1086/prism-insight/discussions)
 
 ### 3. Sample Report
@@ -86,99 +77,43 @@ Watch an AI-generated Apple Inc. analysis report:
 
 ---
 
-## Try in 60 Seconds (US Stocks)
-
-The fastest way to try PRISM-INSIGHT. Only requires an **OpenAI API key**.
-
-```bash
-# Clone and run the quickstart script
-git clone https://github.com/dragon1086/prism-insight.git
-cd prism-insight
-./quickstart.sh YOUR_OPENAI_API_KEY
-```
-
-This generates an AI analysis report for Apple (AAPL). Try other stocks:
-```bash
-python3 -m prism.ops.dev.demo MSFT              # Microsoft
-python3 -m prism.ops.dev.demo NVDA              # NVIDIA
-python3 -m prism.ops.dev.demo TSLA              # Tesla
-```
-
-> **Get your OpenAI API key** from [OpenAI Platform](https://platform.openai.com/api-keys)
->
-> **Optional**: Set `PERPLEXITY_API_KEY` in `.env` for richer news-style analysis ([Perplexity](https://www.perplexity.ai/))
->
-> **Optional**: Add `ADANOS_API_KEY` to enrich US stock news analysis with structured social sentiment context
-
-Your AI-generated PDF reports will be saved in `pdf_reports/`.
-
-<details>
-<summary>Or use Docker (no Python setup needed)</summary>
-
-```bash
-# 1. Set your OpenAI API key
-export OPENAI_API_KEY=sk-your-key-here
-
-# 2. Build and start the local quickstart image
-docker compose -f docker-compose.quickstart.yml up --build -d
-
-# 3. Run analysis
-docker exec -it prism-quickstart python3 demo.py NVDA
-```
-
-The first run builds the image locally, so it may take several minutes.
-
-Reports will be saved to `./quickstart-output/`.
-
-</details>
-
----
-
-## Full Installation
+## Installation & Setup
 
 ### Prerequisites
-- Python 3.10+ or Docker
-- OpenAI API Key ([get one here](https://platform.openai.com/api-keys)) or ChatGPT Plus/Pro subscription
+- Python 3.10+
+- OpenAI API Key ([get one here](https://platform.openai.com/api-keys))
 
-### Option A: Python Installation
+### Installation Steps
 
 ```bash
-# 1. Clone & Install
+# 1. Clone the repository
 git clone https://github.com/dragon1086/prism-insight.git
 cd prism-insight
+
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 2. Install Playwright for PDF generation
+# 3. Install the prism package in editable mode
+pip install -e .
+
+# 4. Install Playwright for PDF report generation
 python3 -m playwright install chromium
 
-# 3. Install perplexity-ask MCP server
-cd perplexity-ask && npm install && npm run build && cd ..
-
-# 4. Setup `.env` (tracked `mcp_agent.config.yaml` already defines MCP servers; no secrets in that file)
+# 5. Set up your environment configuration
 cp .env.example .env
-# Edit .env with OPENAI_API_KEY and optional MCP keys (Anthropic, Firecrawl, Perplexity, SEC_EDGAR_USER_AGENT…)
-
-# 5. Run analysis
-python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
+# Edit the .env file with your OPENAI_API_KEY and other optional API credentials
 ```
 
-### Option B: Docker (Recommended for Production)
+### Run Verification
 
+Generate a single AI-powered stock analysis report for Apple (AAPL):
 ```bash
-# 1. Clone & Configure
-git clone https://github.com/dragon1086/prism-insight.git
-cd prism-insight
-cp .env.example .env
-# Edit `.env` (API keys — see .env.example). Default `mcp_agent.config.yaml` ships with the repo.
+# Using the registered CLI shortcut
+prism-demo AAPL
 
-# 2. Build & Run
-docker compose up -d
-
-# 3. Run analysis manually (optional)
-docker exec prism-insight-container python3 -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
+# Or via package module execution directly
+python -m prism.ops.dev.demo AAPL
 ```
-
-**Full Setup Guide**: [docs/setup.md](docs/setup.md)
 
 ---
 
@@ -195,9 +130,9 @@ PRISM-INSIGHT is a **completely open-source, free** AI-powered stock analysis sy
 - **Macro Intelligence** — Market regime detection, sector rotation analysis, risk event monitoring
 
 ### AI Models
-- **Analysis & Trading**: OpenAI GPT-5 / GPT-5.4-mini (via API or ChatGPT Plus subscription)
+- **Analysis & Trading**: OpenAI GPT-5 / GPT-5.4-mini
 - **Report Generation**: Anthropic Claude Sonnet 4.6
-- **Translation**: OpenAI GPT-5 (EN, JA, ZH, ES support)
+- **Translation**: OpenAI GPT-5 (target language translation support)
 
 ---
 
@@ -263,15 +198,19 @@ PRISM-INSIGHT is a **completely open-source, free** AI-powered stock analysis sy
 
 ---
 
-## Analysis Commands
+## Analysis & Execution Commands
 
-Run the US pipeline from canonical root entry points:
+Run the US pipeline using package CLI commands or modules:
 
 ```bash
-# Run morning analysis
+# Run morning batch analysis
+prism-orchestrator --mode morning
+# Or via python module directly:
 python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 
-# With English reports
+# Generate analysis in a specific target language (e.g. English)
+prism-orchestrator --mode morning --language en
+# Or:
 python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning --language en
 ```
 
@@ -288,7 +227,6 @@ python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning --langu
 | [AGENTS.md](AGENTS.md) | Cursor / agent project guide |
 | [docs/trigger-batch-algorithms.md](docs/trigger-batch-algorithms.md) | Surge detection algorithms |
 | [docs/trading-journal.md](docs/trading-journal.md) | Trading memory system |
-
 
 ---
 
@@ -315,8 +253,6 @@ python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning --langu
 
 ## License
 
-**Dual Licensed:**
-
 ### For Individual & Open-Source Use
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
@@ -326,7 +262,6 @@ Free under AGPL-3.0 for personal use, non-commercial projects, and open-source d
 Separate commercial license required for SaaS companies.
 
 **Contact**: dragon1086@naver.com
-**Details**: [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md)
 
 ---
 

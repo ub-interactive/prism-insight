@@ -1124,7 +1124,7 @@ def auth(
 
         try:
             # Use retry logic for transient failures
-            result = _request_token_with_retry(token_url, p, _getBaseHeader())
+            result = _request_token_with_retry(token_url, p, _get_base_header())
 
             my_token = result.get("access_token")
             my_expired = result.get("access_token_token_expired")

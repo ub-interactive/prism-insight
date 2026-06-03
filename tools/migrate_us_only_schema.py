@@ -5,9 +5,14 @@ One-shot migration to US-only canonical table names.
 
 from __future__ import annotations
 
-import argparse
+import sys
 import sqlite3
+import argparse
 from pathlib import Path
+
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root / "src"))
+from prism.paths import DB_PATH
 
 
 TABLE_RENAMES = [
@@ -60,7 +65,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Migrate us_* tables to canonical US-only names.")
     parser.add_argument(
         "--db-path",
-        default=str(Path(__file__).resolve().parent.parent / "stock_tracking_db.sqlite"),
+        default=str(DB_PATH),
         help="Path to sqlite database file",
     )
     parser.add_argument("--dry-run", action="store_true", help="Print planned operations only")

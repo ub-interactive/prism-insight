@@ -51,7 +51,7 @@ from pathlib import Path
 _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
 
-from prism.paths import LOGS_DIR
+from prism.paths import LOGS_DIR, DB_PATH
 
 # Ensure logs directory exists
 LOGS_DIR.mkdir(exist_ok=True, parents=True)
@@ -72,7 +72,7 @@ logger = logging.getLogger(__name__)
 
 
 async def run_compression(
-    db_path: str = "stock_tracking_db.sqlite",
+    db_path: str = None,
     layer1_age_days: int = 7,
     layer2_age_days: int = 30,
     min_entries: int = 3,
@@ -106,6 +106,7 @@ async def run_compression(
     from prism.ops.pipelines.stock_tracking_agent import StockTrackingAgent
     from unittest.mock import MagicMock
 
+    db_path = db_path or str(DB_PATH)
     logger.info("=" * 60)
     logger.info("Trading Memory Compression Started")
     logger.info(f"Database: {db_path}")
@@ -306,8 +307,8 @@ Examples:
     parser.add_argument(
         "--db-path",
         type=str,
-        default="stock_tracking_db.sqlite",
-        help="Path to SQLite database (default: stock_tracking_db.sqlite)"
+        default=None,
+        help="Path to SQLite database (default: src/var/stock_tracking_db.sqlite)"
     )
     parser.add_argument(
         "--layer1-age",

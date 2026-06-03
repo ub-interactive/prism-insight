@@ -28,7 +28,7 @@ from pathlib import Path
 # Add repo root so trading/, configs, and SQLite resolve consistently
 _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
-from prism.paths import REPO_ROOT
+from prism.paths import REPO_ROOT, DB_PATH
 
 import pytz
 
@@ -40,9 +40,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 KST = pytz.timezone('Asia/Seoul')
-
-# DB path (same as trading module)
-DB_PATH = REPO_ROOT / "stock_tracking_db.sqlite"
 
 
 def get_pending_orders(conn: sqlite3.Connection, today_str: str) -> list:

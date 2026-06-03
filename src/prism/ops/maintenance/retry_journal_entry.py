@@ -29,6 +29,8 @@ sys.path.insert(0, str(_repo / "src"))
 from dotenv import load_dotenv
 load_dotenv()
 
+from prism.paths import DB_PATH
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -192,8 +194,8 @@ async def retry_all_missing(db_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description='Trading journal retry script')
-    parser.add_argument('--db-path', default='stock_tracking_db.sqlite',
-                       help='Database path')
+    parser.add_argument('--db-path', default=str(DB_PATH),
+                       help='Database path (default: src/var/stock_tracking_db.sqlite)')
     parser.add_argument('--id', type=int, help='Trade ID')
     parser.add_argument('--ticker', help='Ticker code (recent trade)')
     parser.add_argument('--all-missing', action='store_true',

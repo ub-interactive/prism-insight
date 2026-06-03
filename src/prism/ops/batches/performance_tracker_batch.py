@@ -24,7 +24,7 @@ from pathlib import Path
 
 _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
-from prism.paths import REPO_ROOT, LOGS_DIR
+from prism.paths import REPO_ROOT, LOGS_DIR, DB_PATH
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -41,9 +41,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
-# Database path
-DB_PATH = REPO_ROOT / "stock_tracking_db.sqlite"
 
 # Import yfinance for price data
 try:
@@ -633,7 +630,7 @@ Examples:
         "--db",
         type=str,
         default=None,
-        help="SQLite DB path (default: ../stock_tracking_db.sqlite)"
+        help="SQLite DB path (default: src/var/stock_tracking_db.sqlite)"
     )
 
     args = parser.parse_args()

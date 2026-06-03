@@ -17,9 +17,14 @@ import sqlite3
 import json
 import glob
 from datetime import datetime
+import sys
 from pathlib import Path
 from typing import Dict, Optional
 import logging
+
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root / "src"))
+from prism.paths import DB_PATH
 
 # Setup logging
 logging.basicConfig(
@@ -35,18 +40,7 @@ _TRIGGER_MAP: Dict[tuple, dict] = {}
 
 def get_db_path() -> Path:
     """Get database path"""
-    # Try relative path first (when running from project root)
-    db_path = Path("stock_tracking_db.sqlite")
-    if db_path.exists():
-        return db_path
-
-    # Try from utils directory
-    project_root = Path(__file__).parent.parent
-    db_path = project_root / "stock_tracking_db.sqlite"
-    if db_path.exists():
-        return db_path
-
-    raise FileNotFoundError("Database not found")
+    return DB_PATH
 
 
 def simplify_trigger_type(trigger_type: str) -> str:

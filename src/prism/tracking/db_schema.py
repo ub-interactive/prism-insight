@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from prism.trading import kis_auth
+from prism.paths import DB_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -331,7 +332,7 @@ def initialize_us_database(db_path: Optional[str] = None):
     import sqlite3
 
     if db_path is None:
-        db_path = str(Path(__file__).resolve().parent.parent / "stock_tracking_db.sqlite")
+        db_path = str(DB_PATH)
 
     conn = sqlite3.connect(str(db_path))
     cursor = conn.cursor()
@@ -359,7 +360,7 @@ async def async_initialize_us_database(db_path: Optional[str] = None):
     import aiosqlite
 
     if db_path is None:
-        db_path = str(Path(__file__).resolve().parent.parent / "stock_tracking_db.sqlite")
+        db_path = str(DB_PATH)
 
     await asyncio.to_thread(_initialize_sync_and_close, str(db_path))
     return await aiosqlite.connect(str(db_path))
@@ -1208,9 +1209,7 @@ def initialize_us_database(db_path: Optional[str] = None):
     import sqlite3
 
     if db_path is None:
-        # Default to project root database
-        project_root = Path(__file__).resolve().parent.parent.parent
-        db_path = project_root / "stock_tracking_db.sqlite"
+        db_path = DB_PATH
 
     conn = sqlite3.connect(str(db_path))
     cursor = conn.cursor()
@@ -1257,8 +1256,7 @@ async def async_initialize_us_database(db_path: Optional[str] = None):
     import asyncio
 
     if db_path is None:
-        project_root = Path(__file__).resolve().parent.parent.parent
-        db_path = project_root / "stock_tracking_db.sqlite"
+        db_path = DB_PATH
 
     await asyncio.to_thread(_initialize_us_database_sync_and_close, str(db_path))
     conn = await aiosqlite.connect(str(db_path))

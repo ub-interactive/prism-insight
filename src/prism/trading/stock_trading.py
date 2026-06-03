@@ -33,6 +33,8 @@ import pytz
 TRADING_DIR = Path(__file__).parent
 PROJECT_ROOT = TRADING_DIR.parent
 
+from prism.paths import DB_PATH
+
 # Import KIS auth from parent trading directory
 import sys
 sys.path.insert(0, str(PROJECT_ROOT / "trading"))
@@ -879,7 +881,7 @@ class USStockTrading:
         from pathlib import Path
 
         try:
-            db_path = PROJECT_ROOT / "stock_tracking_db.sqlite"
+            db_path = DB_PATH
             conn = sqlite3.connect(str(db_path))
             cursor = conn.cursor()
 

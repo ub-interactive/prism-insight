@@ -17,8 +17,13 @@ import sqlite3
 import json
 import argparse
 import logging
-from datetime import datetime
+import sys
+from pathlib import Path
 from typing import List, Dict, Any, Optional
+
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root / "src"))
+from prism.paths import DB_PATH
 
 # Setup logging
 logging.basicConfig(
@@ -272,8 +277,8 @@ def main():
     )
     parser.add_argument(
         '--db-path',
-        default='stock_tracking_db.sqlite',
-        help='Path to SQLite database (default: stock_tracking_db.sqlite)'
+        default=str(DB_PATH),
+        help='Path to SQLite database (default: src/var/stock_tracking_db.sqlite)'
     )
     parser.add_argument(
         '--dry-run',

@@ -37,7 +37,7 @@ _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
 
 from prism.core.openai.error_logging import log_openai_error
-from prism.paths import LOGS_DIR
+from prism.paths import LOGS_DIR, DB_PATH
 
 # Ensure logs directory exists
 LOGS_DIR.mkdir(exist_ok=True, parents=True)
@@ -366,7 +366,7 @@ class USStockTrackingAgent:
 
     def __init__(
         self,
-        db_path: str = "stock_tracking_db.sqlite",
+        db_path: str = None,
         enable_journal: bool = False,
     ):
         """
@@ -381,7 +381,7 @@ class USStockTrackingAgent:
         self._msg_types = []  # msg_type for each message in queue
         self.trading_agent = None
         self.sell_decision_agent = None
-        self.db_path = db_path
+        self.db_path = db_path or str(DB_PATH)
         self.conn = None
         self.cursor = None
         self.language = "en"  # Default to English for US

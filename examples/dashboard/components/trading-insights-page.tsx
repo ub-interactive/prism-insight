@@ -916,7 +916,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
             <BookOpen className="w-5 h-5 text-blue-500" />
             <CardTitle>{t("insights.journal")}</CardTitle>
             <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-xs">
-              {Trading journal}
+              Trading journal
             </Badge>
           </div>
           <CardDescription>{t("insights.journalDescription")}</CardDescription>
@@ -1010,7 +1010,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                   <div className="flex items-center gap-2 mb-1">
                                     <TrendingUp className="w-4 h-4 text-green-600" />
                                     <span className="font-medium text-green-700 dark:text-green-400">
-                                      {Buy Context}
+                                      Buy Context
                                     </span>
                                   </div>
                                   <p className="text-muted-foreground">{parsed.buy_context_summary}</p>
@@ -1021,7 +1021,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                   <div className="flex items-center gap-2 mb-1">
                                     <TrendingDown className="w-4 h-4 text-red-600" />
                                     <span className="font-medium text-red-700 dark:text-red-400">
-                                      {Sell Context}
+                                      Sell Context
                                     </span>
                                   </div>
                                   <p className="text-muted-foreground">{parsed.sell_context_summary}</p>
@@ -1091,7 +1091,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                         ? "bg-green-500/10 text-green-600 border-green-500/20"
                                         : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
                                     }>
-                                      {Buy}: {parsed.buy_quality}
+                                      Buy: {parsed.buy_quality}
                                     </Badge>
                                   </div>
                                   {parsed.buy_quality_reason && (
@@ -1107,7 +1107,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                         ? "bg-green-500/10 text-green-600 border-green-500/20"
                                         : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
                                     }>
-                                      {Sell}: {parsed.sell_quality}
+                                      Sell: {parsed.sell_quality}
                                     </Badge>
                                   </div>
                                   {parsed.sell_quality_reason && (

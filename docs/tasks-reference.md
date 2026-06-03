@@ -1,6 +1,6 @@
 # Common Tasks - PRISM-INSIGHT
 
-> **Note**: Task playbooks. Overview: [CURSOR.md](../CURSOR.md) · [AGENTS.md](../AGENTS.md).
+> **Note**: Task playbooks. Overview: [AGENTS.md](../AGENTS.md).
 
 ---
 
@@ -261,4 +261,4 @@ python tools/migrate_lessons_to_principles.py
 
 ---
 
-*See also: [CURSOR.md](../CURSOR.md) | [agent-reference.md](agent-reference.md) | [troubleshooting.md](troubleshooting.md)*
+*See also: [AGENTS.md](../AGENTS.md) | [agent-reference.md](agent-reference.md) | [troubleshooting.md](troubleshooting.md)*

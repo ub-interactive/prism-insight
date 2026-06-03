@@ -1,6 +1,6 @@
 # Troubleshooting - PRISM-INSIGHT
 
-> **Note**: Extended troubleshooting. Quick fixes: [CURSOR.md](../CURSOR.md) · [AGENTS.md](../AGENTS.md).
+> **Note**: Extended troubleshooting. Quick fixes: [AGENTS.md](../AGENTS.md).
 
 ---
 
@@ -213,4 +213,4 @@ logging.basicConfig(
 
 ---
 
-*See also: [CURSOR.md](../CURSOR.md) | [agent-reference.md](agent-reference.md) | [tasks-reference.md](tasks-reference.md)*
+*See also: [AGENTS.md](../AGENTS.md) | [agent-reference.md](agent-reference.md) | [tasks-reference.md](tasks-reference.md)*

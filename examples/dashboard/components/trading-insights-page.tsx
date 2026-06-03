@@ -207,26 +207,26 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
               </div>
               <span className="font-semibold">{t("insights.category.performance")}</span>
               <Badge variant="outline" className="text-xs ml-auto">
-                {Last 30d}
+                Last 30d
               </Badge>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <span className="text-muted-foreground text-xs">
-                  {Actual Trades}
+                  Actual Trades
                 </span>
                 <p className="font-bold text-green-600">
                   {data.performance_analysis?.actual_trading?.count || 0}{}
                   {data.performance_analysis?.actual_trading?.win_rate !== undefined && (
                     <span className="text-muted-foreground font-normal text-xs ml-1">
-                      ({WR} {(data.performance_analysis.actual_trading.win_rate * 100).toFixed(0)}%)
+                      (WR {(data.performance_analysis.actual_trading.win_rate * 100).toFixed(0)}%)
                     </span>
                   )}
                 </p>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">
-                  {Avg Return}
+                  Avg Return
                 </span>
                 <p className={`font-bold ${
                   (data.performance_analysis?.actual_trading?.avg_profit_rate || 0) >= 0
@@ -240,7 +240,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
               <TooltipProvider>
                 <div>
                   <span className="text-muted-foreground text-xs flex items-center gap-1">
-                    {Watched Stocks}
+                    Watched Stocks
                     <Tooltip>
                       <TooltipTrigger>
                         <HelpCircle className="w-3 h-3" />
@@ -259,7 +259,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                 </div>
                 <div>
                   <span className="text-muted-foreground text-xs flex items-center gap-1">
-                    {Watched Win Rate}
+                    Watched Win Rate
                     <Tooltip>
                       <TooltipTrigger>
                         <HelpCircle className="w-3 h-3" />
@@ -293,7 +293,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
               <span className="font-semibold">{t("insights.category.wisdom")}</span>
               {marketFilter !== "all" && (
                 <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">
-                  🇺🇸 {Filtered}
+                  🇺🇸 Filtered
                 </Badge>
               )}
             </div>
@@ -369,7 +369,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium flex items-center gap-2">
                       <Eye className="w-4 h-4 text-cyan-500" />
-                      {Watched Stocks by Trigger Type}
+                      Watched Stocks by Trigger Type
                       <Tooltip>
                         <TooltipTrigger>
                           <HelpCircle className="w-3 h-3 text-muted-foreground" />
@@ -453,7 +453,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium flex items-center gap-2">
                       <BarChart3 className="w-4 h-4 text-cyan-500" />
-                      {Watched Stocks by R/R Ratio}
+                      Watched Stocks by R/R Ratio
                       <Tooltip>
                         <TooltipTrigger>
                           <HelpCircle className="w-3 h-3 text-muted-foreground" />
@@ -505,7 +505,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-green-500" />
-                      {Actual Trading (Last 30 Days)}
+                      Actual Trading (Last 30 Days)
                       <Tooltip>
                         <TooltipTrigger>
                           <HelpCircle className="w-3 h-3 text-muted-foreground" />
@@ -518,13 +518,13 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                     <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
                       <div className="flex items-center justify-between mb-3">
                         <span className="font-medium text-green-700 dark:text-green-400">
-                          {data.performance_analysis.actual_trading.count || 0}{ trades}
+                          {data.performance_analysis.actual_trading.count || 0} trades
                         </span>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         {/* 평균 수익률 */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{Avg Return}</span>
+                          <span className="text-muted-foreground text-xs">Avg Return</span>
                           <p className={`font-bold text-lg ${
                             (data.performance_analysis.actual_trading.avg_profit_rate || 0) >= 0 ? "text-green-600" : "text-red-600"
                           }`}>
@@ -533,7 +533,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                         </div>
                         {/* 승률 */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{Win Rate}</span>
+                          <span className="text-muted-foreground text-xs">Win Rate</span>
                           <p className="font-bold text-lg">
                             {data.performance_analysis.actual_trading.win_rate !== null
                               ? `${(data.performance_analysis.actual_trading.win_rate * 100).toFixed(0)}%`
@@ -545,28 +545,28 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                         </div>
                         {/* 평균 수익 (수익건) */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{Avg Profit (wins)}</span>
+                          <span className="text-muted-foreground text-xs">Avg Profit (wins)</span>
                           <p className="font-bold text-green-600">
                             {formatPercent(data.performance_analysis.actual_trading.avg_profit)}
                           </p>
                         </div>
                         {/* 평균 손실 (손실건) */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{Avg Loss (losses)}</span>
+                          <span className="text-muted-foreground text-xs">Avg Loss (losses)</span>
                           <p className="font-bold text-red-600">
                             {formatPercent(data.performance_analysis.actual_trading.avg_loss)}
                           </p>
                         </div>
                         {/* 최대 수익 */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{Max Profit}</span>
+                          <span className="text-muted-foreground text-xs">Max Profit</span>
                           <p className="font-bold text-green-600">
                             {formatPercent(data.performance_analysis.actual_trading.max_profit)}
                           </p>
                         </div>
                         {/* 최대 손실 */}
                         <div>
-                          <span className="text-muted-foreground text-xs">{Max Loss}</span>
+                          <span className="text-muted-foreground text-xs">Max Loss</span>
                           <p className="font-bold text-red-600">
                             {formatPercent(data.performance_analysis.actual_trading.max_loss)}
                           </p>
@@ -603,7 +603,7 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium flex items-center gap-2">
                       <Filter className="w-4 h-4 text-purple-500" />
-                      {Actual Trading by Trigger Type (Since 2026.01.12)}
+                      Actual Trading by Trigger Type (Since 2026.01.12)
                       <Tooltip>
                         <TooltipTrigger>
                           <HelpCircle className="w-3 h-3 text-muted-foreground" />
@@ -619,29 +619,29 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                           <tr className="border-b">
                             <th className="text-left py-2 px-3 font-medium text-muted-foreground">{t("insights.performance.triggerType")}</th>
                             <th className="text-center py-2 px-3 font-medium text-muted-foreground">{t("insights.performance.count")}</th>
-                            <th className="text-center py-2 px-3 font-medium text-muted-foreground">{Win Rate}</th>
+                            <th className="text-center py-2 px-3 font-medium text-muted-foreground">Win Rate</th>
                             <th className="text-center py-2 px-3 font-medium text-muted-foreground">
                               <div className="flex items-center justify-center gap-1">
-                                {Avg Profit}
+                                Avg Profit
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <HelpCircle className="w-3 h-3" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{Average of winning trades only}</p>
+                                    <p>Average of winning trades only</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
                             </th>
                             <th className="text-center py-2 px-3 font-medium text-muted-foreground">
                               <div className="flex items-center justify-center gap-1">
-                                {Avg Loss}
+                                Avg Loss
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <HelpCircle className="w-3 h-3" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{Average of losing trades only}</p>
+                                    <p>Average of losing trades only</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>

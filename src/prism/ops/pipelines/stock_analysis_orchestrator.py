@@ -598,8 +598,8 @@ async def main():
     parser = argparse.ArgumentParser(description="US stock analysis orchestrator")
     parser.add_argument("--mode", choices=["morning", "midday", "afternoon", "both"], default="both",
                         help="Execution mode (morning, midday, afternoon, both)")
-    parser.add_argument("--language", choices=["en"], default="en",
-                        help="Analysis language (en: English)")
+    parser.add_argument("--language", type=str, default="en",
+                        help="Analysis language (e.g. en: English, zh: Chinese, ko: Korean)")
     parser.add_argument("--no-proxy", action="store_true",
                         help="Disable ChatGPT OAuth proxy (use standard OpenAI API key)")
     parser.add_argument("--force", action="store_true",

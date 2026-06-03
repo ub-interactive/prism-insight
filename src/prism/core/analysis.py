@@ -415,6 +415,10 @@ async def analyze_us_stock(
         # 11. Clean up markdown formatting
         final_report = clean_markdown(final_report)
 
+        if language and language.lower() != "en":
+            from prism.core.translation import translate_report
+            final_report = await translate_report(final_report, language)
+
         logger.info(f"Final report generated: {company_name}({ticker}) - {len(final_report)} characters")
 
         return final_report

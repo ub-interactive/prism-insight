@@ -74,8 +74,16 @@ async def generate_report(ticker: str, company_name: str, language: str = "en") 
     print(f"  PRISM-INSIGHT AI Stock Analysis")
     print(f"  Ticker: {ticker}")
     print(f"  Company: {company_name}")
-    language_labels = {"en": "English"}
-    print(f"  Language: {language_labels.get(language, language.upper())}")
+    language_labels = {
+        "en": "English",
+        "zh": "Chinese",
+        "ko": "Korean",
+        "ja": "Japanese",
+        "es": "Spanish",
+        "fr": "French",
+        "de": "German"
+    }
+    print(f"  Language: {language_labels.get(language.lower(), language.upper())}")
     if not include_news:
         print(f"  Note: News analysis skipped (Perplexity API not configured)")
     print(f"{'='*60}\n")
@@ -142,9 +150,9 @@ Examples:
     )
     parser.add_argument(
         "--language", "-l",
-        choices=["en"],
+        type=str,
         default="en",
-        help="Report language (default: en)"
+        help="Report language (e.g. en, zh, ko, ja, es, fr, de) (default: en)"
     )
 
     args = parser.parse_args()

@@ -1,6 +1,6 @@
 # Troubleshooting - PRISM-INSIGHT
 
-> **Note**: Extended troubleshooting. Quick fixes: [AGENTS.md](../AGENTS.md).
+> **Note**: Extended troubleshooting. Quick fixes: [agents.md](../agents.md).
 
 ---
 
@@ -207,10 +207,10 @@ logging.basicConfig(
 1. **Check logs**: `tail -f log_*.log`
 2. **GitHub Issues**: [Report issues](https://github.com/dragon1086/prism-insight/issues)
 3. **Documentation**:
-   - [README.md](../README.md)
+   - [readme.md](../readme.md)
    - [tools/crontab-setup.md](../tools/crontab-setup.md)
    - [tools/playwright-setup.md](../tools/playwright-setup.md)
 
 ---
 
-*See also: [AGENTS.md](../AGENTS.md) | [agent-reference.md](agent-reference.md) | [tasks-reference.md](tasks-reference.md)*
+*See also: [agents.md](../agents.md) | [agent-reference.md](agent-reference.md) | [tasks-reference.md](tasks-reference.md)*

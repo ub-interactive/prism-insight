@@ -224,7 +224,7 @@ python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning --langu
 |----------|-------------|
 | [docs/setup.md](docs/setup.md) | Complete installation guide |
 | [docs/agent-reference.md](docs/agent-reference.md) | AI agent system details |
-| [AGENTS.md](AGENTS.md) | Cursor / agent project guide |
+| [agents.md](agents.md) | Cursor / agent project guide |
 | [docs/trigger-batch-algorithms.md](docs/trigger-batch-algorithms.md) | Surge detection algorithms |
 | [docs/trading-journal.md](docs/trading-journal.md) | Trading memory system |
 

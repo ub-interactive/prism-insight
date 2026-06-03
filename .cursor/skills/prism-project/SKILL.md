@@ -38,4 +38,4 @@ python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning
 pytest tests/test_multi_account_us.py
 ```
 
-More: [AGENTS.md](../../../AGENTS.md), [docs/agent-reference.md](../../../docs/agent-reference.md).
+More: [agents.md](../../../agents.md), [docs/agent-reference.md](../../../docs/agent-reference.md).

@@ -1,12 +1,12 @@
 # AI Agent System - PRISM-INSIGHT
 
-> **Note**: Detailed AI agent reference. Overview: [AGENTS.md](../AGENTS.md).
+> **Note**: Detailed AI agent reference. Overview: [agents.md](../agents.md).
 >
 ---
 
 ## Specialized Agents
 
-Orchestration order and filenames are authoritative in [`AGENTS.md`](../AGENTS.md). Sections below supplement that with narrative detail.
+Orchestration order and filenames are authoritative in [`agents.md`](../agents.md). Sections below supplement that with narrative detail.
 
 ### Analysis Team (6 Agents) - GPT-5 Based
 
@@ -218,4 +218,4 @@ def get_agent_directory(...):
 
 ---
 
-*See also: [AGENTS.md](../AGENTS.md) | [tasks-reference.md](tasks-reference.md) | [troubleshooting.md](troubleshooting.md)*
+*See also: [agents.md](../agents.md) | [tasks-reference.md](tasks-reference.md) | [troubleshooting.md](troubleshooting.md)*

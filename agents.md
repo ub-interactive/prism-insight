@@ -1,4 +1,4 @@
-# AGENTS.md — Cursor / PRISM-INSIGHT Project Guide
+# agents.md — Cursor / PRISM-INSIGHT Project Guide
 
 Instructions and references for AI agents and assistants working in this repository.
 
@@ -34,7 +34,7 @@ from prism.core.analysis import analyze_us_stock
 
 ```
 prism-insight/
-├── AGENTS.md                  # Comprehensive agent instructions (this file)
+├── agents.md                  # Comprehensive agent instructions (this file)
 ├── .cursor/skills/            # Project skills (prism-project, prism-python, …)
 ├── src/
 │   ├── config/                # mcp_agent.config.yaml

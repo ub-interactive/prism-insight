@@ -1031,13 +1031,13 @@ export function TradingInsightsPage({ data, market = "US" }: TradingInsightsPage
                                 <div className="grid md:grid-cols-2 gap-3">
                                   {parsed.market_at_buy && (
                                     <div className="p-2 rounded bg-muted/30">
-                                      <span className="text-xs text-muted-foreground">{Market at Buy}</span>
+                                      <span className="text-xs text-muted-foreground">Market at Buy</span>
                                       <p className="text-sm">{parsed.market_at_buy}</p>
                                     </div>
                                   )}
                                   {parsed.market_at_sell && (
                                     <div className="p-2 rounded bg-muted/30">
-                                      <span className="text-xs text-muted-foreground">{Market at Sell}</span>
+                                      <span className="text-xs text-muted-foreground">Market at Sell</span>
                                       <p className="text-sm">{parsed.market_at_sell}</p>
                                     </div>
                                   )}

@@ -149,7 +149,7 @@ python compress_trading_memory.py --force
 
 | Option | Default | Description |
 |------|--------|------|
-| `--db-path` | `var/stock_tracking_db.sqlite` | SQLite database path |
+| `--db-path` | `var/db/stock_tracking_db.sqlite` | SQLite database path |
 | `--layer1-age` | 7 | Threshold days to compress Layer 1 to 2 |
 | `--layer2-age` | 30 | Threshold days to compress Layer 2 to 3 |
 | `--min-entries` | 3 | Minimum entries required to trigger compression |

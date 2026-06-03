@@ -344,7 +344,7 @@ Successful run will create:
 - `trigger_results_*.json` - Detected surge stocks
 - `reports/*.md` - Analysis reports in Markdown
 - `pdf_reports/*.pdf` - PDF versions of reports
-- `var/stock_tracking_db.sqlite` - Trading simulation database
+- `var/db/stock_tracking_db.sqlite` - Trading simulation database
 
 ---
 

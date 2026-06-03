@@ -278,7 +278,7 @@ def main():
     parser.add_argument(
         '--db-path',
         default=str(DB_PATH),
-        help='Path to SQLite database (default: var/stock_tracking_db.sqlite)'
+        help='Path to SQLite database (default: var/db/stock_tracking_db.sqlite)'
     )
     parser.add_argument(
         '--dry-run',

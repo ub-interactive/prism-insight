@@ -43,8 +43,8 @@ for file in src/config/mcp_agent.*.yaml; do
 done
 
 # stock_tracking_db.sqlite
-if [ -f var/stock_tracking_db.sqlite ]; then
-    cp var/stock_tracking_db.sqlite $BACKUP_DIR/
+if [ -f var/db/stock_tracking_db.sqlite ]; then
+    cp var/db/stock_tracking_db.sqlite $BACKUP_DIR/
     log "✓ stock_tracking_db.sqlite backup complete"
 else
     log "⚠ stock_tracking_db.sqlite file not found"

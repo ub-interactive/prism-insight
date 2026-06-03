@@ -15,6 +15,7 @@ PDF_REPORTS_DIR = VAR_ROOT / "pdf_reports"
 HTML_REPORTS_DIR = VAR_ROOT / "html_reports"
 LOGS_DIR = VAR_ROOT / "logs"
 TRIGGER_RESULTS_DIR = VAR_ROOT / "trigger_results"
-DB_PATH = VAR_ROOT / "stock_tracking_db.sqlite"
+DB_PATH = VAR_ROOT / "db" / "stock_tracking_db.sqlite"
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 TRADING_DIR = SRC_ROOT / "prism" / "trading"
 TRADING_CONFIG_DIR = TRADING_DIR / "config"

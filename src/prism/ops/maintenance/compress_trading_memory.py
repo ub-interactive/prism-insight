@@ -308,7 +308,7 @@ Examples:
         "--db-path",
         type=str,
         default=None,
-        help="Path to SQLite database (default: var/stock_tracking_db.sqlite)"
+        help="Path to SQLite database (default: var/db/stock_tracking_db.sqlite)"
     )
     parser.add_argument(
         "--layer1-age",

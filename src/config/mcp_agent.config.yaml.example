@@ -93,12 +93,6 @@ openai:
     - gpt-4.1-mini
     - gpt-4.1
     - gpt-4.1-nano
-  # When set, overrides every bundled ChatGPT-proxy Codex map target (see chatgpt_proxy_model_map).
-  # chatgpt_proxy_fallback_model: gpt-5.4-mini
-  # Explicit per-alias overrides for Codex-compatible gateway:
-  # chatgpt_proxy_model_map:
-  #   gpt-4o: gpt-5.4-mini
-  chatgpt_proxy_request_default_model: gpt-4o
 
 anthropic:
   default_model: claude-sonnet-4-6

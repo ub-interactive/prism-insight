@@ -27,17 +27,6 @@ _DEFAULT_ARCHIVE_QUERY_MODELS = [
     "gpt-4.1-nano",
 ]
 
-_DEFAULT_CHATGPT_PROXY_MAP: dict[str, str] = {
-    "gpt-4o": "gpt-5.4-mini",
-    "gpt-4o-mini": "gpt-5.4-mini",
-    "gpt-4o-2024-08-06": "gpt-5.4-mini",
-    "gpt-4-turbo": "gpt-5.4-mini",
-    "gpt-4": "gpt-5.4-mini",
-    "gpt-3.5-turbo": "gpt-5.4-mini",
-    "o4-mini": "gpt-5.4-mini",
-    "o3-mini": "gpt-5.4-mini",
-}
-
 
 @lru_cache(maxsize=1)
 def _read_config() -> dict:
@@ -105,42 +94,6 @@ def get_archive_query_allowed_models() -> list[str]:
         if cleaned:
             return cleaned
     return list(_DEFAULT_ARCHIVE_QUERY_MODELS)
-
-
-def get_chatgpt_proxy_codex_model_map() -> dict[str, str]:
-    """
-    Maps legacy ChatGPT client model IDs to Codex/Responses gateway models.
-
-    ``openai.chatgpt_proxy_fallback_model`` replaces all built-in defaults when set,
-    then ``openai.chatgpt_proxy_model_map`` applies per-key overrides.
-    """
-    openai_cfg = _read_config().get("openai", {})
-    if not isinstance(openai_cfg, Mapping):
-        return dict(_DEFAULT_CHATGPT_PROXY_MAP)
-
-    merged: dict[str, str] = dict(_DEFAULT_CHATGPT_PROXY_MAP)
-    global_fb = openai_cfg.get("chatgpt_proxy_fallback_model")
-    if isinstance(global_fb, str) and global_fb.strip():
-        fb = global_fb.strip()
-        merged = {k: fb for k in merged}
-
-    overrides = openai_cfg.get("chatgpt_proxy_model_map")
-    if isinstance(overrides, Mapping):
-        for key, val in overrides.items():
-            if isinstance(key, str) and isinstance(val, str) and val.strip():
-                merged[key] = val.strip()
-    return merged
-
-
-def get_chatgpt_proxy_request_default_model() -> str:
-    """Default ``model`` when the incoming Chat Completions body omits it."""
-    openai_cfg = _read_config().get("openai", {})
-    if not isinstance(openai_cfg, Mapping):
-        return "gpt-4o"
-    raw = openai_cfg.get("chatgpt_proxy_request_default_model")
-    if isinstance(raw, str) and raw.strip():
-        return raw.strip()
-    return "gpt-4o"
 
 
 def get_configured_firecrawl_spark_model(default_model: str = "spark-1-mini") -> str:

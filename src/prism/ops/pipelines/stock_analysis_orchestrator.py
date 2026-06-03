@@ -52,12 +52,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-def _import_proxy_safe():
-    """Import chatgpt_proxy from canonical cores package."""
-    import prism.core.chatgpt_proxy as proxy_mod
-    return proxy_mod
-
 US_MACRO_ANALYSIS_MODEL = get_configured_model("us_macro_analysis", "gpt-5.4-mini")
 US_REPORT_FILENAME_MODEL = get_configured_model("us_report_filename", US_MACRO_ANALYSIS_MODEL)
 
@@ -600,37 +594,12 @@ async def main():
                         help="Execution mode (morning, midday, afternoon, both)")
     parser.add_argument("--language", type=str, default="en",
                         help="Analysis language (e.g. en: English, zh: Chinese, ko: Korean)")
-    parser.add_argument("--no-proxy", action="store_true",
-                        help="Disable ChatGPT OAuth proxy (use standard OpenAI API key)")
     parser.add_argument("--force", action="store_true",
                         help="Force execution even on market holidays (for testing)")
     parser.add_argument("--date", type=str, default=None,
                         help="Override trade date (YYYYMMDD format, for testing)")
 
     args = parser.parse_args()
-
-    # ChatGPT OAuth proxy setup
-    proxy_started = False
-    stop_proxy = None
-    if not args.no_proxy and os.getenv("PRISM_OPENAI_AUTH_MODE") == "chatgpt_oauth":
-        try:
-            _proxy_mod = _import_proxy_safe()
-            inject_env = _proxy_mod.inject_env
-            start_proxy = _proxy_mod.start_proxy
-            clear_env = _proxy_mod.clear_env
-            stop_proxy = _proxy_mod.stop_proxy
-
-            inject_env()
-            proxy_started = await start_proxy()
-            if not proxy_started:
-                logger.warning("ChatGPT OAuth proxy failed to start, falling back to standard API")
-                clear_env()
-        except Exception as e:
-            logger.warning("ChatGPT OAuth proxy setup error: %s, falling back to standard API", e)
-            try:
-                _proxy_mod.clear_env()
-            except Exception:
-                pass
 
     orchestrator = USStockAnalysisOrchestrator()
 
@@ -642,13 +611,6 @@ async def main():
 
     if args.mode == "afternoon" or args.mode == "both":
         await orchestrator.run_full_pipeline("afternoon", language=args.language, override_date=args.date)
-
-    # Stop proxy if started
-    if proxy_started and stop_proxy is not None:
-        try:
-            await stop_proxy()
-        except Exception:
-            pass
 
 
 def cli_main():

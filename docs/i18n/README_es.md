@@ -41,27 +41,6 @@ patrocina con orgullo **PRISM-INSIGHT** — el asistente de IA para inversionist
 
 ---
 
-## NUEVO: Soporte para Suscripcion ChatGPT Plus/Pro
-
-**Sin clave de API? No hay problema.** PRISM-INSIGHT ahora admite ejecutar analisis directamente a traves de tu suscripcion ChatGPT Plus ($20/mes) o Pro ($200/mes) mediante el **Proxy OAuth de Codex**.
-
-```bash
-# Primer inicio de sesion (el navegador se abrira para autenticar con ChatGPT)
-python -m cores.chatgpt_proxy.oauth_login
-
-# Re-autenticar (cambiar de cuenta o renovar tokens expirados)
-python -m cores.chatgpt_proxy.oauth_login --force
-
-# Ejecutar con tu suscripcion de ChatGPT
-PRISM_OPENAI_AUTH_MODE=chatgpt_oauth python stock_analysis_orchestrator.py --mode morning
-```
-
-> Los tokens se renuevan automaticamente en segundo plano, asi que solo necesitas iniciar sesion de nuevo si cambias de cuenta de ChatGPT o de contrasena.
-
-Sin costos de API. El mismo analisis potente. Tu suscripcion existente hace el trabajo.
-
----
-
 ## Aplicacion Movil
 
 <div align="center">

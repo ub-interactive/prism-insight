@@ -60,23 +60,16 @@ Orchestration: `src/prism/core/analysis.py`.
 | `python trigger_batch.py morning INFO` | Surge detection only |
 | `python pending_order_batch.py --dry-run` | Pending orders dry run |
 | `prism-demo AAPL` | Same as demo (after `pip install -e .`) |
-| `PRISM_OPENAI_AUTH_MODE=chatgpt_oauth python demo.py AAPL` | ChatGPT OAuth proxy |
 
 ## Configuration
 
 | File | Purpose |
 |------|---------|
-| `.env` | API keys, Redis/GCP toggles (`PRISM_OPENAI_AUTH_MODE`, …) |
+| `.env` | API keys, Redis/GCP toggles |
 | `src/config/mcp_agent.config.yaml` | MCP servers (no secrets) |
 | `src/prism/trading/config/kis_devlp.yaml` | KIS credentials (gitignored) |
 
 Copy `.env.example` → `.env`. MCP config path is passed explicitly to `MCPApp` via `MCP_CONFIG_PATH`.
-
-ChatGPT OAuth login:
-
-```bash
-python -m prism.core.chatgpt_proxy.oauth_login
-```
 
 ## Engineering rules
 
@@ -101,7 +94,6 @@ See `.cursor/skills/` (see [README](.cursor/skills/README.md)). Summary:
 | MCP config not found | Use `MCP_CONFIG_PATH`; file is `src/config/mcp_agent.config.yaml` |
 | KIS auth | `src/prism/trading/config/kis_devlp.yaml` |
 | Playwright PDF | `python3 -m playwright install chromium` |
-| ChatGPT OAuth | `python -m prism.core.chatgpt_proxy.oauth_login` |
 
 More: [`docs/troubleshooting.md`](docs/troubleshooting.md).
 

@@ -282,25 +282,6 @@ python stock_analysis_orchestrator.py --mode morning --language en
 | [docs/TRIGGER_BATCH_ALGORITHMS.md](docs/TRIGGER_BATCH_ALGORITHMS.md) | 异动检测算法 |
 | [docs/TRADING_JOURNAL.md](docs/TRADING_JOURNAL.md) | 交易记忆系统 |
 
----
-
-## 前端示例
-
-### 仪表盘
-实时投资组合跟踪与绩效仪表盘。
-
-**[在线演示](https://analysis.stocksimulation.kr/)**
-
-```bash
-cd examples/dashboard
-npm install
-npm run dev
-# Visit http://localhost:3000
-```
-
-**特性**：投资组合概览、交易历史、绩效指标、与 S&P 500 / Nasdaq 基准对比（示例仪表盘）
-
-**仪表盘安装指南**：[examples/dashboard/DASHBOARD_README.md](examples/dashboard/DASHBOARD_README.md)
 
 ---
 

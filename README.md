@@ -290,25 +290,6 @@ python stock_analysis_orchestrator.py --mode morning --language en
 | [docs/TRIGGER_BATCH_ALGORITHMS.md](docs/TRIGGER_BATCH_ALGORITHMS.md) | Surge detection algorithms |
 | [docs/TRADING_JOURNAL.md](docs/TRADING_JOURNAL.md) | Trading memory system |
 
----
-
-## Frontend Examples
-
-### Dashboard
-Real-time portfolio tracking and performance dashboard.
-
-**[Live Demo](https://analysis.stocksimulation.kr/)**
-
-```bash
-cd examples/dashboard
-npm install
-npm run dev
-# Visit http://localhost:3000
-```
-
-**Features**: Portfolio overview, trading history, performance metrics, and return comparison.
-
-**Dashboard Setup Guide**: [examples/dashboard/DASHBOARD_README.md](examples/dashboard/DASHBOARD_README.md)
 
 ---
 

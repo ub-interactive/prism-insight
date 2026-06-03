@@ -42,10 +42,6 @@ dist/
 node_modules/
 *.tsbuildinfo
 
-# examples/.gitignore
-examples/dashboard/build/
-examples/dashboard/dist/
-examples/dashboard/node_modules/
 
 # Generated reports & data (legacy root paths + src/var/)
 reports/
@@ -57,9 +53,6 @@ src/var/
 *_report*.md
 *_full_report*
 
-# Dashboard generated data
-examples/dashboard/public/*_dashboard_data*.json
-examples/dashboard/public/dashboard_data*.json
 
 # MCP servers (should be installed separately)
 perplexity-ask/

@@ -210,65 +210,10 @@ def create_your_agent(...):
     )
 ```
 
----
-
-## Task 7: Event-Driven Trading Signal Integration
-
-```bash
-# Redis/Upstash integration for real-time trading signals
-
-# 1. Configure .env
-UPSTASH_REDIS_REST_URL="https://xxx.upstash.io"
-UPSTASH_REDIS_REST_TOKEN="your-token"
-
-# 2. Run Redis subscriber
-python examples/messaging/redis_subscriber_example.py \
-    --from-beginning \
-    --dry-run  # Test mode without actual trading
-
-# 3. GCP Pub/Sub alternative
-GCP_PROJECT_ID="your-project"
-GCP_PUBSUB_SUBSCRIPTION_ID="your-subscription"
-GCP_CREDENTIALS_PATH="/path/to/credentials.json"
-
-# Run GCP subscriber
-python examples/messaging/gcp_pubsub_subscriber_example.py \
-    --polling-interval 60
-```
-
-**Key features:**
-- Real-time buy/sell signal subscription
-- Market hours aware scheduling (after 16:00 → next market day 09:05)
-- Auto-trading execution with demo/real mode
-- CLI options: `--from-beginning`, `--log-file`, `--dry-run`, `--polling-interval`
 
 ---
 
-## Task 8: Dashboard JSON Generation
-
-```bash
-# Generate dashboard data from trading history
-python examples/generate_dashboard_json.py
-
-# Skip English translation (faster)
-python examples/generate_dashboard_json.py --no-translation
-```
-
-**Output files:**
-- `examples/dashboard/public/us_dashboard_data_en.json` (English)
-- `examples/dashboard/public/dashboard_data_en.json` (English)
-
-**Features:**
-- Database to JSON conversion from trading history
-- English dashboard JSON via `examples/generate_us_dashboard_json.py`
-- Market index data integration
-- Portfolio performance metrics
-- Trading Insights data (principles, journal, intuitions)
-- Performance analysis (7/14/30 day tracking)
-
----
-
-## Task 9: Trading Memory Compression & Cleanup
+## Task 7: Trading Memory Compression & Cleanup
 
 ```bash
 # Weekly memory compression with cleanup (recommended for cron)
@@ -296,7 +241,7 @@ python compress_trading_memory.py \
 
 ---
 
-## Task 10: Performance Tracking Migration
+## Task 8: Performance Tracking Migration
 
 ```bash
 # Migrate watchlist/trading history to performance tracker
@@ -320,7 +265,7 @@ python utils/migrate_watchlist_to_performance_tracker.py --reset
 
 ---
 
-## Task 11: Lessons to Principles Migration
+## Task 9: Lessons to Principles Migration
 
 ```bash
 # Migrate trading_journal lessons to trading_principles table

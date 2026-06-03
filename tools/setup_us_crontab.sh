@@ -67,8 +67,6 @@ US_MIDDAY_BATCH_TIME_EST="30 2"
 US_AFTERNOON_BATCH_TIME_EST="30 6"
 # Performance tracker: 17:30 EST = 07:30 KST
 US_PERFORMANCE_TRACKER_TIME_EST="30 7"
-# Dashboard refresh: 18:00 EST = 08:00 KST
-US_DASHBOARD_TIME_EST="0 8"
 
 # === EDT (Daylight Time: March - November) ===
 # Morning batch: 10:15 EDT = 23:15 KST (previous day)
@@ -79,8 +77,6 @@ US_MIDDAY_BATCH_TIME_EDT="30 1"
 US_AFTERNOON_BATCH_TIME_EDT="30 5"
 # Performance tracker: 17:30 EDT = 06:30 KST
 US_PERFORMANCE_TRACKER_TIME_EDT="30 6"
-# Dashboard refresh: 18:00 EDT = 07:00 KST
-US_DASHBOARD_TIME_EDT="0 7"
 
 # Choose which timezone to use (default: EST)
 # Change to EDT during daylight saving time (March-November)
@@ -91,13 +87,11 @@ if [ "$TIMEZONE_MODE" = "EDT" ]; then
     US_MIDDAY_BATCH_TIME="$US_MIDDAY_BATCH_TIME_EDT"
     US_AFTERNOON_BATCH_TIME="$US_AFTERNOON_BATCH_TIME_EDT"
     US_PERFORMANCE_TRACKER_TIME="$US_PERFORMANCE_TRACKER_TIME_EDT"
-    US_DASHBOARD_TIME="$US_DASHBOARD_TIME_EDT"
 else
     US_MORNING_BATCH_TIME="$US_MORNING_BATCH_TIME_EST"
     US_MIDDAY_BATCH_TIME="$US_MIDDAY_BATCH_TIME_EST"
     US_AFTERNOON_BATCH_TIME="$US_AFTERNOON_BATCH_TIME_EST"
     US_PERFORMANCE_TRACKER_TIME="$US_PERFORMANCE_TRACKER_TIME_EST"
-    US_DASHBOARD_TIME="$US_DASHBOARD_TIME_EST"
 fi
 
 # Other schedule times (KST)
@@ -242,9 +236,6 @@ $US_AFTERNOON_BATCH_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH stock_analysis_
 # EST: 17:30 EST = 07:30 KST | EDT: 17:30 EDT = 06:30 KST
 $US_PERFORMANCE_TRACKER_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH performance_tracker_batch.py >> $LOG_DIR/us_performance_\$(date +\%Y\%m\%d).log 2>&1
 
-# US Dashboard refresh: After performance tracking
-# EST: 18:00 EST = 08:00 KST | EDT: 18:00 EDT = 07:00 KST
-$US_DASHBOARD_TIME * * 2-6 cd $PROJECT_DIR && $PYTHON_PATH examples/generate_us_dashboard_json.py >> $LOG_DIR/us_dashboard.log 2>&1
 
 # -----------------------------------------------------------------------------
 # Maintenance (US Module)
@@ -377,9 +368,6 @@ US Market Schedule (in KST):
     - EST: 07:30 KST (17:30 EST)
     - EDT: 06:30 KST (17:30 EDT)
 
-  Dashboard refresh:
-    - EST: 08:00 KST (18:00 EST)
-    - EDT: 07:00 KST (18:00 EDT)
 
 EOF
 }
@@ -426,7 +414,6 @@ interactive_setup() {
     echo "  Midday batch: $US_MIDDAY_BATCH_TIME (KST)"
     echo "  Afternoon batch: $US_AFTERNOON_BATCH_TIME (KST)"
     echo "  Performance tracker: $US_PERFORMANCE_TRACKER_TIME (KST)"
-    echo "  Dashboard refresh: $US_DASHBOARD_TIME (KST)"
     echo
 
     read -p "Continue? (y/N): " confirm

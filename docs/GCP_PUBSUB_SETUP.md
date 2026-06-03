@@ -104,11 +104,6 @@ async def test_publish():
 asyncio.run(test_publish())
 ```
 
-### Subscriber 테스트
-
-```bash
-python examples/messaging/gcp_pubsub_subscriber_example.py --dry-run
-```
 
 ## 요약
 

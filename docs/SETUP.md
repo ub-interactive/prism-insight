@@ -129,8 +129,6 @@ Copy tuning / optional files:
 # OPENAI_API_KEY, ANTHROPIC_API_KEY, optional MCP vendor keys — copy template then edit (.env.example)
 cp .env.example .env
 
-# Streamlit dashboard (optional)
-cp ./examples/streamlit/config.py.example ./examples/streamlit/config.py
 
 # Trading configuration (optional - for automated trading)
 cp ./trading/config/kis_devlp.yaml.example ./trading/config/kis_devlp.yaml
@@ -220,13 +218,7 @@ kis_account_number: "12345678-01"
 kis_account_code: "01"
 ```
 
-### Web Interface Settings (Optional)
 
-| File | Purpose |
-|------|---------|
-| `examples/streamlit/config.py` | Streamlit dashboard API keys |
-
----
 
 ## Platform-Specific Setup
 

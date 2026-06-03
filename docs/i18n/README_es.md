@@ -282,25 +282,6 @@ python stock_analysis_orchestrator.py --mode morning --language en
 | [docs/TRIGGER_BATCH_ALGORITHMS.md](docs/TRIGGER_BATCH_ALGORITHMS.md) | Algoritmos de deteccion de movimientos inusuales |
 | [docs/TRADING_JOURNAL.md](docs/TRADING_JOURNAL.md) | Sistema de memoria de trading |
 
----
-
-## Ejemplos de Frontend
-
-### Dashboard
-Seguimiento de portafolio en tiempo real y panel de rendimiento.
-
-**[Demo en Vivo](https://analysis.stocksimulation.kr/)**
-
-```bash
-cd examples/dashboard
-npm install
-npm run dev
-# Visit http://localhost:3000
-```
-
-**Caracteristicas**: Vista general del portafolio, historial de operaciones, metricas de rendimiento, comparacion vs S&P 500 / Nasdaq (dashboard de ejemplo)
-
-**Guia de Configuracion del Dashboard**: [examples/dashboard/DASHBOARD_README.md](examples/dashboard/DASHBOARD_README.md)
 
 ---
 

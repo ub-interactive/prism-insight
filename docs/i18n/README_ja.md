@@ -282,25 +282,6 @@ python stock_analysis_orchestrator.py --mode morning --language en
 | [docs/TRIGGER_BATCH_ALGORITHMS.md](docs/TRIGGER_BATCH_ALGORITHMS.md) | 急騰検出アルゴリズム |
 | [docs/TRADING_JOURNAL.md](docs/TRADING_JOURNAL.md) | トレーディングメモリシステム |
 
----
-
-## フロントエンドサンプル
-
-### ダッシュボード
-リアルタイムのポートフォリオ追跡とパフォーマンスダッシュボードです。
-
-**[ライブデモ](https://analysis.stocksimulation.kr/)**
-
-```bash
-cd examples/dashboard
-npm install
-npm run dev
-# Visit http://localhost:3000
-```
-
-**特徴**: ポートフォリオ概要、取引履歴、パフォーマンス指標、S&P 500 / Nasdaq ベンチマークとの比較（サンプルダッシュボード）
-
-**ダッシュボードセットアップガイド**: [examples/dashboard/DASHBOARD_README.md](examples/dashboard/DASHBOARD_README.md)
 
 ---
 

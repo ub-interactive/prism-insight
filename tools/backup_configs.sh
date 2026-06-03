@@ -61,17 +61,6 @@ else
     log "⚠ src/prism/trading/config/kis_devlp.yaml file not found"
 fi
 
-# 3. Backup examples directory
-log "Backing up examples directory..."
-mkdir -p $BACKUP_DIR/examples/streamlit
-
-if [ -f examples/streamlit/config.py ]; then
-    cp examples/streamlit/config.py $BACKUP_DIR/examples/streamlit/
-    log "✓ examples/streamlit/config.py backup complete"
-else
-    log "⚠ examples/streamlit/config.py file not found"
-fi
-
 # Set backup file permissions (security)
 find $BACKUP_DIR -type d -exec chmod 700 {} \;
 find $BACKUP_DIR -type f -exec chmod 600 {} \;

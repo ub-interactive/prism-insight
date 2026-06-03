@@ -105,16 +105,9 @@ GCP_PROJECT_ID=MY_PROJECT_ID
 GCP_PUBSUB_SUBSCRIPTION_ID=my-prism-signals
 GCP_CREDENTIALS_PATH=/path/to/downloaded-key.json
 ```
-
 #### 구독자 실행
 
-```bash
-# 테스트 모드 (실제 매매 X)
-python examples/messaging/gcp_pubsub_subscriber_example.py --dry-run
-
-# 실제 매매 모드 (주의!)
-python examples/messaging/gcp_pubsub_subscriber_example.py
-```
+GCP Pub/Sub SDK를 사용하여 토픽에서 이벤트를 수신하는 자체 구독자 스크립트를 구현 및 실행하여 연동합니다.
 
 ## 📊 수신되는 데이터 형식
 

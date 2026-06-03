@@ -37,6 +37,10 @@ _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
 
 from prism.core.openai.error_logging import log_openai_error
+from prism.paths import LOGS_DIR
+
+# Ensure logs directory exists
+LOGS_DIR.mkdir(exist_ok=True, parents=True)
 
 # Logging configuration
 logging.basicConfig(
@@ -44,7 +48,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(f"us_stock_tracking_{datetime.now().strftime('%Y%m%d')}.log")
+        logging.FileHandler(LOGS_DIR / f"us_stock_tracking_{datetime.now().strftime('%Y%m%d')}.log")
     ]
 )
 logger = logging.getLogger(__name__)

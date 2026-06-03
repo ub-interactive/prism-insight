@@ -24,9 +24,12 @@ from pathlib import Path
 
 _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
-from prism.paths import REPO_ROOT
+from prism.paths import REPO_ROOT, LOGS_DIR
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+
+# Ensure logs directory exists
+LOGS_DIR.mkdir(exist_ok=True, parents=True)
 
 # Logging setup
 logging.basicConfig(
@@ -34,7 +37,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(SCRIPT_DIR / f"us_performance_tracker_{datetime.now().strftime('%Y%m%d')}.log")
+        logging.FileHandler(LOGS_DIR / f"us_performance_tracker_{datetime.now().strftime('%Y%m%d')}.log")
     ]
 )
 logger = logging.getLogger(__name__)

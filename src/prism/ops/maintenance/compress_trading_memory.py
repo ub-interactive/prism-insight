@@ -51,6 +51,11 @@ from pathlib import Path
 _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
 
+from prism.paths import LOGS_DIR
+
+# Ensure logs directory exists
+LOGS_DIR.mkdir(exist_ok=True, parents=True)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -58,7 +63,7 @@ logging.basicConfig(
     handlers=[
         logging.StreamHandler(),
         logging.FileHandler(
-            f"compression_{datetime.now().strftime('%Y%m%d')}.log",
+            LOGS_DIR / f"compression_{datetime.now().strftime('%Y%m%d')}.log",
             encoding='utf-8'
         )
     ]

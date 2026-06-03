@@ -6,7 +6,7 @@ Instructions for AI agents working in this repository.
 
 1. **Skills** — `.cursor/skills/` (`prism-project`, `prism-python`, `prism-trading`, `prism-reports`)
 2. **Full guide** — [`CURSOR.md`](CURSOR.md)
-3. **Setup** — [`docs/SETUP.md`](docs/SETUP.md)
+3. **Setup** — [`docs/setup.md`](docs/setup.md)
 
 ## Project
 

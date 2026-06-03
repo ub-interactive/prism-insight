@@ -269,7 +269,7 @@ python -m playwright install chromium
 
 ```
 
-For detailed Playwright setup, see [tools/PLAYWRIGHT_SETUP.md](../tools/PLAYWRIGHT_SETUP.md).
+For detailed Playwright setup, see [tools/playwright-setup.md](../tools/playwright-setup.md).
 
 ---
 
@@ -289,7 +289,7 @@ chmod +x tools/setup_crontab.sh
 tools/setup_crontab.sh
 ```
 
-See [tools/CRONTAB_SETUP.md](../tools/CRONTAB_SETUP.md) for details.
+See [tools/crontab-setup.md](../tools/crontab-setup.md) for details.
 
 ### Morning Analysis
 

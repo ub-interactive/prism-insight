@@ -178,7 +178,7 @@ docker compose up -d
 docker exec prism-insight-container python3 stock_analysis_orchestrator.py --mode morning
 ```
 
-**Full Setup Guide**: [docs/SETUP.md](docs/SETUP.md)
+**Full Setup Guide**: [docs/setup.md](docs/setup.md)
 
 ---
 
@@ -232,7 +232,7 @@ PRISM-INSIGHT is a **completely open-source, free** AI-powered stock analysis sy
 | **Trading Sim** | AI-driven investment strategy simulation |
 | **Auto Trading** | Execution via Korea Investment & Securities API |
 | **Dashboard** | Transparent portfolio, trades, and performance tracking |
-| **Self-Improving** | Trading journal feedback loop — past trigger win rates automatically inform future buy decisions ([details](docs/TRADING_JOURNAL.md#performance-tracker-피드백-루프-self-improving-trading)) |
+| **Self-Improving** | Trading journal feedback loop — past trigger win rates automatically inform future buy decisions ([details](docs/trading-journal.md#performance-tracker-feedback-loop-self-improving-trading)) |
 | **US Markets** | Full support for NYSE/NASDAQ analysis |
 | **Macro Intelligence** | Market regime detection and sector rotation for smarter stock selection |
 | **Mobile App** | iOS & Android app with smart filtering and PDF reports |
@@ -283,12 +283,12 @@ python stock_analysis_orchestrator.py --mode morning --language en
 
 | Document | Description |
 |----------|-------------|
-| [docs/SETUP.md](docs/SETUP.md) | Complete installation guide |
+| [docs/setup.md](docs/setup.md) | Complete installation guide |
 | [docs/agent-reference.md](docs/agent-reference.md) | AI agent system details |
 | [CURSOR.md](CURSOR.md) | Cursor / agent project guide |
 | [AGENTS.md](AGENTS.md) | Short agent entry point |
-| [docs/TRIGGER_BATCH_ALGORITHMS.md](docs/TRIGGER_BATCH_ALGORITHMS.md) | Surge detection algorithms |
-| [docs/TRADING_JOURNAL.md](docs/TRADING_JOURNAL.md) | Trading memory system |
+| [docs/trigger-batch-algorithms.md](docs/trigger-batch-algorithms.md) | Surge detection algorithms |
+| [docs/trading-journal.md](docs/trading-journal.md) | Trading memory system |
 
 
 ---

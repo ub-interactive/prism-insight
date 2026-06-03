@@ -124,7 +124,7 @@ for any deep/asset links supplied by callers.
   - Hierarchical memory compression (detailed → summary → intuition)
   - Buy score adjustment based on past experience
 - **Activation**: Set `ENABLE_TRADING_JOURNAL=true` in `.env`
-- **Details**: [TRADING_JOURNAL.md](TRADING_JOURNAL.md)
+- **Details**: [trading-journal.md](trading-journal.md)
 
 <br clear="both"/>
 

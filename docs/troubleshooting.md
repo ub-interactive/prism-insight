@@ -208,9 +208,8 @@ logging.basicConfig(
 2. **GitHub Issues**: [Report issues](https://github.com/dragon1086/prism-insight/issues)
 3. **Documentation**:
    - [README.md](../README.md)
-   - [CONTRIBUTING.md](../CONTRIBUTING.md)
-   - [tools/CRONTAB_SETUP.md](../tools/CRONTAB_SETUP.md)
-   - [tools/PLAYWRIGHT_SETUP.md](../tools/PLAYWRIGHT_SETUP.md)
+   - [tools/crontab-setup.md](../tools/crontab-setup.md)
+   - [tools/playwright-setup.md](../tools/playwright-setup.md)
 
 ---
 

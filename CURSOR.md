@@ -110,4 +110,4 @@ More: [`docs/troubleshooting.md`](docs/troubleshooting.md).
 | [`docs/agent-reference.md`](docs/agent-reference.md) | Agent system detail |
 | [`docs/troubleshooting.md`](docs/troubleshooting.md) | Extended troubleshooting |
 | [`docs/tasks-reference.md`](docs/tasks-reference.md) | Task playbooks |
-| [`docs/SETUP.md`](docs/SETUP.md) | Environment setup |
+| [`docs/setup.md`](docs/setup.md) | Environment setup |

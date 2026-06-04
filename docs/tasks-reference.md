@@ -86,7 +86,7 @@ def detect_surge_stocks(mode="morning"):
 python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning --language en
 ```
 
-3. If you localize weekly digests, adapt your notifier / Firebase bridge payloads instead of coupling to a proprietary chat SDK.
+3. If you localize weekly digests, adapt your notifier payloads instead of coupling to a proprietary chat SDK.
 
 
 ---

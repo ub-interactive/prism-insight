@@ -27,17 +27,6 @@ cd tools && chmod +x setup_playwright.sh && ./setup_playwright.sh
 
 ---
 
-### Issue 2: Optional Firebase Bridge Not Sending Pushes
-
-**Symptoms**: `firebase_bridge.notify` exits early or mobile QA devices never receive FCM traffic.
-
-**Checklist**:
-1. Confirm `.env`: `FIREBASE_BRIDGE_ENABLED=true` and `GOOGLE_APPLICATION_CREDENTIALS` resolves inside the runtime (absolute paths work best).
-2. Validate the Firebase project + service-account JSON scopes in GCP/Firebase console.
-3. Tail application logs—the bridge absorbs most exceptions but still logs warnings once logging is WARNING+.
-
----
-
 ### Issue 4: MCP Server Connection Failed (e.g. Yahoo Finance MCP)
 
 **Symptoms**:

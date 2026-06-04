@@ -97,7 +97,7 @@ def format_buy_message(
     rank_change_msg: str = ""
 ) -> str:
     """
-    Format buy-trade notification plain text for logs/digests/Firebase-style hooks.
+    Format buy-trade notification plain text for logs/digests.
 
     Args:
         company_name: Company name
@@ -214,7 +214,7 @@ def format_sell_message(
     sell_reason: str
 ) -> str:
     """
-    Format sell-trade notification plain text for logs/digests/Firebase-style hooks.
+    Format sell-trade notification plain text for logs/digests.
 
     Args:
         company_name: Company name

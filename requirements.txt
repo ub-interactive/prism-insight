@@ -76,8 +76,5 @@ pandas-market-calendars>=4.0.0  # US market holidays
 pytz>=2024.1  # Timezone support
 lxml>=4.9.0  # HTML/XML parsing for pandas read_html
 
-# Firebase Bridge (PRISM-Mobile)
-firebase-admin>=6.0.0
-
 # Firecrawl AI Research
 firecrawl-py>=4.22.0

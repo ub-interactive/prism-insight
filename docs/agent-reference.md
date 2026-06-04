@@ -85,9 +85,7 @@ Orchestration order and filenames are authoritative in [`agents.md`](../agents.m
 
 ### Auxiliary messaging workflows (retired)
 
-Optional assistants that rewrote summaries for auxiliary distribution rails are not bundled in this repo.
-Use your own notifier or the optional Firebase Bridge; FCM payloads use ``report_link`` / ``pdf_report_link``
-for any deep/asset links supplied by callers.
+Optional assistants that rewrote summaries for auxiliary distribution rails are not bundled in this repo. Use your own notifier integrations for messaging rails.
 
 ### Trading Simulation Team (3 Agents) - GPT-5 Based
 

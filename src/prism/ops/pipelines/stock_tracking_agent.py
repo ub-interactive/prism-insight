@@ -1408,7 +1408,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
         analysis_summary: Dict[str, Any],
         current_price: float = 0
     ):
-        """Process DB updates and queued notifications (logs / Firebase) based on portfolio_adjustment"""
+        """Process DB updates and queued notifications (logs) based on portfolio_adjustment"""
         try:
             if not portfolio_adjustment.get("needed", False):
                 return
@@ -1938,7 +1938,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
             self.cursor.execute("SELECT COUNT(*) FROM trading_history WHERE account_key = ? AND profit_rate > 0", (self._account_scope()[0],))
             successful_trades = self.cursor.fetchone()[0] or 0
 
-            # Generate consolidated portfolio snapshot for logs / Firebase
+            # Generate consolidated portfolio snapshot for logs
             message = (
                 f"📊 PRISM US Simulator | Live portfolio ({datetime.now().strftime('%Y-%m-%d %H:%M')})\n\n"
             )
@@ -2285,27 +2285,13 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
             logger.error(traceback.format_exc())
             return 0, 0
 
-    async def _notify_firebase(self, message: str, msg_type=None):
-        """Best-effort Firebase Bridge notification for Prism Mobile (optional; see FIREBASE_BRIDGE_ENABLED)."""
-        try:
-            from prism.integrations.firebase_bridge import notify
-            await notify(
-                message=message,
-                market="us",
-                channel_id=None,
-                msg_type=msg_type,
-            )
-        except Exception as e:
-            logger.debug(f"Firebase bridge: {e}")
-
     async def _flush_tracking_notifications(self) -> None:
-        """Append portfolio summary, log queued digests, and optionally mirror to Firebase Bridge."""
+        """Append portfolio summary and log queued digests."""
         try:
             summary = await self.generate_report_summary()
             self._msg_types.append("portfolio")
             self.message_queue.append(summary)
 
-            firebase_tasks: list[asyncio.Task] = []
             for idx, message in enumerate(self.message_queue):
                 msg_type = self._msg_types[idx] if idx < len(self._msg_types) else None
                 preview = message if len(message) <= 2400 else (message[:2400] + "\n...(truncated for logs)")
@@ -2315,12 +2301,6 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                     len(message),
                     preview,
                 )
-                firebase_tasks.append(
-                    asyncio.create_task(self._notify_firebase(message, msg_type=msg_type))
-                )
-
-            if firebase_tasks:
-                await asyncio.gather(*firebase_tasks, return_exceptions=True)
         except Exception as e:
             logger.error(f"Failed to flush tracking notifications: {str(e)}")
             logger.error(traceback.format_exc())

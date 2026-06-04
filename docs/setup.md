@@ -40,7 +40,6 @@
 
 | Service | Purpose | Get Key |
 |---------|---------|---------|
-| GCP / Firebase Admin | Push metadata for PRISM-Mobile (optional bridge) | [Firebase Console](https://console.firebase.google.com/) |
 | Korea Investment & Securities | Automated trading | [KIS Developers](https://apiportal.koreainvestment.com/) |
 
 ---
@@ -182,24 +181,7 @@ npm install -g @perplexity-ai/mcp-server
 | File | Purpose |
 |------|---------|
 | `mcp_agent.config.yaml` | Tracked MCP server layout + OpenAI model map (no API keys). |
-| `.env` | Secrets + runtime toggles: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, vendor MCP keys, Firebase, etc. |
-
-### Companion app / Firebase (Optional)
-
-PRISM-Mobile can subscribe to mirrored notifications via the optional Firebase bridge.
-
-| File | Purpose |
-|------|---------|
-| `.env` | Toggle `FIREBASE_BRIDGE_ENABLED` and `GOOGLE_APPLICATION_CREDENTIALS` |
-
-```bash
-# .env (enable only when coordinating with companion mobile apps)
-FIREBASE_BRIDGE_ENABLED=false
-GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/firebase-admin.json
-```
-
-> **Tip**: Keep the bridge disabled until you deliberately wire mobile onboarding.
-
+| `.env` | Secrets + runtime toggles: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, vendor MCP keys, etc. |
 ### Trading Settings (Optional)
 
 | File | Purpose |

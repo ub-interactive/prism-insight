@@ -1,1 +1,1 @@
-"""External integration surfaces (Firebase, Firecrawl, archive API)."""
+"""External integration surfaces (Firecrawl, archive API)."""

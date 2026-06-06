@@ -27,6 +27,7 @@ from prism.core.report_generation import (
     generate_summary,
     get_disclaimer,
 )
+from prism.core.footnotes import annotate_financial_terms
 from prism.core.utils import clean_markdown
 from prism.core.visualization.cn_chart import (
     get_cn_holder_chart_html,
@@ -365,6 +366,7 @@ async def analyze_cn_stock(
 """
 
         final_report = clean_markdown(final_report)
+        final_report = await annotate_financial_terms(final_report, language, logger)
 
         if language and language.lower() != "en":
             from prism.core.translation import translate_report

@@ -34,6 +34,7 @@ from prism.core.visualization.chart import (
     get_us_price_chart_html,
     get_us_technical_chart_html,
 )
+from prism.core.footnotes import annotate_financial_terms
 from prism.core.utils import clean_markdown
 
 # Market analysis cache storage (global variable)
@@ -414,6 +415,7 @@ async def analyze_us_stock(
 
         # 11. Clean up markdown formatting
         final_report = clean_markdown(final_report)
+        final_report = await annotate_financial_terms(final_report, language, logger)
 
         if language and language.lower() != "en":
             from prism.core.translation import translate_report

@@ -76,6 +76,19 @@ async def test_translate_text(mock_generate_str):
 
 @pytest.mark.asyncio
 @patch("mcp_agent.workflows.llm.augmented_llm_openai.OpenAIAugmentedLLM.generate_str", new_callable=AsyncMock)
+async def test_translate_text_preserves_footnote_syntax_instruction(mock_generate_str):
+    mock_generate_str.return_value = "市盈率[^1]\n\n[^1]: 市盈率用于比较股价与每股收益。"
+
+    await translate_text("P/E ratio[^1]\n\n[^1]: The P/E ratio compares price with earnings.", "zh")
+
+    call_args = mock_generate_str.call_args[1]
+    prompt = call_args["message"]
+    assert "Preserve markdown footnote markers like [^1] exactly" in prompt
+    assert "Preserve footnote definition labels like [^1]: exactly" in prompt
+
+
+@pytest.mark.asyncio
+@patch("mcp_agent.workflows.llm.augmented_llm_openai.OpenAIAugmentedLLM.generate_str", new_callable=AsyncMock)
 async def test_translate_report_end_to_end(mock_generate_str):
     # Setup mock translations for each segment
     # Segment 1: Header/Intro (before H2)

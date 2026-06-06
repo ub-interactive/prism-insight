@@ -64,7 +64,8 @@ async def translate_text(text: str, target_lang: str) -> str:
         instruction=(
             "You are a professional financial translator. "
             "Translate all English text to the target language accurately and professionally. "
-            "Preserve all markdown formatting, lists, bold text, tables, and HTML comments/placeholders exactly."
+            "Preserve all markdown formatting, lists, bold text, tables, footnote markers, "
+            "footnote definition labels, and HTML comments/placeholders exactly."
         ),
         server_names=[]
     )
@@ -74,6 +75,8 @@ async def translate_text(text: str, target_lang: str) -> str:
     prompt = (
         f"Translate the following text into standard financial terminology in {lang_name}. "
         "Preserve all markdown headers, bold text, tables, bullet points, HTML comments, and placeholders exactly as they are. "
+        "Preserve markdown footnote markers like [^1] exactly. "
+        "Preserve footnote definition labels like [^1]: exactly; translate only the definition text after the label. "
         "Output only the translated text, with no conversational preamble, explanation, or introduction:\n\n"
         f"{text}"
     )

@@ -30,6 +30,54 @@ logger = logging.getLogger(__name__)
 
 _MIN_TECH_ROWS = 26  # MACD slow period
 
+_LABEL_COLS = ("股东名称", "HOLDER_NAME", "股东")
+_VALUE_COLS = (
+    "占总股本持股比例",
+    "占总股本比例",
+    "期末持股-持股占流通股比",
+    "FREE_HOLDNUM_RATIO",
+    "持股数",
+    "期末持股-数量",
+    "HOLD_NUM",
+)
+_RANK_COLS = {"名次", "序号", "HOLDER_RANK", "股东排名"}
+
+
+def _ensure_cn_font() -> None:
+    from matplotlib import font_manager
+
+    candidates = (
+        "PingFang SC",
+        "Noto Sans CJK SC",
+        "Noto Sans SC",
+        "SimHei",
+        "Arial Unicode MS",
+    )
+    available = {f.name for f in font_manager.fontManager.ttflist}
+    for name in candidates:
+        if name in available:
+            plt.rcParams["font.sans-serif"] = [name, *plt.rcParams["font.sans-serif"]]
+            plt.rcParams["axes.unicode_minus"] = False
+            return
+    logger.warning("No CJK font found; CN chart labels may render as boxes")
+
+
+def _resolve_holder_columns(holders_df: pd.DataFrame) -> tuple[str, str] | None:
+    label_col = next((c for c in _LABEL_COLS if c in holders_df.columns), None)
+    value_col = next((c for c in _VALUE_COLS if c in holders_df.columns), None)
+    if value_col is None:
+        numeric = [
+            c for c in holders_df.select_dtypes(include="number").columns
+            if c not in _RANK_COLS
+        ]
+        value_col = numeric[0] if numeric else None
+    if label_col is None:
+        non_numeric = holders_df.select_dtypes(exclude="number").columns.tolist()
+        label_col = non_numeric[0] if non_numeric else None
+    if not label_col or not value_col:
+        return None
+    return label_col, value_col
+
 
 def _html_or_empty(html: str | None) -> str:
     return html or ""
@@ -43,6 +91,7 @@ def get_cn_price_chart_html(
     dpi: int = 80,
 ) -> str:
     """Generate CN price trend chart and return as base64 HTML."""
+    _ensure_cn_font()
     fig = None
     try:
         if hist_df is None or hist_df.empty or "Close" not in hist_df.columns:
@@ -137,6 +186,7 @@ def get_cn_technical_chart_html(
     dpi: int = 80,
 ) -> str:
     """Generate CN RSI/MACD technical chart and return as base64 HTML."""
+    _ensure_cn_font()
     fig = None
     try:
         if hist_df is None or hist_df.empty or "Close" not in hist_df.columns:
@@ -210,22 +260,17 @@ def get_cn_holder_chart_html(
     dpi: int = 80,
 ) -> str:
     """Generate CN top holders horizontal bar chart and return as base64 HTML."""
+    _ensure_cn_font()
     fig = None
     try:
         if holders_df is None or holders_df.empty:
             return ""
 
-        numeric_cols = holders_df.select_dtypes(include="number").columns.tolist()
-        if not numeric_cols:
+        resolved = _resolve_holder_columns(holders_df)
+        if resolved is None:
             return ""
-
-        value_col = numeric_cols[0]
-        non_numeric_cols = holders_df.select_dtypes(exclude="number").columns.tolist()
-        if non_numeric_cols:
-            label_col = non_numeric_cols[0]
-            labels = holders_df[label_col].astype(str)
-        else:
-            labels = holders_df.index.astype(str)
+        label_col, value_col = resolved
+        labels = holders_df[label_col].astype(str)
 
         plot_df = pd.DataFrame({"label": labels, "value": holders_df[value_col]})
         plot_df = plot_df.dropna(subset=["value"]).sort_values("value", ascending=False).head(10)
@@ -248,7 +293,11 @@ def get_cn_holder_chart_html(
         ax.set_yticks(y_pos)
         ax.set_yticklabels(display_labels, fontsize=9)
         ax.invert_yaxis()
-        ax.set_xlabel(value_col, fontsize=10)
+        if "比例" in value_col or "RATIO" in value_col:
+            xlabel = "Shareholding Ratio (%)"
+        else:
+            xlabel = value_col
+        ax.set_xlabel(xlabel, fontsize=10)
         ax.grid(axis="x", linestyle="--", alpha=0.3)
 
         max_val = plot_df["value"].max()

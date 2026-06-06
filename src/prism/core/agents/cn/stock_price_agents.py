@@ -56,7 +56,7 @@ def create_institutional_holdings_analysis_agent(
     data_block = (
         f"## Pre-collected Holder Data\n{prefetched_data}\n"
         if prefetched_data
-        else ""
+        else "## Data\nNo holder data was prefetched. State clearly when data is unavailable; do not invent shareholder or fund positions."
     )
     instruction = f"""You are a China A-share ownership analyst for {company_name} ({code}.{exchange}).
 

@@ -45,3 +45,41 @@ def test_get_stock_info_returns_dict(mock_ak):
     client = CNDataClient()
     info = client.get_stock_info("600519")
     assert info["股票简称"] == "贵州茅台"
+
+
+@patch.object(CNDataClient, "get_stock_info", return_value={"股票简称": "贵州茅台"})
+def test_get_company_name_prefers_short_name(_mock_get_stock_info):
+    client = CNDataClient()
+    assert client.get_company_name("600519") == "贵州茅台"
+
+
+@patch.object(CNDataClient, "get_stock_info", return_value={})
+def test_get_company_name_falls_back_to_code(_mock_get_stock_info):
+    client = CNDataClient()
+    assert client.get_company_name("600519") == "600519"
+
+
+@patch("prism.core.data.cn_client.ak")
+def test_get_top_holders_uses_prefixed_symbol(mock_ak):
+    mock_ak.stock_gdfx_top_10_em.return_value = pd.DataFrame({"holder": ["Test"]})
+    client = CNDataClient()
+    df = client.get_top_holders("600519")
+    assert not df.empty
+    mock_ak.stock_gdfx_top_10_em.assert_called_once_with(symbol="sh600519")
+
+
+@patch("prism.core.data.cn_client.ak")
+def test_get_fund_holdings_calls_akshare(mock_ak):
+    mock_ak.stock_fund_stock_holder.return_value = pd.DataFrame({"fund": ["Test Fund"]})
+    client = CNDataClient()
+    df = client.get_fund_holdings("600519")
+    assert not df.empty
+    mock_ak.stock_fund_stock_holder.assert_called_once_with(symbol="600519")
+
+
+@patch("prism.core.data.cn_client.ak")
+def test_get_ohlcv_returns_empty_on_exception(mock_ak):
+    mock_ak.stock_zh_a_hist.side_effect = RuntimeError("network error")
+    client = CNDataClient()
+    df = client.get_ohlcv("600519", start_date="20250101", end_date="20250601")
+    assert df.empty

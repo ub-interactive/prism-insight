@@ -9,6 +9,8 @@ import logging
 import akshare as ak
 import pandas as pd
 
+from prism.core.market.cn_ticker import normalize
+
 logger = logging.getLogger(__name__)
 
 _OHLCV_RENAME = {
@@ -78,7 +80,7 @@ class CNDataClient:
     def get_company_name(self, code: str) -> str:
         """Return company short name, or the code if unavailable."""
         info = self.get_stock_info(code)
-        return info.get("股票简称") or info.get("证券简称") or code
+        return str(info.get("股票简称") or info.get("证券简称") or code)
 
     def get_financial_indicators(self, code: str) -> pd.DataFrame:
         """Get financial analysis indicators."""
@@ -95,7 +97,8 @@ class CNDataClient:
     def get_top_holders(self, code: str) -> pd.DataFrame:
         """Get top 10 shareholders."""
         try:
-            df = ak.stock_gdfx_top_10_em(symbol=code)
+            ticker = normalize(code)
+            df = ak.stock_gdfx_top_10_em(symbol=ticker.akshare_symbol)
             if df is None or df.empty:
                 logger.warning(f"No top holders found for {code}")
                 return pd.DataFrame()
@@ -107,7 +110,7 @@ class CNDataClient:
     def get_fund_holdings(self, code: str) -> pd.DataFrame:
         """Get fund holdings for the symbol."""
         try:
-            df = ak.stock_fund_stock_holder_em(symbol=code)
+            df = ak.stock_fund_stock_holder(symbol=code)
             if df is None or df.empty:
                 logger.warning(f"No fund holdings found for {code}")
                 return pd.DataFrame()

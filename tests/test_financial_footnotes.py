@@ -1,4 +1,12 @@
-from prism.core.footnotes import TermFootnote, insert_footnote_markers
+import pytest
+from unittest.mock import AsyncMock, patch
+
+from prism.core.footnotes import (
+    TermFootnote,
+    _coerce_terms,
+    annotate_financial_terms,
+    insert_footnote_markers,
+)
 
 
 def test_insert_footnotes_first_occurrence_only_and_document_order():
@@ -102,3 +110,61 @@ def test_insert_footnotes_skips_tables_code_blocks_and_existing_definitions():
     assert "EBITDA[^1] improved in operating results." in result
     assert "[^9]: EBITDA old definition." in result
     assert "[^1]: EBITDA is earnings before interest, taxes, depreciation, and amortization." in result
+
+
+def test_coerce_terms_accepts_valid_payload_and_filters_invalid_items():
+    payload = {
+        "terms": [
+            {
+                "term": "Free cash flow",
+                "surface_form": "free cash flow",
+                "definition": "Cash left after operating expenses and capital expenditures.",
+            },
+            {"term": "Bad", "surface_form": "", "definition": "Missing surface form."},
+            "not a dictionary",
+        ]
+    }
+
+    terms = _coerce_terms(payload)
+
+    assert terms == [
+        TermFootnote(
+            term="Free cash flow",
+            surface_form="free cash flow",
+            definition="Cash left after operating expenses and capital expenditures.",
+        )
+    ]
+
+
+@pytest.mark.asyncio
+@patch("prism.core.footnotes._extract_financial_terms", new_callable=AsyncMock)
+async def test_annotate_financial_terms_returns_original_when_extraction_fails(mock_extract):
+    mock_extract.side_effect = RuntimeError("model unavailable")
+    report = "The P/E ratio contracted."
+
+    result = await annotate_financial_terms(report, "en", logger=None)
+
+    assert result == report
+
+
+@pytest.mark.asyncio
+@patch("prism.core.footnotes._extract_financial_terms", new_callable=AsyncMock)
+async def test_annotate_financial_terms_restores_charts(mock_extract):
+    mock_extract.return_value = [
+        TermFootnote(
+            term="P/E ratio",
+            surface_form="P/E ratio",
+            definition="The price-to-earnings ratio compares price with earnings.",
+        )
+    ]
+    report = (
+        "# Report\n"
+        '<img src="data:image/png;base64,chartbytes" />\n\n'
+        "The P/E ratio contracted."
+    )
+
+    result = await annotate_financial_terms(report, "en", logger=None)
+
+    assert '<img src="data:image/png;base64,chartbytes" />' in result
+    assert "The P/E ratio[^1] contracted." in result
+    assert "[^1]: The price-to-earnings ratio compares price with earnings." in result

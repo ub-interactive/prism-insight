@@ -4,6 +4,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+from typing import Any
+
+from mcp_agent.agents.agent import Agent
+from mcp_agent.workflows.llm.augmented_llm import RequestParams
+from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
+
+from prism.core.config.models import get_configured_model, get_optional_reasoning_effort
+from prism.core.translation import extract_and_replace_charts, restore_charts
+from prism.core.utils import parse_llm_json
+
+FINANCIAL_FOOTNOTE_MODEL = get_configured_model("financial_footnotes", "gpt-5.4-mini")
 
 
 @dataclass(frozen=True)
@@ -120,3 +131,97 @@ def insert_footnote_markers(report_md: str, terms: list[TermFootnote]) -> str:
         definitions.append(f"[^{number}]: {term.definition}")
 
     return output.rstrip() + "\n\n---\n\n## Footnotes\n\n" + "\n".join(definitions) + "\n"
+
+
+def _coerce_terms(payload: dict[str, Any] | None) -> list[TermFootnote]:
+    """Validate parsed LLM JSON into TermFootnote objects."""
+    if not isinstance(payload, dict):
+        return []
+
+    raw_terms = payload.get("terms")
+    if not isinstance(raw_terms, list):
+        return []
+
+    terms: list[TermFootnote] = []
+    for item in raw_terms:
+        if not isinstance(item, dict):
+            continue
+        term = str(item.get("term", "")).strip()
+        surface_form = str(item.get("surface_form", "")).strip()
+        definition = str(item.get("definition", "")).strip()
+        if term and surface_form and definition:
+            terms.append(TermFootnote(term=term, surface_form=surface_form, definition=definition))
+
+    return terms
+
+
+async def _extract_financial_terms(report_md: str, language: str) -> list[TermFootnote]:
+    """Ask an LLM to identify financial terms and plain-language definitions."""
+    agent = Agent(
+        name="financial_footnote_extractor",
+        instruction=(
+            "You identify financial terms in investment research reports. "
+            "Return only strict JSON. Do not rewrite the report."
+        ),
+        server_names=[],
+    )
+    llm = await agent.attach_llm(OpenAIAugmentedLLM)
+
+    message = f"""Identify financial terms in this investment report that a general individual investor may not understand.
+
+Return strict JSON with this exact shape:
+{{
+  "terms": [
+    {{
+      "term": "canonical term name",
+      "surface_form": "exact substring as it appears in the report",
+      "definition": "one concise plain-language definition in English"
+    }}
+  ]
+}}
+
+Rules:
+- Include financial, accounting, valuation, trading, macroeconomic, and market-structure terms.
+- Use the exact first visible report substring for surface_form, preserving capitalization and punctuation.
+- Definitions must be one sentence, clear enough for retail investors, and not investment advice.
+- Do not include company names, ticker symbols, dates, plain percentages, or ordinary words.
+- Do not include terms that appear only in markdown tables, code blocks, chart placeholders, or existing footnote definitions.
+- The report language parameter is "{language}", but this extraction pass receives the pre-translation English report; write definitions in English.
+- Output only JSON. No markdown fence.
+
+Report:
+{report_md}
+"""
+
+    response = await llm.generate_str(
+        message=message,
+        request_params=RequestParams(
+            model=FINANCIAL_FOOTNOTE_MODEL,
+            maxTokens=8000,
+            max_iterations=1,
+            parallel_tool_calls=False,
+            use_history=False,
+            **get_optional_reasoning_effort(FINANCIAL_FOOTNOTE_MODEL, "none"),
+        ),
+    )
+    payload = parse_llm_json(response, "financial footnote extraction")
+    return _coerce_terms(payload)
+
+
+async def annotate_financial_terms(report_md: str, language: str, logger) -> str:
+    """Annotate financial terms with markdown footnotes, returning original markdown on failure."""
+    if not report_md or not report_md.strip():
+        return report_md
+
+    try:
+        processed_report, charts = extract_and_replace_charts(report_md)
+        terms = await _extract_financial_terms(processed_report, language)
+        if not terms:
+            return report_md
+
+        annotated = insert_footnote_markers(processed_report, terms)
+        return restore_charts(annotated, charts)
+    except Exception as exc:
+        if logger:
+            logger.warning(f"Financial footnote annotation skipped: {exc}")
+        return report_md

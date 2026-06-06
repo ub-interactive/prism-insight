@@ -25,6 +25,15 @@ def test_get_ohlcv_normalizes_columns(mock_ak):
     assert not df.empty
     assert "Close" in df.columns
     assert "Open" in df.columns
+    assert isinstance(df.index, pd.DatetimeIndex)
+    assert "Date" not in df.columns
+    mock_ak.stock_zh_a_hist.assert_called_once_with(
+        symbol="600519",
+        period="daily",
+        start_date="20250101",
+        end_date="20250601",
+        adjust="qfq",
+    )
 
 
 @patch("prism.core.data.cn_client.ak")

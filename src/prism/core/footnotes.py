@@ -44,8 +44,15 @@ def _inside_spans(index: int, spans: list[tuple[int, int]]) -> bool:
     return any(start <= index < end for start, end in spans)
 
 
-def _find_first_unprotected(
-    text: str, surface_form: str, spans: list[tuple[int, int]]
+def _spans_overlap(left: tuple[int, int], right: tuple[int, int]) -> bool:
+    return left[0] < right[1] and right[0] < left[1]
+
+
+def _find_next_unprotected_non_overlapping(
+    text: str,
+    surface_form: str,
+    protected_spans: list[tuple[int, int]],
+    occupied_spans: list[tuple[int, int]],
 ) -> tuple[int, int] | None:
     if not surface_form:
         return None
@@ -56,9 +63,14 @@ def _find_first_unprotected(
         match = pattern.search(text, search_from)
         if match is None:
             return None
-        if not _inside_spans(match.start(), spans):
-            return match.start(), match.end()
-        search_from = match.end()
+        span = (match.start(), match.end())
+        if _inside_spans(match.start(), protected_spans):
+            search_from = match.end()
+            continue
+        if any(_spans_overlap(span, occupied) for occupied in occupied_spans):
+            search_from = match.end()
+            continue
+        return span
 
 
 def insert_footnote_markers(report_md: str, terms: list[TermFootnote]) -> str:
@@ -66,9 +78,9 @@ def insert_footnote_markers(report_md: str, terms: list[TermFootnote]) -> str:
     if not report_md.strip() or not terms:
         return report_md
 
-    spans = _protected_spans(report_md)
+    protected_spans = _protected_spans(report_md)
     seen: set[str] = set()
-    candidates: list[tuple[int, int, TermFootnote]] = []
+    pending_terms: list[TermFootnote] = []
 
     for term in terms:
         surface = term.surface_form.strip()
@@ -77,12 +89,20 @@ def insert_footnote_markers(report_md: str, terms: list[TermFootnote]) -> str:
         if not surface or not definition or key in seen:
             continue
         seen.add(key)
-        match_span = _find_first_unprotected(report_md, surface, spans)
+        pending_terms.append(TermFootnote(term.term.strip(), surface, definition))
+
+    pending_terms.sort(key=lambda term: len(term.surface_form), reverse=True)
+    occupied_spans: list[tuple[int, int]] = []
+    candidates: list[tuple[int, int, TermFootnote]] = []
+
+    for term in pending_terms:
+        match_span = _find_next_unprotected_non_overlapping(
+            report_md, term.surface_form, protected_spans, occupied_spans
+        )
         if match_span is not None:
             start, end = match_span
-            candidates.append(
-                (start, end, TermFootnote(term.term.strip(), surface, definition))
-            )
+            occupied_spans.append(match_span)
+            candidates.append((start, end, term))
 
     if not candidates:
         return report_md
@@ -92,8 +112,8 @@ def insert_footnote_markers(report_md: str, terms: list[TermFootnote]) -> str:
     offset = 0
     definitions: list[str] = []
 
-    for number, (index, end, term) in enumerate(candidates, start=1):
-        insert_at = index + offset + (end - index)
+    for number, (_index, end, term) in enumerate(candidates, start=1):
+        insert_at = end + offset
         marker = f"[^{number}]"
         output = output[:insert_at] + marker + output[insert_at:]
         offset += len(marker)

@@ -42,3 +42,35 @@ def test_insert_footnotes_deduplicates_terms_by_surface_form():
     assert result.count("Revenue[^1]") == 1
     assert "Duplicate definition should not be used" not in result
     assert "[^1]: Revenue is total sales before expenses." in result
+
+
+def test_insert_footnotes_prefers_longer_overlapping_match():
+    report = "Free cash flow improved after cash conversion improved."
+    terms = [
+        TermFootnote(
+            term="cash",
+            surface_form="cash",
+            definition="Cash is money available to a company.",
+        ),
+        TermFootnote(
+            term="free cash flow",
+            surface_form="free cash flow",
+            definition="Free cash flow is cash generated after operating expenses and capital spending.",
+        ),
+    ]
+
+    result = insert_footnote_markers(report, terms)
+
+    assert "Free cash flow[^1] improved after cash[^2] conversion improved." in result
+    assert "flo[^2]w" not in result
+    assert "[^1]: Free cash flow is cash generated after operating expenses and capital spending." in result
+    assert "[^2]: Cash is money available to a company." in result
+
+
+def test_insert_footnotes_returns_original_when_no_terms_match():
+    report = "Revenue improved."
+    terms = [TermFootnote(term="EBITDA", surface_form="EBITDA", definition="Earnings before interest, taxes, depreciation, and amortization.")]
+
+    result = insert_footnote_markers(report, terms)
+
+    assert result == report

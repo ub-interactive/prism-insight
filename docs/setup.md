@@ -371,6 +371,24 @@ tail -f stock_analysis_*.log
 
 ---
 
+## Optional Components
+
+### China A-Share Reports
+
+CN A-share demo reports use [akshare](https://github.com/akfamily/akshare) (included in `requirements.txt`).
+
+```bash
+pip install -e .
+python -m prism.ops.dev.demo 600519 --market cn --language zh
+python -m prism.ops.dev.demo 000001 --market cn --language en
+```
+
+- Tickers are bare 6-digit codes (`600519`, `000001`); exchange is inferred automatically.
+- Reports are saved under `var/reports/` and `var/pdf_reports/`.
+- **Linux PDF with Chinese text:** install CJK fonts, e.g. `apt install fonts-noto-cjk` (Debian/Ubuntu).
+
+---
+
 ## Next Steps
 
 After successful setup:

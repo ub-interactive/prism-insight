@@ -74,3 +74,31 @@ def test_insert_footnotes_returns_original_when_no_terms_match():
     result = insert_footnote_markers(report, terms)
 
     assert result == report
+
+
+def test_insert_footnotes_skips_tables_code_blocks_and_existing_definitions():
+    report = (
+        "| Metric | Value |\n"
+        "| --- | --- |\n"
+        "| EBITDA | 100 |\n\n"
+        "```text\n"
+        "EBITDA appears in a code block.\n"
+        "```\n\n"
+        "EBITDA improved in operating results.\n\n"
+        "[^9]: EBITDA old definition."
+    )
+    terms = [
+        TermFootnote(
+            term="EBITDA",
+            surface_form="EBITDA",
+            definition="EBITDA is earnings before interest, taxes, depreciation, and amortization.",
+        )
+    ]
+
+    result = insert_footnote_markers(report, terms)
+
+    assert "| EBITDA | 100 |" in result
+    assert "EBITDA appears in a code block." in result
+    assert "EBITDA[^1] improved in operating results." in result
+    assert "[^9]: EBITDA old definition." in result
+    assert "[^1]: EBITDA is earnings before interest, taxes, depreciation, and amortization." in result

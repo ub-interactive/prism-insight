@@ -9,8 +9,7 @@ Usage:
     python -m prism.ops.dev.demo                    # Analyze Apple (AAPL)
     python -m prism.ops.dev.demo MSFT               # Analyze Microsoft
     python -m prism.ops.dev.demo NVDA "NVIDIA Corp" # Analyze with custom company name
-
-Reports are saved to: pdf_reports/
+    python -m prism.ops.dev.demo 600519 --market cn --language zh
 """
 import asyncio
 import argparse
@@ -48,30 +47,41 @@ def get_company_name(ticker: str) -> str:
         import yfinance as yf
         stock = yf.Ticker(ticker)
         info = stock.info
-        return info.get('longName') or info.get('shortName') or ticker
+        return info.get("longName") or info.get("shortName") or ticker
     except Exception:
         return ticker
 
 
-async def generate_report(ticker: str, company_name: str, language: str = "en") -> tuple:
+def get_cn_company_name(code: str) -> str:
+    """Get company name from A-share code using akshare."""
+    from prism.core.data.cn_client import CNDataClient
+
+    return CNDataClient().get_company_name(code)
+
+
+async def generate_report(
+    ticker: str,
+    company_name: str,
+    language: str = "en",
+    market: str = "us",
+) -> tuple:
     """
     Generate a stock analysis report.
 
     Args:
-        ticker: Stock ticker symbol (e.g., "AAPL")
-        company_name: Company name (e.g., "Apple Inc.")
-        language: Language code ("en")
+        ticker: Stock ticker symbol (US) or 6-digit A-share code (CN)
+        company_name: Company name
+        language: Language code ("en", "zh", etc.)
+        market: Market selector ("us" or "cn")
 
     Returns:
         tuple: (markdown_path, pdf_path)
     """
-    from prism.reporting.report_generator import save_us_report, save_us_pdf_report
-
-    # Check if Perplexity is configured for news analysis
     include_news = check_perplexity_configured()
 
     print(f"\n{'='*60}")
-    print(f"  PRISM-INSIGHT AI Stock Analysis")
+    print("  PRISM-INSIGHT AI Stock Analysis")
+    print(f"  Market: {market.upper()}")
     print(f"  Ticker: {ticker}")
     print(f"  Company: {company_name}")
     language_labels = {
@@ -81,11 +91,11 @@ async def generate_report(ticker: str, company_name: str, language: str = "en") 
         "ja": "Japanese",
         "es": "Spanish",
         "fr": "French",
-        "de": "German"
+        "de": "German",
     }
     print(f"  Language: {language_labels.get(language.lower(), language.upper())}")
     if not include_news:
-        print(f"  Note: News analysis skipped (Perplexity API not configured)")
+        print("  Note: News analysis skipped (Perplexity API not configured)")
     print(f"{'='*60}\n")
 
     print("[1/3] Generating AI analysis report...")
@@ -100,26 +110,43 @@ async def generate_report(ticker: str, company_name: str, language: str = "en") 
 
     start_time = time.time()
 
-    # Generate the report
-    reference_date = datetime.now().strftime("%Y%m%d")
-    report_content = await analyze_us_stock(
-        ticker=ticker,
-        company_name=company_name,
-        reference_date=reference_date,
-        language=language,
-        include_news=include_news
-    )
+    if market == "cn":
+        from prism.core.analysis_cn import analyze_cn_stock
+        from prism.core.market.cn_ticker import normalize
+        from prism.core.market_calendar_cn import get_cn_reference_date
+        from prism.reporting.report_generator import save_cn_pdf_report, save_cn_report
+
+        ticker_info = normalize(ticker)
+        reference_date = get_cn_reference_date()
+        report_content = await analyze_cn_stock(
+            code=ticker_info.code,
+            company_name=company_name,
+            exchange=ticker_info.exchange,
+            reference_date=reference_date,
+            language=language,
+            include_news=include_news,
+        )
+        md_path = save_cn_report(ticker_info.code, company_name, report_content)
+        pdf_path = save_cn_pdf_report(ticker_info.code, company_name, md_path)
+    else:
+        from prism.reporting.report_generator import save_us_pdf_report, save_us_report
+
+        reference_date = datetime.now().strftime("%Y%m%d")
+        report_content = await analyze_us_stock(
+            ticker=ticker,
+            company_name=company_name,
+            reference_date=reference_date,
+            language=language,
+            include_news=include_news,
+        )
+        md_path = save_us_report(ticker, company_name, report_content)
+        pdf_path = save_us_pdf_report(ticker, company_name, md_path)
 
     analysis_time = time.time() - start_time
     print(f"\n[2/3] Analysis complete! ({analysis_time:.1f} seconds)")
     print(f"      Report length: {len(report_content):,} characters")
 
-    # Save markdown
-    print("[3/3] Saving report files...")
-    md_path = save_us_report(ticker, company_name, report_content)
-
-    # Convert to PDF
-    pdf_path = save_us_pdf_report(ticker, company_name, md_path)
+    print("[3/3] Report files saved.")
 
     return md_path, pdf_path
 
@@ -134,42 +161,67 @@ Examples:
   python -m prism.ops.dev.demo MSFT                 # Analyze Microsoft
   python -m prism.ops.dev.demo NVDA "NVIDIA Corp"   # Analyze with custom name
   python -m prism.ops.dev.demo AAPL --language en   # English report
-        """
+  python -m prism.ops.dev.demo 600519 --market cn --language zh
+  python -m prism.ops.dev.demo 000001 --market cn --language en
+        """,
     )
     parser.add_argument(
         "ticker",
         nargs="?",
         default="AAPL",
-        help="Stock ticker symbol (default: AAPL)"
+        help="US ticker symbol or CN 6-digit A-share code (default: AAPL)",
     )
     parser.add_argument(
         "company_name",
         nargs="?",
         default=None,
-        help="Company name (auto-detected if not provided)"
+        help="Company name (auto-detected if not provided)",
     )
     parser.add_argument(
-        "--language", "-l",
+        "--market",
+        "-m",
+        choices=["us", "cn"],
+        default="us",
+        help="Market: us (default) or cn (A-shares)",
+    )
+    parser.add_argument(
+        "--language",
+        "-l",
         type=str,
         default="en",
-        help="Report language (e.g. en, zh, ko, ja, es, fr, de) (default: en)"
+        help="Report language (e.g. en, zh, ko, ja, es, fr, de) (default: en)",
     )
 
     args = parser.parse_args()
 
-    ticker = args.ticker.upper()
+    if args.market == "cn":
+        from prism.core.market.cn_ticker import CNTickerError, normalize
 
-    # Auto-detect company name if not provided
-    if args.company_name:
-        company_name = args.company_name
+        try:
+            ticker_info = normalize(args.ticker)
+        except CNTickerError as exc:
+            print(f"Error: {exc}")
+            sys.exit(1)
+
+        ticker = ticker_info.code
+        if args.company_name:
+            company_name = args.company_name
+        else:
+            print(f"Looking up company name for {ticker}...")
+            company_name = get_cn_company_name(ticker)
+            print(f"Found: {company_name}")
     else:
-        print(f"Looking up company name for {ticker}...")
-        company_name = get_company_name(ticker)
-        print(f"Found: {company_name}")
+        ticker = args.ticker.upper()
+        if args.company_name:
+            company_name = args.company_name
+        else:
+            print(f"Looking up company name for {ticker}...")
+            company_name = get_company_name(ticker)
+            print(f"Found: {company_name}")
 
     try:
         md_path, pdf_path = asyncio.run(
-            generate_report(ticker, company_name, args.language)
+            generate_report(ticker, company_name, args.language, args.market)
         )
 
         print(f"\n{'='*60}")
@@ -177,10 +229,9 @@ Examples:
         print(f"{'='*60}")
         print(f"\n  Markdown: {md_path}")
         print(f"  PDF:      {pdf_path}")
-        print(f"\n  Open the PDF to view your AI-generated analysis report.")
+        print("\n  Open the PDF to view your AI-generated analysis report.")
         print(f"\n{'='*60}")
 
-        # Try to open PDF on macOS
         if sys.platform == "darwin":
             print("\nOpening PDF...")
             subprocess.run(["open", str(pdf_path)], check=False)
@@ -191,6 +242,7 @@ Examples:
     except Exception as e:
         print(f"\nError: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

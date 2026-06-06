@@ -24,10 +24,12 @@ except Exception:
 # Language name mapping for report generation
 LANGUAGE_NAMES = {
     "en": "English",
+    "zh": "Chinese",
+    "ko": "Korean",
     "ja": "Japanese",
     "es": "Spanish",
     "fr": "French",
-    "de": "German"
+    "de": "German",
 }
 
 REPORT_GENERATION_MODEL = get_configured_model("report_generation", "gpt-5.4-mini")
@@ -415,6 +417,11 @@ def get_disclaimer(language="en"):
     Returns:
         Disclaimer text in specified language
     """
+    if language == "zh":
+        return """## 投资风险提示
+
+本报告仅供参考，不构成投资建议。报告内容由 AI 基于公开信息生成，
+其准确性和完整性不作保证。投资有风险，决策需谨慎，投资者须自行承担投资风险。"""
     return """## Investment Disclaimer
 
 This report is provided for informational purposes only and is not intended as investment advice.

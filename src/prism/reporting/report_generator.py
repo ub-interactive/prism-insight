@@ -211,6 +211,39 @@ def save_us_pdf_report(ticker: str, company_name: str, md_path: Path) -> Path:
     return pdf_path
 
 
+def save_cn_report(code: str, company_name: str, content: str) -> Path:
+    """Save CN A-share report to file."""
+    reference_date = datetime.now().strftime("%Y%m%d")
+    safe_company_name = company_name.replace(" ", "_").replace(".", "").replace(",", "")
+    filename = f"{code}_{safe_company_name}_{reference_date}_analysis.md"
+    filepath = US_REPORTS_DIR / filename
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    logger.info(f"CN markdown report saved: {filepath}")
+    return filepath
+
+
+def save_cn_pdf_report(code: str, company_name: str, md_path: Path) -> Path:
+    """Convert CN A-share markdown file to PDF and save."""
+    from prism.reporting.pdf_converter import markdown_to_pdf
+
+    reference_date = datetime.now().strftime("%Y%m%d")
+    safe_company_name = company_name.replace(" ", "_").replace(".", "").replace(",", "")
+    pdf_filename = f"{code}_{safe_company_name}_{reference_date}_analysis.pdf"
+    pdf_path = US_PDF_REPORTS_DIR / pdf_filename
+
+    try:
+        markdown_to_pdf(str(md_path), str(pdf_path), "playwright", add_theme=True)
+        logger.info(f"CN PDF report generated: {pdf_path}")
+    except Exception as e:
+        logger.error(f"Error converting CN PDF: {e}")
+        raise
+
+    return pdf_path
+
+
 def generate_us_report_response_sync(ticker: str, company_name: str) -> str:
     """
     Generate US stock detailed report synchronously (called from background thread)

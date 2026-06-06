@@ -59,7 +59,7 @@ DEFAULT_CSS = """
 }
 
 body {
-    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Noto Sans SC", "Noto Sans CJK SC", "PingFang SC", "Noto Sans KR", sans-serif;
     font-size: 10pt;
     line-height: 1.7;
     color: var(--text-dark);

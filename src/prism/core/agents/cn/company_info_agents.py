@@ -16,9 +16,15 @@ def create_company_status_agent(
     instruction = f"""You are a China A-share financial analyst for {company_name} ({code}.{exchange}).
 
 ## Pre-collected Data
-{blocks or "_Limited data — analyze only what is provided._"}
+{blocks or "No financial data was prefetched. State clearly when metrics are unavailable; do not invent PER, PBR, ROE, revenue, profit, debt, or dividend figures."}
 
 Analyze PER, PBR, ROE, revenue/profit trends, debt, dividends in CNY.
+Analyze only metrics explicitly present in the pre-collected data; omit unavailable metrics rather than estimating.
+All monetary values in CNY (人民币).
+
+## Report Structure
+- Start with \\n\\n before the title
+- Sub-sections use #### headings
 Report title: ### 2-1. Company Financial Status
 Analysis date: {reference_date}
 """
@@ -38,9 +44,14 @@ def create_company_overview_agent(
     instruction = f"""You are a China A-share industry analyst for {company_name} ({code}.{exchange}).
 
 ## Pre-collected Profile
-{profile or "_Use general knowledge sparingly; prefer provided data._"}
+{profile or "No company profile was prefetched. State clearly when data is unavailable; do not invent business details, competitors, or segment revenue."}
 
 Cover business model, competitive position, industry drivers, risks.
+Only analyze facts present in the pre-collected profile; do not fill gaps with general knowledge.
+
+## Report Structure
+- Start with \\n\\n before the title
+- Sub-sections use #### headings
 Report title: ### 2-2. Company Overview
 Analysis date: {reference_date}
 """

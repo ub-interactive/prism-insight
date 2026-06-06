@@ -13,6 +13,7 @@ CST = pytz.timezone("Asia/Shanghai")
 
 
 def is_cn_market_day(check_date: date | None = None) -> bool:
+    """Return True if *check_date* (default: today CST) is an SSE trading day."""
     if check_date is None:
         check_date = datetime.now(CST).date()
     if check_date.weekday() >= 5:
@@ -22,6 +23,7 @@ def is_cn_market_day(check_date: date | None = None) -> bool:
 
 
 def get_last_trading_day(from_date: date | None = None) -> date:
+    """Most recent SSE trading day on or before *from_date*."""
     if from_date is None:
         from_date = datetime.now(CST).date()
     start = (from_date - timedelta(days=14)).strftime("%Y-%m-%d")

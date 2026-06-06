@@ -13,6 +13,9 @@ config.py
 # Claude Code plugin state
 .omc/
 
+# Local git worktrees
+.worktrees/
+
 # Logs
 *.log
 

@@ -34,6 +34,30 @@ def test_get_ohlcv_normalizes_columns(mock_ak):
         end_date="20250601",
         adjust="qfq",
     )
+    mock_ak.stock_zh_a_hist_tx.assert_not_called()
+
+
+@patch("prism.core.data.cn_client.ak")
+def test_get_ohlcv_falls_back_to_tencent(mock_ak):
+    mock_ak.stock_zh_a_hist.side_effect = ConnectionError("eastmoney blocked")
+    mock_ak.stock_zh_a_hist_tx.return_value = pd.DataFrame({
+        "date": ["2026-01-02"],
+        "open": [100.0],
+        "close": [101.0],
+        "high": [102.0],
+        "low": [99.0],
+        "amount": [100000.0],
+    })
+    client = CNDataClient()
+    df = client.get_ohlcv("600519", start_date="20250101", end_date="20250601")
+    assert not df.empty
+    assert df["Close"].iloc[0] == 101.0
+    mock_ak.stock_zh_a_hist_tx.assert_called_once_with(
+        symbol="sh600519",
+        start_date="20250101",
+        end_date="20250601",
+        adjust="qfq",
+    )
 
 
 @patch("prism.core.data.cn_client.ak")
@@ -80,6 +104,8 @@ def test_get_fund_holdings_calls_akshare(mock_ak):
 @patch("prism.core.data.cn_client.ak")
 def test_get_ohlcv_returns_empty_on_exception(mock_ak):
     mock_ak.stock_zh_a_hist.side_effect = RuntimeError("network error")
+    mock_ak.stock_zh_a_hist_tx.side_effect = RuntimeError("network error")
+    mock_ak.stock_zh_a_daily.side_effect = RuntimeError("network error")
     client = CNDataClient()
     df = client.get_ohlcv("600519", start_date="20250101", end_date="20250601")
     assert df.empty

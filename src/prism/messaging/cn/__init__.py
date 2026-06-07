@@ -1,0 +1,1 @@
+"""CN messaging (stub)."""

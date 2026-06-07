@@ -14,8 +14,8 @@ Key Differences from Korean Version:
 - Market hours: 09:30-16:00 EST (vs 09:00-15:30 KST)
 
 Usage:
-    python -m prism.ops.pipelines.trigger_batch morning INFO --output trigger_results_us.json
-    python -m prism.ops.pipelines.trigger_batch afternoon INFO --output trigger_results_us.json
+    python -m prism.ops.us.pipelines.trigger_batch morning INFO --output trigger_results_us.json
+    python -m prism.ops.us.pipelines.trigger_batch afternoon INFO --output trigger_results_us.json
 """
 
 from dotenv import load_dotenv
@@ -31,7 +31,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-_repo = Path(__file__).resolve().parents[4]
+_repo = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_repo / "src"))
 
 from prism.core.us.data.surge_detector import (

@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
-_repo = Path(__file__).resolve().parents[4]
+_repo = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_repo / "src"))
 from prism.paths import REPO_ROOT, LOGS_DIR, DB_PATH
 
@@ -52,7 +52,7 @@ except ImportError:
 
 # Import US market day checker
 try:
-    from prism.ops.maintenance.check_market_day import is_us_market_day, get_last_trading_day
+    from prism.ops.us.maintenance.check_market_day import is_us_market_day, get_last_trading_day
     MARKET_CALENDAR_AVAILABLE = True
 except ImportError:
     MARKET_CALENDAR_AVAILABLE = False

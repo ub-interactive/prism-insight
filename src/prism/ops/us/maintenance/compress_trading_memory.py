@@ -48,7 +48,7 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-_repo = Path(__file__).resolve().parents[4]
+_repo = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_repo / "src"))
 
 from prism.paths import LOGS_DIR, DB_PATH
@@ -103,7 +103,7 @@ async def run_compression(
     Returns:
         dict: Compression and cleanup results
     """
-    from prism.ops.pipelines.stock_tracking_agent import StockTrackingAgent
+    from prism.ops.us.pipelines.stock_tracking_agent import StockTrackingAgent
     from unittest.mock import MagicMock
 
     db_path = db_path or str(DB_PATH)

@@ -33,7 +33,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
 
-_repo = Path(__file__).resolve().parents[4]
+_repo = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_repo / "src"))
 
 from prism.core.shared.openai.error_logging import log_openai_error

@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-_repo = Path(__file__).resolve().parents[4]
+_repo = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_repo / "src"))
 
 from dotenv import load_dotenv
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 async def retry_journal_entry(db_path: str, trade_id: int = None, ticker: str = None):
     """Regenerate journal entry for a specific trade"""
-    from prism.ops.pipelines.stock_tracking_agent import StockTrackingAgent
+    from prism.ops.us.pipelines.stock_tracking_agent import StockTrackingAgent
 
     # Query trade info from DB
     conn = sqlite3.connect(db_path)

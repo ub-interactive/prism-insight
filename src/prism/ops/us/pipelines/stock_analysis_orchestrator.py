@@ -26,12 +26,13 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-_repo = Path(__file__).resolve().parents[4]
+_repo = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_repo / "src"))
 from prism.paths import LOGS_DIR, MCP_CONFIG_PATH, PDF_REPORTS_DIR, REPORTS_DIR, REPO_ROOT, TRIGGER_RESULTS_DIR
 
 from prism.core.shared.config.models import get_configured_model, get_optional_reasoning_effort
 from prism.core.shared.openai.error_logging import log_openai_error
+from prism.core.us.analysis import analyze_stock
 
 # Directory configuration (before logging — FileHandler needs LOGS_DIR)
 US_REPORTS_DIR = REPORTS_DIR
@@ -202,7 +203,7 @@ class USStockAnalysisOrchestrator:
         """
         logger.info(f"Starting US trigger batch execution: {mode}")
         try:
-            from prism.ops.pipelines.trigger_batch import run_batch
+            from prism.ops.us.pipelines.trigger_batch import run_batch
 
             # Results file path (consistent with trigger_batch naming)
             effective_date = override_date if override_date else datetime.now().strftime("%Y%m%d")
@@ -295,8 +296,6 @@ class USStockAnalysisOrchestrator:
             )
 
             try:
-                from prism.core.us.analysis import analyze_stock
-
                 logger.info(f"[{idx}/{len(tickers)}] Starting analyze_stock function call")
                 report = await analyze_stock(
                     ticker=ticker,
@@ -544,7 +543,7 @@ class USStockAnalysisOrchestrator:
                 try:
                     logger.info("Starting US stock tracking system batch execution")
 
-                    from prism.ops.pipelines.stock_tracking_agent import USStockTrackingAgent, app as tracking_app
+                    from prism.ops.us.pipelines.stock_tracking_agent import USStockTrackingAgent, app as tracking_app
 
                     async with tracking_app.run():
                         tracking_agent = USStockTrackingAgent()
@@ -617,7 +616,7 @@ def cli_main():
     """Sync console entry point."""
     force_execution = "--force" in sys.argv
 
-    from prism.ops.maintenance.check_market_day import is_us_market_day
+    from prism.ops.us.maintenance.check_market_day import is_us_market_day
 
     if not force_execution and not is_us_market_day():
         current_date = datetime.now().date()

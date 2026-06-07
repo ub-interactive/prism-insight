@@ -6,10 +6,10 @@ Generate a single AI-powered stock analysis report (PDF).
 No brokerage integration in this script—only the analysis and PDF export.
 
 Usage:
-    python -m prism.ops.dev.demo                    # Analyze Apple (AAPL)
-    python -m prism.ops.dev.demo MSFT               # Analyze Microsoft
-    python -m prism.ops.dev.demo NVDA "NVIDIA Corp" # Analyze with custom company name
-    python -m prism.ops.dev.demo 600519 --market cn --language zh
+    python -m prism.ops.shared.dev.demo                    # Analyze Apple (AAPL)
+    python -m prism.ops.shared.dev.demo MSFT               # Analyze Microsoft
+    python -m prism.ops.shared.dev.demo NVDA "NVIDIA Corp" # Analyze with custom company name
+    python -m prism.ops.shared.dev.demo 600519 --market cn --language zh
 """
 import asyncio
 import argparse
@@ -22,14 +22,14 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-_repo = Path(__file__).resolve().parents[4]
+_repo = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_repo / "src"))
 from prism.paths import REPO_ROOT
 
 project_root = REPO_ROOT
 load_dotenv(project_root / ".env")
 
-from prism.core.us.analysis import analyze_stock
+from prism.core import us, cn
 
 
 def check_perplexity_configured() -> bool:
@@ -111,14 +111,13 @@ async def generate_report(
     start_time = time.time()
 
     if market == "cn":
-        from prism.core.cn.analysis import analyze_stock
-        from prism.core.cn.market.ticker import normalize
-        from prism.core.cn.market_calendar import get_reference_date
+        from prism.core.cn import market as cn_market
+        from prism.core.cn import market_calendar
         from prism.reporting.report_generator import save_cn_pdf_report, save_cn_report
 
-        ticker_info = normalize(ticker)
-        reference_date = get_reference_date()
-        report_content = await analyze_stock(
+        ticker_info = cn_market.ticker.normalize(ticker)
+        reference_date = market_calendar.get_reference_date()
+        report_content = await cn.analysis.analyze_stock(
             code=ticker_info.code,
             company_name=company_name,
             exchange=ticker_info.exchange,
@@ -132,7 +131,7 @@ async def generate_report(
         from prism.reporting.report_generator import save_us_pdf_report, save_us_report
 
         reference_date = datetime.now().strftime("%Y%m%d")
-        report_content = await analyze_stock(
+        report_content = await us.analysis.analyze_stock(
             ticker=ticker,
             company_name=company_name,
             reference_date=reference_date,
@@ -157,12 +156,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python -m prism.ops.dev.demo                      # Analyze Apple (AAPL)
-  python -m prism.ops.dev.demo MSFT                 # Analyze Microsoft
-  python -m prism.ops.dev.demo NVDA "NVIDIA Corp"   # Analyze with custom name
-  python -m prism.ops.dev.demo AAPL --language en   # English report
-  python -m prism.ops.dev.demo 600519 --market cn --language zh
-  python -m prism.ops.dev.demo 000001 --market cn --language en
+  python -m prism.ops.shared.dev.demo                      # Analyze Apple (AAPL)
+  python -m prism.ops.shared.dev.demo MSFT                 # Analyze Microsoft
+  python -m prism.ops.shared.dev.demo NVDA "NVIDIA Corp"   # Analyze with custom name
+  python -m prism.ops.shared.dev.demo AAPL --language en   # English report
+  python -m prism.ops.shared.dev.demo 600519 --market cn --language zh
+  python -m prism.ops.shared.dev.demo 000001 --market cn --language en
         """,
     )
     parser.add_argument(

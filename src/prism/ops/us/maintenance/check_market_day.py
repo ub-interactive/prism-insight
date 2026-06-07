@@ -12,7 +12,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-_repo = Path(__file__).resolve().parents[4]
+_repo = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_repo / "src"))
 
 # Re-export every public helper so existing ``from scripts.check_market_day import …`` keeps working.

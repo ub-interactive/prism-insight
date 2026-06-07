@@ -17,7 +17,7 @@ import logging
 import sys
 from pathlib import Path
 
-_repo = Path(__file__).resolve().parents[4]
+_repo = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_repo / "src"))
 
 from dotenv import load_dotenv

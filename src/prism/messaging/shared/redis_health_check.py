@@ -14,7 +14,7 @@ Usage:
 
     # Or using asyncio
     import asyncio
-    from prism.messaging.redis_health_check import run_health_check
+    from prism.messaging.shared.redis_health_check import run_health_check
     asyncio.run(run_health_check())
 """
 import os

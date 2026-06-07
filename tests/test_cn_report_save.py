@@ -1,12 +1,12 @@
 from pathlib import Path
 from unittest.mock import patch
 
-from prism.reporting.report_generator import save_cn_pdf_report, save_cn_report
+from prism.reporting.shared.report_generator import save_cn_pdf_report, save_cn_report
 
 
 def test_save_cn_report_writes_markdown(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "prism.reporting.report_generator.US_REPORTS_DIR",
+        "prism.reporting.shared.report_generator.US_REPORTS_DIR",
         tmp_path,
     )
     content = "# Test Report\n\nBody"
@@ -16,10 +16,10 @@ def test_save_cn_report_writes_markdown(tmp_path, monkeypatch):
     assert path.name.startswith("600519_")
 
 
-@patch("prism.reporting.pdf_converter.markdown_to_pdf")
+@patch("prism.reporting.shared.pdf_converter.markdown_to_pdf")
 def test_save_cn_pdf_report_calls_converter(mock_markdown_to_pdf, tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "prism.reporting.report_generator.US_PDF_REPORTS_DIR",
+        "prism.reporting.shared.report_generator.US_PDF_REPORTS_DIR",
         tmp_path,
     )
     md_path = tmp_path / "600519_test_analysis.md"

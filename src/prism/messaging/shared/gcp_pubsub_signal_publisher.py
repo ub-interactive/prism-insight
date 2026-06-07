@@ -5,7 +5,7 @@ Module for publishing PRISM-INSIGHT buy/sell signals to Google Cloud Pub/Sub.
 Subscribers can receive real-time trading signals by subscribing to this topic.
 
 Usage:
-    from prism.messaging.gcp_pubsub_signal_publisher import SignalPublisher
+    from prism.messaging.shared.gcp_pubsub_signal_publisher import SignalPublisher
 
     async with SignalPublisher() as publisher:
         await publisher.publish_buy_signal(

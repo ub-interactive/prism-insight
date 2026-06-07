@@ -696,7 +696,7 @@ class USStockTrackingAgent:
 
             rank_change_percentage, rank_change_msg = await self._get_trading_value_rank_change(ticker)
 
-            from prism.reporting.pdf_converter import pdf_to_markdown_text
+            from prism.reporting.shared.pdf_converter import pdf_to_markdown_text
 
             report_content = pdf_to_markdown_text(pdf_report_path)
             trigger_info = getattr(self, 'trigger_info_map', {}).get(ticker, {})
@@ -1839,7 +1839,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                         # [Optional] Publish sell signal via Redis Streams
                         # Auto-skipped if Redis not configured (requires UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN)
                         try:
-                            from prism.messaging.redis_signal_publisher import publish_sell_signal
+                            from prism.messaging.shared.redis_signal_publisher import publish_sell_signal
                             profit_rate = ((current_price - stock.get('buy_price', 0)) / stock.get('buy_price', 0) * 100) if stock.get('buy_price', 0) > 0 else 0
                             await publish_sell_signal(
                                 ticker=ticker,
@@ -1857,7 +1857,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                         # [Optional] Publish sell signal via GCP Pub/Sub
                         # Auto-skipped if GCP not configured (requires GCP_PROJECT_ID, GCP_PUBSUB_TOPIC_ID)
                         try:
-                            from prism.messaging.gcp_pubsub_signal_publisher import publish_sell_signal as gcp_publish_sell_signal
+                            from prism.messaging.shared.gcp_pubsub_signal_publisher import publish_sell_signal as gcp_publish_sell_signal
                             profit_rate = ((current_price - stock.get('buy_price', 0)) / stock.get('buy_price', 0) * 100) if stock.get('buy_price', 0) > 0 else 0
                             await gcp_publish_sell_signal(
                                 ticker=ticker,
@@ -2207,7 +2207,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
 
                                 if ticker not in signaled_tickers:
                                     try:
-                                        from prism.messaging.redis_signal_publisher import publish_buy_signal
+                                        from prism.messaging.shared.redis_signal_publisher import publish_buy_signal
                                         await publish_buy_signal(
                                             ticker=ticker,
                                             company_name=company_name,
@@ -2221,7 +2221,7 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                                         logger.warning(f"Buy signal publish failed (non-critical): {signal_err}")
 
                                     try:
-                                        from prism.messaging.gcp_pubsub_signal_publisher import publish_buy_signal as gcp_publish_buy_signal
+                                        from prism.messaging.shared.gcp_pubsub_signal_publisher import publish_buy_signal as gcp_publish_buy_signal
                                         await gcp_publish_buy_signal(
                                             ticker=ticker,
                                             company_name=company_name,

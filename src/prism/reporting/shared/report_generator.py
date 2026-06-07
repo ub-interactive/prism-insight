@@ -193,7 +193,7 @@ def save_us_pdf_report(ticker: str, company_name: str, md_path: Path) -> Path:
     Returns:
         Path: Generated PDF file path
     """
-    from prism.reporting.pdf_converter import markdown_to_pdf
+    from prism.reporting.shared.pdf_converter import markdown_to_pdf
 
     reference_date = datetime.now().strftime("%Y%m%d")
     # Remove spaces and special characters from filename
@@ -227,7 +227,7 @@ def save_cn_report(code: str, company_name: str, content: str) -> Path:
 
 def save_cn_pdf_report(code: str, company_name: str, md_path: Path) -> Path:
     """Convert CN A-share markdown file to PDF and save."""
-    from prism.reporting.pdf_converter import markdown_to_pdf
+    from prism.reporting.shared.pdf_converter import markdown_to_pdf
 
     reference_date = datetime.now().strftime("%Y%m%d")
     safe_company_name = company_name.replace(" ", "_").replace(".", "").replace(",", "")
@@ -366,7 +366,7 @@ def save_pdf_report(stock_code: str, company_name: str, md_path: Path) -> Path:
     Returns:
         Path: Generated PDF destination
     """
-    from prism.reporting.pdf_converter import markdown_to_pdf
+    from prism.reporting.shared.pdf_converter import markdown_to_pdf
 
     reference_date = datetime.now().strftime("%Y%m%d")
     pdf_filename = f"{stock_code}_{company_name}_{reference_date}_analysis.pdf"
@@ -536,7 +536,7 @@ async def generate_firecrawl_search_response(search_query: str, analysis_prompt:
         str: Claude-generated analysis, or None on error
     """
     try:
-        from prism.integrations.firecrawl_client import firecrawl_search
+        from prism.integrations.shared.firecrawl_client import firecrawl_search
 
         # Step 1: Firecrawl search with full article content
         # with_content=True fetches markdown body per result — much richer than meta descriptions.

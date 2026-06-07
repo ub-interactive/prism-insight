@@ -113,7 +113,7 @@ async def generate_report(
     if market == "cn":
         from prism.core.cn import market as cn_market
         from prism.core.cn import market_calendar
-        from prism.reporting.report_generator import save_cn_pdf_report, save_cn_report
+        from prism.reporting.shared.report_generator import save_cn_pdf_report, save_cn_report
 
         ticker_info = cn_market.ticker.normalize(ticker)
         reference_date = market_calendar.get_reference_date()
@@ -128,7 +128,7 @@ async def generate_report(
         md_path = save_cn_report(ticker_info.code, company_name, report_content)
         pdf_path = save_cn_pdf_report(ticker_info.code, company_name, md_path)
     else:
-        from prism.reporting.report_generator import save_us_pdf_report, save_us_report
+        from prism.reporting.shared.report_generator import save_us_pdf_report, save_us_report
 
         reference_date = datetime.now().strftime("%Y%m%d")
         report_content = await us.analysis.analyze_stock(

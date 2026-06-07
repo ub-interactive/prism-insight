@@ -11,7 +11,7 @@ load_dotenv(Path('.env'))
 print('=== Debug Test ===')
 
 from upstash_redis import Redis
-from prism.messaging.redis_signal_publisher import SignalPublisher
+from prism.messaging.shared.redis_signal_publisher import SignalPublisher
 
 # Test Redis directly
 redis = Redis(

@@ -334,7 +334,7 @@ class USStockAnalysisOrchestrator:
         logger.info(f"Starting PDF conversion for {len(report_paths)} US reports")
         pdf_paths = []
 
-        from prism.reporting.pdf_converter import markdown_to_pdf
+        from prism.reporting.shared.pdf_converter import markdown_to_pdf
 
         for report_path in report_paths:
             try:

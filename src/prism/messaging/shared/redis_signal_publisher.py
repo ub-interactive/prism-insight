@@ -5,7 +5,7 @@ Module for publishing PRISM-INSIGHT buy/sell signals to Redis Streams.
 Subscribers can receive real-time trading signals by subscribing to this stream.
 
 Usage:
-    from prism.messaging.redis_signal_publisher import SignalPublisher
+    from prism.messaging.shared.redis_signal_publisher import SignalPublisher
 
     async with SignalPublisher() as publisher:
         await publisher.publish_buy_signal(

@@ -29,7 +29,7 @@ from prism.paths import REPO_ROOT
 
 load_dotenv(REPO_ROOT / ".env")
 
-from prism.messaging.gcp_pubsub_signal_publisher import (
+from prism.messaging.shared.gcp_pubsub_signal_publisher import (
     SignalPublisher,
     get_signal_publisher,
     publish_buy_signal,

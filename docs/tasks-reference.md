@@ -8,7 +8,7 @@
 
 ```python
 # 1. Create agent file
-# File: src/prism/core/agents/your_agent.py
+# File: src/prism/core/us/agents/your_agent.py
 
 from mcp_agent import Agent
 
@@ -22,7 +22,7 @@ def create_your_agent(company_name, company_code, reference_date, language="en")
         mcp_servers=["yahoo_finance"],  # Add required MCP servers
     )
 
-# 2. Register in src/prism/core/agents/__init__.py
+# 2. Register in src/prism/core/us/agents/directory.py
 from .your_agent import create_your_agent
 
 def get_agent_directory(...):
@@ -32,14 +32,14 @@ def get_agent_directory(...):
     }
     return agents
 
-# 3. Add to base_sections in src/prism/core/analysis.py
+# 3. Add to base_sections in src/prism/core/us/analysis.py
 base_sections = [
     "price_volume_analysis",
     # ... existing sections
     "your_section",  # Add your section
 ]
 
-# 4. Add section template in src/prism/core/report_generation.py
+# 4. Add section template in src/prism/core/shared/report_generation.py
 section_templates = {
     # ... existing templates
     "your_section": """
@@ -78,12 +78,12 @@ def detect_surge_stocks(mode="morning"):
 
 ## Task 3: Adding Multi-Language Support
 
-1. Extend templates in `src/prism/core/config/language.py` (or whichever localized template helper your section uses).
+1. Extend templates in `src/prism/core/shared/config/language.py` (or whichever localized template helper your section uses).
 
 2. Run the orchestrator with an explicit `--language` flag:
 
 ```bash
-python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning --language en
+python -m prism.ops.us.pipelines.stock_analysis_orchestrator --mode morning --language en
 ```
 
 3. If you localize weekly digests, adapt your notifier payloads instead of coupling to a proprietary chat SDK.
@@ -94,7 +94,7 @@ python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning --langu
 ## Task 4: Modifying Trading Strategy
 
 ```python
-# File: src/prism/core/agents/trading_agents.py
+# File: src/prism/core/us/agents/trading_agents.py
 
 def create_trading_scenario_agent(...):
     instruction = """
@@ -130,7 +130,7 @@ def create_trading_scenario_agent(...):
 ## Task 5: Customizing Report Format
 
 ```python
-# File: src/prism/core/report_generation.py
+# File: src/prism/core/shared/report_generation.py
 
 # 1. Modify report template
 REPORT_TEMPLATE = """

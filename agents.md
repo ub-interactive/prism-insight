@@ -25,7 +25,8 @@ src/config/   var/   src/vendor/sqlite/
 Import `prism.*` only. Do **not** import legacy `cores`, `scripts`, or root `trading`.
 ```python
 from prism.paths import REPORTS_DIR, MCP_CONFIG_PATH
-from prism.core.analysis import analyze_us_stock
+from prism.core import us
+await us.analysis.analyze_stock(...)
 ```
 
 ---
@@ -49,22 +50,22 @@ prism-insight/
 ## Analysis & Trading Pipeline
 
 ```
-prism.ops.pipelines.trigger_batch → candidates JSON
-prism.ops.pipelines.stock_analysis_orchestrator → prefetch → 6 analysts (sequential) → strategist → PDF
-prism.ops.pipelines.stock_tracking_agent → buy/sell (cron, multi-account)
+prism.ops.us.pipelines.trigger_batch → candidates JSON
+prism.ops.us.pipelines.stock_analysis_orchestrator → prefetch → 6 analysts (sequential) → strategist → PDF
+prism.ops.us.pipelines.stock_tracking_agent → buy/sell (cron, multi-account)
 ```
 
 Agent orchestration table and prompts: [`docs/agent-reference.md`](docs/agent-reference.md).
 
 | # | Agent | Module |
 |---|-------|--------|
-| 1–2 | Technical / Flow | `src/prism/core/agents/stock_price_agents.py` |
-| 3–4 | Financial / Industry | `src/prism/core/agents/company_info_agents.py` |
-| 5–7 | News / Market / Strategist | `src/prism/core/agents/news_strategy_agents.py`, `market_index_agents.py` |
-| 8 | Macro Intelligence | `src/prism/core/agents/macro_intelligence_agent.py` |
+| 1–2 | Technical / Flow | `src/prism/core/us/agents/stock_price_agents.py` |
+| 3–4 | Financial / Industry | `src/prism/core/us/agents/company_info_agents.py` |
+| 5–7 | News / Market / Strategist | `src/prism/core/us/agents/news_strategy_agents.py`, `market_index_agents.py` |
+| 8 | Macro Intelligence | `src/prism/core/us/agents/macro_intelligence_agent.py` |
 | 9–11 | Journal / Buy / Sell | `trading_journal_agent.py`, `trading_agents.py` |
 
-Orchestration logic: `src/prism/core/analysis.py`.
+Orchestration logic: `src/prism/core/us/analysis.py`.
 
 ---
 
@@ -72,12 +73,12 @@ Orchestration logic: `src/prism/core/analysis.py`.
 
 | Command | Purpose |
 |---------|---------|
-| `python -m prism.ops.dev.demo AAPL` | Single-stock report |
-| `python -m prism.ops.pipelines.stock_analysis_orchestrator --mode morning` | Morning batch |
-| `python -m prism.ops.pipelines.trigger_batch morning INFO` | Surge detection only |
-| `python -m prism.ops.batches.pending_order_batch --dry-run` | Pending orders dry run |
+| `python -m prism.ops.shared.dev.demo AAPL` | Single-stock report |
+| `python -m prism.ops.us.pipelines.stock_analysis_orchestrator --mode morning` | Morning batch |
+| `python -m prism.ops.us.pipelines.trigger_batch morning INFO` | Surge detection only |
+| `python -m prism.ops.us.batches.pending_order_batch --dry-run` | Pending orders dry run |
 | `prism-demo AAPL` | Same as demo (after `pip install -e .` entry point) |
-| `pytest tests/test_multi_account_us.py tests/test_trading_journal.py` | Run core verification tests |
+| `pytest tests/core/ tests/test_multi_account_us.py tests/test_trading_journal.py` | Run core verification tests |
 
 *Skip unless required*: `test_gcp_pubsub_signal.py`, `test_redis_signal_pubsub.py`, `test_integration_pipeline.py`.
 
@@ -101,7 +102,7 @@ Copy `.env.example` → `.env`. The MCP config path is passed explicitly to `MCP
 - **No secrets in git** (never commit `.env`, `kis_devlp.yaml`, or `mcp_agent.secrets.yaml`).
 - **Sequential LLM agent invocation**: Generate report sections sequentially (no `asyncio.gather` on agent endpoints).
 - **Asynchronous non-blocking I/O**: Use async in async paths; do not use blocking `requests`.
-- **KIS numbers**: Use `_safe_float` / `_safe_int` from `prism.trading.stock_trading`.
+- **KIS numbers**: Use `_safe_float` / `_safe_int` from `prism.trading.us.stock_trading`.
 - **Reports**: Reports must be generated in English.
 - **Trading**: Respect slot and sector limits.
 

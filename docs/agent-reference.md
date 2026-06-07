@@ -13,7 +13,7 @@ Orchestration order and filenames are authoritative in [`agents.md`](../agents.m
 <img src="images/aiagent/technical_analyst.jpeg" alt="Technical Analyst" width="150" align="right"/>
 
 **1. Technical Analyst** (`create_price_volume_analysis_agent`)
-- **File**: `src/prism/core/agents/stock_price_agents.py`
+- **File**: `src/prism/core/us/agents/stock_price_agents.py`
 - **Purpose**: Stock price and volume technical analysis
 - **Analyzes**: Trends, moving averages, support/resistance, RSI, MACD, Bollinger Bands
 - **Output**: Technical analysis section of report
@@ -23,7 +23,7 @@ Orchestration order and filenames are authoritative in [`agents.md`](../agents.m
 <img src="images/aiagent/tranding_flow_analyst.jpeg" alt="Trading Flow Analyst" width="150" align="right"/>
 
 **2. Trading Flow Analyst** (`create_investor_trading_analysis_agent`)
-- **File**: `src/prism/core/agents/stock_price_agents.py`
+- **File**: `src/prism/core/us/agents/stock_price_agents.py`
 - **Purpose**: Investor trading pattern analysis
 - **Analyzes**: Institutional/foreign/individual trading flows, volume patterns
 - **Output**: Trading flow section
@@ -33,7 +33,7 @@ Orchestration order and filenames are authoritative in [`agents.md`](../agents.m
 <img src="images/aiagent/financial_analyst.jpeg" alt="Financial Analyst" width="150" align="right"/>
 
 **3. Financial Analyst** (`create_company_status_agent`)
-- **File**: `src/prism/core/agents/company_info_agents.py`
+- **File**: `src/prism/core/us/agents/company_info_agents.py`
 - **Purpose**: Financial metrics and valuation
 - **Analyzes**: PER, PBR, ROE, debt ratio, target prices, consensus
 - **Output**: Company status section
@@ -43,7 +43,7 @@ Orchestration order and filenames are authoritative in [`agents.md`](../agents.m
 <img src="images/aiagent/industry_analyst.jpeg" alt="Industry Analyst" width="150" align="right"/>
 
 **4. Industry Analyst** (`create_company_overview_agent`)
-- **File**: `src/prism/core/agents/company_info_agents.py`
+- **File**: `src/prism/core/us/agents/company_info_agents.py`
 - **Purpose**: Business model and competitive position
 - **Analyzes**: Business portfolio, market share, competitors, R&D, growth drivers
 - **Output**: Company overview section
@@ -53,7 +53,7 @@ Orchestration order and filenames are authoritative in [`agents.md`](../agents.m
 <img src="images/aiagent/information_analyst.jpeg" alt="Information Analyst" width="150" align="right"/>
 
 **5. Information Analyst** (`create_news_analysis_agent`)
-- **File**: `src/prism/core/agents/news_strategy_agents.py`
+- **File**: `src/prism/core/us/agents/news_strategy_agents.py`
 - **Purpose**: News and catalyst identification
 - **Analyzes**: Recent news, disclosures, industry trends, political/economic issues
 - **Output**: News analysis section
@@ -63,7 +63,7 @@ Orchestration order and filenames are authoritative in [`agents.md`](../agents.m
 <img src="images/aiagent/market_analyst.jpeg" alt="Market Analyst" width="150" align="right"/>
 
 **6. Market Analyst** (`create_market_index_analysis_agent`)
-- **File**: `src/prism/core/agents/market_index_agents.py`
+- **File**: `src/prism/core/us/agents/market_index_agents.py`
 - **Purpose**: Market and macro environment
 - **Analyzes**: S&P 500/NASDAQ indices, macro indicators, global correlations
 - **Output**: Market analysis section
@@ -76,7 +76,7 @@ Orchestration order and filenames are authoritative in [`agents.md`](../agents.m
 <img src="images/aiagent/investment_strategist.jpeg" alt="Investment Strategist" width="150" align="right"/>
 
 **7. Investment Strategist** (`create_investment_strategy_agent`)
-- **File**: `src/prism/core/agents/news_strategy_agents.py`
+- **File**: `src/prism/core/us/agents/news_strategy_agents.py`
 - **Purpose**: Synthesize all analyses into actionable strategy
 - **Integrates**: All 6 analysis reports
 - **Output**: Investment strategy with recommendations for different investor types
@@ -89,12 +89,12 @@ Optional assistants that rewrote summaries for auxiliary distribution rails are 
 
 ### Trading Simulation Team (3 Agents) - GPT-5 Based
 
-> **Note**: All agents now use GPT-5 (gpt-5) as the default model. GPT-5 output formatting requires additional cleanup in `src/prism/core/utils.py` (tool artifacts, headers).
+> **Note**: All agents now use GPT-5 (gpt-5) as the default model. GPT-5 output formatting requires additional cleanup in `src/prism/core/shared/utils.py` (tool artifacts, headers).
 
 <img src="images/aiagent/buy_specialist.jpeg" alt="Buy Specialist" width="150" align="right"/>
 
 **9-1. Buy Specialist** (`create_trading_scenario_agent`)
-- **File**: `src/prism/core/agents/trading_agents.py`
+- **File**: `src/prism/core/us/agents/trading_agents.py`
 - **Purpose**: Buy decision-making and entry strategy
 - **Evaluates**: Valuation, momentum, portfolio constraints
 - **Market-Adaptive Criteria**:
@@ -107,7 +107,7 @@ Optional assistants that rewrote summaries for auxiliary distribution rails are 
 <img src="images/aiagent/sell_specialist.jpeg" alt="Sell Specialist" width="150" align="right"/>
 
 **9-2. Sell Specialist** (`create_sell_decision_agent`)
-- **File**: `src/prism/core/agents/trading_agents.py`
+- **File**: `src/prism/core/us/agents/trading_agents.py`
 - **Purpose**: Monitor holdings and determine sell timing
 - **Monitors**: Stop-loss, profit targets, technical trends, market conditions
 - **Output**: JSON sell decision with confidence score
@@ -115,7 +115,7 @@ Optional assistants that rewrote summaries for auxiliary distribution rails are 
 <br clear="both"/>
 
 **9-3. Trading Journal Agent** (Optional)
-- **File**: `src/prism/core/agents/trading_journal_agent.py` (invoked from `stock_tracking_agent.py` when enabled)
+- **File**: `src/prism/core/us/agents/trading_journal_agent.py` (invoked from `src/prism/ops/us/pipelines/stock_tracking_agent.py` when enabled)
 - **Purpose**: Retrospective trade analysis and long-term memory accumulation
 - **Features**:
   - Buy/sell context comparison and lesson extraction
@@ -131,7 +131,7 @@ Optional assistants that rewrote summaries for auxiliary distribution rails are 
 ## Agent Collaboration Pattern
 
 ```python
-# Pattern in src/prism/core/analysis.py
+# Pattern in src/prism/core/us/analysis.py
 async def analyze_stock(company_name, company_code, reference_date, language="en"):
     # 1. Get agent directory
     agents = get_agent_directory(company_name, company_code, reference_date,
@@ -171,7 +171,7 @@ async def analyze_stock(company_name, company_code, reference_date, language="en
 **Template Pattern**:
 
 ```python
-# File: src/prism/core/agents/your_agent.py
+# File: src/prism/core/us/agents/your_agent.py
 from mcp_agent import Agent
 
 def create_your_agent(company_name, company_code, reference_date, language="en"):
@@ -205,7 +205,7 @@ def create_your_agent(company_name, company_code, reference_date, language="en")
         mcp_servers=["yahoo_finance", "firecrawl", "perplexity"],
     )
 
-# Register in src/prism/core/agents/__init__.py
+# Register in src/prism/core/us/agents/__init__.py
 def get_agent_directory(...):
     agents = {
         # ... existing agents

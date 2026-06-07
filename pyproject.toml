@@ -11,15 +11,15 @@ readme = "readme.md"
 license = {text = "MIT"}
 
 [project.scripts]
-prism-demo = "prism.ops.dev.demo:main"
-prism-orchestrator = "prism.ops.pipelines.stock_analysis_orchestrator:cli_main"
-prism-tracking = "prism.ops.pipelines.stock_tracking_agent:cli_main"
-prism-pending-orders = "prism.ops.batches.pending_order_batch:main"
-prism-trigger-batch = "prism.ops.pipelines.trigger_batch:run_cli"
-prism-performance-tracker = "prism.ops.batches.performance_tracker_batch:main"
-prism-weekly-insight = "prism.ops.reports.weekly_insight_report:main"
-prism-compress-memory = "prism.ops.maintenance.compress_trading_memory:main"
-prism-update-prices = "prism.ops.maintenance.update_current_prices:main"
+prism-demo = "prism.ops.shared.dev.demo:main"
+prism-orchestrator = "prism.ops.us.pipelines.stock_analysis_orchestrator:cli_main"
+prism-tracking = "prism.ops.us.pipelines.stock_tracking_agent:cli_main"
+prism-pending-orders = "prism.ops.us.batches.pending_order_batch:main"
+prism-trigger-batch = "prism.ops.us.pipelines.trigger_batch:run_cli"
+prism-performance-tracker = "prism.ops.us.batches.performance_tracker_batch:main"
+prism-weekly-insight = "prism.ops.us.reports.weekly_insight_report:main"
+prism-compress-memory = "prism.ops.us.maintenance.compress_trading_memory:main"
+prism-update-prices = "prism.ops.us.maintenance.update_current_prices:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

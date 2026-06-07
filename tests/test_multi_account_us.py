@@ -112,9 +112,9 @@ def test_pending_order_batch_processes_with_account_context(monkeypatch, tmp_pat
     _FakeTrader.init_calls = []
     monkeypatch.setattr(pending_batch, "DB_PATH", Path(db_path))
 
-    fake_trading_module = types.ModuleType("prism.trading.stock_trading")
-    fake_trading_module.USStockTrading = _FakeTrader
-    monkeypatch.setitem(sys.modules, "prism.trading.stock_trading", fake_trading_module)
+    fake_trading_module = types.ModuleType("prism.trading.us.stock_trading")
+    fake_trading_module.StockTrading = _FakeTrader
+    monkeypatch.setitem(sys.modules, "prism.trading.us.stock_trading", fake_trading_module)
 
     pending_batch.process_pending_orders(dry_run=False)
 

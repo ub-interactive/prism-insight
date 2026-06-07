@@ -46,7 +46,7 @@ if not CONFIG_FILE.exists():
 if _CREATED_TEST_CONFIG:
     atexit.register(lambda: CONFIG_FILE.unlink(missing_ok=True))
 
-from prism.trading import kis_auth as ka
+from prism.trading.us import kis_auth as ka
 
 
 def _patch_cfg(monkeypatch, cfg):

@@ -112,11 +112,11 @@ def process_pending_orders(dry_run: bool = False):
     logger.info(f"Found {len(pending_orders)} pending order(s) to process")
 
      # Import trading module
-    from prism.trading.stock_trading import USStockTrading
+    from prism.trading.us.stock_trading import StockTrading
 
     # Check if reserved order window is open using a representative trader
     try:
-        window_checker = USStockTrading()
+        window_checker = StockTrading()
     except Exception as e:
         logger.error(f"Failed to initialize trading module: {e}")
         conn.close()
@@ -149,7 +149,7 @@ def process_pending_orders(dry_run: bool = False):
             continue
 
         try:
-            trader = USStockTrading(mode=mode, account_name=account_name, product_code=product_code)
+            trader = StockTrading(mode=mode, account_name=account_name, product_code=product_code)
             if order_type == 'buy':
                 result = trader.buy_reserved_order(
                     ticker=ticker,

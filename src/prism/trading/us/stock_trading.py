@@ -29,23 +29,17 @@ from typing import Optional, Dict, List, Any
 import yaml
 import pytz
 
-# Path to repository root (parent of trading/)
 TRADING_DIR = Path(__file__).parent
-PROJECT_ROOT = TRADING_DIR.parent
 
-from prism.paths import DB_PATH
-
-# Import KIS auth from parent trading directory
-import sys
-sys.path.insert(0, str(PROJECT_ROOT / "trading"))
-import kis_auth as ka
+from prism.paths import DB_PATH, TRADING_CONFIG_DIR
+from prism.trading.us import kis_auth as ka
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Load configuration file (use same config as domestic)
-CONFIG_FILE = PROJECT_ROOT / "trading" / "config" / "kis_devlp.yaml"
+CONFIG_FILE = TRADING_CONFIG_DIR / "kis_devlp.yaml"
 with open(CONFIG_FILE, encoding="UTF-8") as f:
     _cfg = yaml.safe_load(f)
 
@@ -214,7 +208,7 @@ def get_exchange_code(ticker: str) -> str:
     return "NYSE"
 
 
-class USStockTrading:
+class StockTrading:
     """US Stock Trading class using KIS Overseas Stock API"""
 
     # Default buy amount per stock (in USD)
@@ -279,7 +273,7 @@ class USStockTrading:
         self._semaphore = asyncio.Semaphore(3)
         self._stock_locks = {}
 
-        logger.info(f"USStockTrading initialized (Async Enabled)")
+        logger.info(f"StockTrading initialized (Async Enabled)")
         logger.info(f"Mode: {mode}, Buy Amount: ${self.buy_amount:,.2f} USD")
         logger.info(f"Account: {self.account_name} ({ka.mask_account_number(self.trenv.my_acct)}-{self.trenv.my_prod})")
 
@@ -1725,10 +1719,10 @@ class USStockTrading:
             return None
 
 
-class MultiAccountUSStockTrading:
+class MultiAccountStockTrading:
     """Fan out trading orders to all configured US accounts for the current mode."""
 
-    def __init__(self, mode: str, buy_amount: float = None, auto_trading: bool = USStockTrading.AUTO_TRADING, product_code: str = "01"):
+    def __init__(self, mode: str, buy_amount: float = None, auto_trading: bool = StockTrading.AUTO_TRADING, product_code: str = "01"):
         self.mode = mode
         self.buy_amount = buy_amount
         self.auto_trading = auto_trading
@@ -1736,17 +1730,17 @@ class MultiAccountUSStockTrading:
 
         svr = "vps" if mode == "demo" else "prod"
         self.account_configs = ka.get_configured_accounts(svr=svr, product=self.product_code, market="us")
-        self._traders: dict[str, USStockTrading] = {}
+        self._traders: dict[str, StockTrading] = {}
         self.primary_account = None
         try:
             self.primary_account = ka.resolve_account(svr=svr, product=self.product_code, market="us")
         except ValueError:
             logger.warning("No US accounts configured for multi-account trading")
 
-    def _get_trader(self, account: Dict[str, Any]) -> USStockTrading:
+    def _get_trader(self, account: Dict[str, Any]) -> StockTrading:
         trader = self._traders.get(account["account_key"])
         if trader is None:
-            trader = USStockTrading(
+            trader = StockTrading(
                 mode=self.mode,
                 buy_amount=self.buy_amount,
                 auto_trading=self.auto_trading,
@@ -1756,7 +1750,7 @@ class MultiAccountUSStockTrading:
             self._traders[account["account_key"]] = trader
         return trader
 
-    def _get_primary_trader(self) -> USStockTrading:
+    def _get_primary_trader(self) -> StockTrading:
         if not self.primary_account:
             raise RuntimeError("No primary US account configured")
         return self._get_trader(self.primary_account)
@@ -1865,9 +1859,9 @@ class MultiAccountUSTradingContext:
 
     def __init__(
         self,
-        mode: str = USStockTrading.DEFAULT_MODE,
+        mode: str = StockTrading.DEFAULT_MODE,
         buy_amount: float = None,
-        auto_trading: bool = USStockTrading.AUTO_TRADING,
+        auto_trading: bool = StockTrading.AUTO_TRADING,
         product_code: str = "01",
     ):
         self.mode = mode
@@ -1877,7 +1871,7 @@ class MultiAccountUSTradingContext:
         self.trader = None
 
     async def __aenter__(self):
-        self.trader = MultiAccountUSStockTrading(
+        self.trader = MultiAccountStockTrading(
             mode=self.mode,
             buy_amount=self.buy_amount,
             auto_trading=self.auto_trading,
@@ -1916,7 +1910,7 @@ class AsyncUSTradingContext:
         self.trader = None
 
     async def __aenter__(self):
-        self.trader = USStockTrading(
+        self.trader = StockTrading(
             mode=self.mode,
             buy_amount=self.buy_amount,
             auto_trading=self.auto_trading,
@@ -1938,9 +1932,9 @@ if __name__ == "__main__":
     """
 
     # 1. Initialize
-    print("\n=== 1. Initialize USStockTrading ===")
+    print("\n=== 1. Initialize StockTrading ===")
     try:
-        trader = USStockTrading(mode="demo", buy_amount=100)
+        trader = StockTrading(mode="demo", buy_amount=100)
     except Exception as e:
         print(f"Failed to initialize: {e}")
         exit(1)

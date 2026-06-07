@@ -1,0 +1,26 @@
+default_unit_amount: 10000
+default_unit_amount_usd: 100
+auto_trading: false
+default_mode: demo
+default_product_code: "01"
+
+my_app: "YOUR_KIS_REAL_APP_KEY"
+my_sec: "YOUR_KIS_REAL_APP_SECRET"
+paper_app: "YOUR_KIS_PAPER_APP_KEY"
+paper_sec: "YOUR_KIS_PAPER_APP_SECRET"
+my_htsid: "YOUR_KIS_HTS_ID"
+
+accounts:
+  - name: "demo-main"
+    mode: "demo"
+    market: "us"
+    account: "00000000"
+    product: "01"
+
+prod: "https://openapi.koreainvestment.com:9443"
+ops: "ws://ops.koreainvestment.com:21000"
+vps: "https://openapivts.koreainvestment.com:29443"
+vops: "ws://ops.koreainvestment.com:31000"
+
+my_token: ""
+my_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"

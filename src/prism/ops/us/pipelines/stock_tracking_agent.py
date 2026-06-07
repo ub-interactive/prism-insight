@@ -75,7 +75,7 @@ from prism.tracking.journal import USJournalManager
 
 US_TRADING_DECISION_MODEL = get_configured_model("us_trading_decision", "gpt-5.5")
 US_SELL_DECISION_MODEL = get_configured_model("us_sell_decision", "gpt-5.5")
-from prism.trading import kis_auth as ka
+from prism.trading.us import kis_auth as ka
 
 # Create MCPApp instance
 from prism.paths import MCP_CONFIG_PATH
@@ -1819,9 +1819,9 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                         if current_price > 0:
                             try:
                                 try:
-                                    from prism.trading.stock_trading import AsyncUSTradingContext
+                                    from prism.trading.us.stock_trading import AsyncUSTradingContext
                                 except ImportError:
-                                    from prism.trading.stock_trading import AsyncUSTradingContext
+                                    from prism.trading.us.stock_trading import AsyncUSTradingContext
                                 async with AsyncUSTradingContext(account_name=stock.get("account_name")) as trading:
                                     # Pass limit_price for reserved orders (required for US market)
                                     # If limit_price is 0, trading module will use MOO (Market On Open)
@@ -2167,9 +2167,9 @@ Use yahoo_finance and sqlite tools to check latest data, then decide whether to 
                             if current_price > 0:
                                 try:
                                     try:
-                                        from prism.trading.stock_trading import AsyncUSTradingContext
+                                        from prism.trading.us.stock_trading import AsyncUSTradingContext
                                     except ImportError:
-                                        from prism.trading.stock_trading import AsyncUSTradingContext
+                                        from prism.trading.us.stock_trading import AsyncUSTradingContext
                                     async with AsyncUSTradingContext(account_name=account["name"]) as trading:
                                         trade_result = await trading.async_buy_stock(ticker=ticker, limit_price=current_price)
 

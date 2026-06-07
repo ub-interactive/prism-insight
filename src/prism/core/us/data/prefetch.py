@@ -1,7 +1,7 @@
 """
 Data Prefetch Module for US Stock Analysis
 
-Pre-fetches US stock data using yfinance (via USDataClient) to inject into agent
+Pre-fetches US stock data using yfinance (via DataClient) to inject into agent
 instructions, eliminating the need for yahoo_finance MCP server tool calls.
 
 This reduces token usage by avoiding MCP tool call round-trips for predictable,

@@ -54,7 +54,7 @@ Trade Completed → Review & Analysis → Save Journal → Time Passes → Memor
 
 ## Core Components
 
-### 1. Trading Journal Agent (`src/prism/core/agents/trading_journal_agent.py`)
+### 1. Trading Journal Agent (`src/prism/core/us/agents/trading_journal_agent.py`)
 
 Invoked immediately after a sell execution to perform a retrospective trade review.
 
@@ -101,7 +101,7 @@ Invoked immediately after a sell execution to perform a retrospective trade revi
 | Misjudgments | `delayed_stop_loss`, `premature_profit_take`, `news_overreliance`, `panic_sell` |
 | Successful Moves | `trend_following`, `dip_buy`, `rule_compliance`, `correct_sizing` |
 
-### 2. Memory Compressor Agent (`src/prism/core/agents/memory_compressor_agent.py`)
+### 2. Memory Compression (`src/prism/ops/us/maintenance/compress_trading_memory.py`)
 
 Hierarchically compresses historical journals as time progresses to manage context limits.
 

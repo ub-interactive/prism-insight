@@ -27,7 +27,7 @@
 
 ### Purpose
 
-`prism.ops.pipelines.trigger_batch` runs every morning and afternoon to automatically screen for **watchlist candidates**. The selected symbols are then passed to the AI analysis pipeline (`prism.ops.pipelines.stock_analysis_orchestrator`).
+`prism.ops.us.pipelines.trigger_batch` runs every morning and afternoon to automatically screen for **watchlist candidates**. The selected symbols are then passed to the AI analysis pipeline (`prism.ops.us.pipelines.stock_analysis_orchestrator`).
 
 ### Core Objectives (v2.5.3)
 
@@ -41,9 +41,9 @@
 ```
 macro_intelligence_agent.py (Macro Analysis: regime, leading_sectors, sector_map)
     ↓
-prism.ops.pipelines.trigger_batch (Symbol Screening + Hybrid Top-down/Bottom-up Selection)
+prism.ops.us.pipelines.trigger_batch (Symbol Screening + Hybrid Top-down/Bottom-up Selection)
     ↓
-prism.ops.pipelines.stock_analysis_orchestrator (AI Analysis)
+prism.ops.us.pipelines.stock_analysis_orchestrator (AI Analysis)
     ↓
 stock_tracking_agent.py (Buy/Sell Decisions)
     ↓
@@ -522,7 +522,7 @@ Selection summary: 1 top-down + 2 bottom-up = 3 total (regime=moderate_bull, str
 
 ### Canonical US Notes
 
-| Item | US (`prism.ops.pipelines.trigger_batch`) |
+| Item | US (`prism.ops.us.pipelines.trigger_batch`) |
 |------|-------------------------|
 | Score Column | `CompositeScore`, `FinalScore` |
 | Sector Source | `get_us_sector_map()` via yfinance (GICS 11 sectors) |
@@ -550,20 +550,20 @@ Selection summary: 1 top-down + 2 bottom-up = 3 total (regime=moderate_bull, str
 
 ```bash
 # Morning batch
-python -m prism.ops.pipelines.trigger_batch morning INFO
+python -m prism.ops.us.pipelines.trigger_batch morning INFO
 
 # Afternoon batch
-python -m prism.ops.pipelines.trigger_batch afternoon INFO
+python -m prism.ops.us.pipelines.trigger_batch afternoon INFO
 ```
 
 ### Options
 
 ```bash
 # Save JSON results
-python -m prism.ops.pipelines.trigger_batch afternoon INFO --output result.json
+python -m prism.ops.us.pipelines.trigger_batch afternoon INFO --output result.json
 
 # Debug mode
-python -m prism.ops.pipelines.trigger_batch afternoon DEBUG
+python -m prism.ops.us.pipelines.trigger_batch afternoon DEBUG
 ```
 
 ### Output Example (JSON, v2.5.3)

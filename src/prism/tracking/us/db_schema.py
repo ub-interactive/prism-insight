@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from prism.trading import kis_auth
+from prism.trading.us import kis_auth
 from prism.paths import DB_PATH
 
 logger = logging.getLogger(__name__)

@@ -60,8 +60,8 @@ from prism.core.us.agents.trading_agents import create_trading_scenario_agent, c
 from prism.core.shared.llm.openai_responses_llm import OpenAIResponsesLLM as OpenAIAugmentedLLM
 from prism.core.shared.config.models import get_configured_model
 from prism.core.shared.utils import parse_llm_json
-from prism.tracking.compression import USCompressionManager
-from prism.tracking.db_schema import (
+from prism.tracking.us.compression import USCompressionManager
+from prism.tracking.us.db_schema import (
     add_market_column_to_shared_tables,
     add_sector_column_if_missing,
     create_indexes,
@@ -71,7 +71,7 @@ from prism.tracking.db_schema import (
     migrate_us_performance_tracker_columns,
     migrate_us_watchlist_history_columns,
 )
-from prism.tracking.journal import USJournalManager
+from prism.tracking.us.journal import USJournalManager
 
 US_TRADING_DECISION_MODEL = get_configured_model("us_trading_decision", "gpt-5.5")
 US_SELL_DECISION_MODEL = get_configured_model("us_sell_decision", "gpt-5.5")

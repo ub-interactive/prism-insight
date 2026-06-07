@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, Tuple
 
-from prism.tracking.helpers import parse_price_value
+from prism.tracking.us.helpers import parse_price_value
 
 logger = logging.getLogger(__name__)
 

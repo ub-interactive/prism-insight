@@ -5,7 +5,6 @@ Generate comprehensive stock analysis reports for Chinese A-shares.
 Uses akshare-backed data prefetch and CN-specific agents.
 """
 import asyncio
-import re
 from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
@@ -20,15 +19,8 @@ from prism.core.cn.data.client import DataClient
 from prism.core.cn.data.prefetch import prefetch_analysis_data
 from prism.core.cn.market.ticker import normalize
 from prism.core.cn.market_calendar import get_reference_date
-from prism.core.shared.report_generation import (
-    generate_investment_strategy,
-    generate_market_report,
-    generate_report,
-    generate_summary,
-    get_disclaimer,
-)
-from prism.core.shared.footnotes import annotate_financial_terms
-from prism.core.shared.utils import clean_markdown
+from prism.core.shared import analysis_helpers as shared
+from prism.core.shared.report_generation import get_disclaimer
 from prism.core.cn.visualization.chart import (
     get_holder_chart_html,
     get_price_chart_html,
@@ -77,8 +69,6 @@ async def analyze_stock(
             f"Starting: {company_name}({display_code}) CN analysis - reference date: {reference_date}"
         )
 
-        section_reports = {}
-
         akshare_sections = [
             "price_volume_analysis",
             "institutional_holdings_analysis",
@@ -90,10 +80,6 @@ async def analyze_stock(
         if include_news:
             parallel_sections.append("news_analysis")
         else:
-            section_reports["news_analysis"] = (
-                "_News analysis requires Perplexity API key. "
-                "Technical and fundamental analysis are provided normally._"
-            )
             logger.info("Skipping news_analysis (Perplexity API not configured)")
         base_sections = akshare_sections + ["news_analysis"]
 
@@ -121,139 +107,34 @@ async def analyze_stock(
         logger.info(f"  - akshare sections (sequential): {akshare_sections}")
         logger.info(f"  - parallel sections: {parallel_sections}")
 
-        async def process_akshare_sections():
-            """Process akshare-dependent sections sequentially."""
-            results = {}
-            for section in akshare_sections:
-                if section in agents:
-                    logger.info(f"Processing {section} for {company_name}...")
-                    try:
-                        agent = agents[section]
-                        if section == "market_index_analysis":
-                            if "report" in _market_analysis_cache:
-                                logger.info("Using cached CN market analysis")
-                                report = _market_analysis_cache["report"]
-                            else:
-                                logger.info("Generating new CN market analysis")
-                                report = await generate_market_report(
-                                    agent, section, reference_date, logger, language
-                                )
-                                _market_analysis_cache["report"] = report
-                        else:
-                            report = await generate_report(
-                                agent,
-                                section,
-                                company_name,
-                                display_code,
-                                reference_date,
-                                logger,
-                                language,
-                            )
-                        results[section] = report
-                        await asyncio.sleep(3)
-                    except Exception as e:
-                        logger.error(f"Error processing {section}: {e}")
-                        results[section] = f"Analysis failed: {section}"
-            return results
-
-        async def process_parallel_section(section):
-            """Process a non-akshare section with its own MCPApp context."""
-            if section not in agents:
-                return section, None
-
-            section_app = MCPApp(
-                name=f"cn_stock_analysis_{section}",
-                settings=str(MCP_CONFIG_PATH),
+        section_reports = await shared.collect_hybrid_sections(
+            logger,
+            agents=agents,
+            sequential=akshare_sections,
+            parallel=parallel_sections,
+            company_name=company_name,
+            display_symbol=display_code,
+            reference_date=reference_date,
+            language=language,
+            market_cache=_market_analysis_cache,
+            app_prefix="cn_stock_analysis",
+            base_sections=base_sections,
+        )
+        if not include_news:
+            section_reports["news_analysis"] = (
+                "_News analysis requires Perplexity API key. "
+                "Technical and fundamental analysis are provided normally._"
             )
-            async with section_app.run() as section_context:
-                section_logger = section_context.logger
-                section_logger.info(f"Processing {section} for {company_name}...")
-                try:
-                    agent = agents[section]
-                    report = await generate_report(
-                        agent,
-                        section,
-                        company_name,
-                        display_code,
-                        reference_date,
-                        section_logger,
-                        language,
-                    )
-                    return section, report
-                except Exception as e:
-                    section_logger.error(f"Error processing {section}: {e}")
-                    return section, f"Analysis failed: {section}"
 
-        parallel_tasks = [process_parallel_section(s) for s in parallel_sections]
-        akshare_task = process_akshare_sections()
-
-        all_results = await asyncio.gather(akshare_task, *parallel_tasks)
-
-        akshare_results = all_results[0]
-        section_reports.update(akshare_results)
-
-        for result in all_results[1:]:
-            if result and result[1] is not None:
-                section_reports[result[0]] = result[1]
-
-        combined_reports = ""
-        for section in base_sections:
-            if section in section_reports:
-                combined_reports += f"\n\n--- {section.upper()} ---\n\n"
-                combined_reports += section_reports[section]
-
-        try:
-            logger.info(f"Processing investment_strategy for {company_name}...")
-            investment_strategy = await generate_investment_strategy(
-                section_reports,
-                combined_reports,
-                company_name,
-                display_code,
-                reference_date,
-                logger,
-                language,
-            )
-            section_reports["investment_strategy"] = investment_strategy.lstrip("\n")
-            logger.info(
-                f"Completed investment_strategy - {len(investment_strategy)} characters"
-            )
-        except Exception as e:
-            logger.error(f"Error processing investment_strategy: {e}")
-            section_reports["investment_strategy"] = "Investment strategy analysis failed"
-
-        try:
-            logger.info(f"Processing summary for {company_name}...")
-            summary = await generate_summary(
-                section_reports,
-                company_name,
-                display_code,
-                reference_date,
-                logger,
-                language,
-            )
-            summary = summary.lstrip("\n")
-            summary = re.sub(
-                r"^#\s*"
-                + re.escape(company_name)
-                + r"\s*\("
-                + re.escape(display_code)
-                + r"\)[^\n]*\n+",
-                "",
-                summary,
-                flags=re.IGNORECASE,
-            )
-            summary = re.sub(
-                r"^\*{0,2}Publication Date\*{0,2}\s*:\s*[^\n]+\n+",
-                "",
-                summary,
-                flags=re.IGNORECASE,
-            )
-            summary = re.sub(r"^-{3,}\s*\n+", "", summary)
-            section_reports["summary"] = summary.lstrip("\n")
-            logger.info(f"Completed summary - {len(summary)} characters")
-        except Exception as e:
-            logger.error(f"Error processing summary: {e}")
-            section_reports["summary"] = "Summary generation failed"
+        section_reports = await shared.add_strategy_and_summary(
+            logger,
+            section_reports,
+            company_name=company_name,
+            display_symbol=display_code,
+            reference_date=reference_date,
+            language=language,
+            base_sections=base_sections,
+        )
 
         price_chart_html = ""
         holder_chart_html = ""
@@ -365,13 +246,9 @@ async def analyze_stock(
 {get_disclaimer(language)}
 """
 
-        final_report = clean_markdown(final_report)
-        final_report = await annotate_financial_terms(final_report, language, logger)
-
-        if language and language.lower() != "en":
-            from prism.core.shared.translation import translate_report
-
-            final_report = await translate_report(final_report, language)
+        final_report = await shared.finalize_markdown(
+            logger, final_report, language=language, market="cn"
+        )
 
         logger.info(
             f"Final report generated: {company_name}({display_code}) - "

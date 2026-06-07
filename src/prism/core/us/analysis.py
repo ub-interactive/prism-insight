@@ -7,7 +7,6 @@ Uses yfinance MCP server for market data and US-specific agents.
 import os
 import asyncio
 from datetime import datetime
-from pathlib import Path
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -16,26 +15,17 @@ from mcp_agent.app import MCPApp
 
 from prism.paths import MCP_CONFIG_PATH
 
-# Set up import paths
-import sys
 from prism.core.us.agents.directory import get_agent_directory
 from prism.core.us.data.prefetch import prefetch_analysis_data
 from prism.core.shared.config.models import get_configured_model
-from prism.core.shared.report_generation import (
-    generate_investment_strategy,
-    generate_market_report,
-    generate_report,
-    generate_summary,
-    get_disclaimer,
-)
+from prism.core.shared import analysis_helpers as shared
+from prism.core.shared.report_generation import get_disclaimer
 from prism.core.us.data.social_sentiment import USSocialSentimentClient
 from prism.core.us.visualization.chart import (
     get_institutional_chart_html,
     get_price_chart_html,
     get_technical_chart_html,
 )
-from prism.core.shared.footnotes import annotate_financial_terms
-from prism.core.shared.utils import clean_markdown
 
 # Market analysis cache storage (global variable)
 _market_analysis_cache = {}
@@ -83,9 +73,6 @@ async def analyze_stock(
         logger = parallel_app.logger
         logger.info(f"Starting: {company_name}({ticker}) US analysis - reference date: {reference_date}")
 
-        # 2. Create dictionary to store data as shared resource
-        section_reports = {}
-
         # 3. Define sections to analyze (US-specific)
         # yfinance sections: run sequentially to avoid rate limits
         yfinance_sections = [
@@ -100,8 +87,6 @@ async def analyze_stock(
         if include_news:
             parallel_sections.append("news_analysis")  # perplexity (requires API key)
         else:
-            # Add placeholder for skipped news section
-            section_reports["news_analysis"] = "_News analysis requires Perplexity API key. Technical and fundamental analysis are provided normally._"
             logger.info("Skipping news_analysis (Perplexity API not configured)")
         # Always include news_analysis in base_sections for report structure
         base_sections = yfinance_sections + ["news_analysis"]
@@ -132,130 +117,38 @@ async def analyze_stock(
         agents = get_agent_directory(company_name, ticker, reference_date, base_sections, language, prefetched_data=prefetched)
 
         # 6. Execute base analysis using HYBRID mode
-        # - yfinance sections: sequential with 2 sec delay (rate limit friendly)
-        # - news_analysis: parallel with yfinance sections (uses perplexity, not yfinance)
         logger.info(f"Running US analysis in HYBRID mode for {company_name}...")
         logger.info(f"  - yfinance sections (sequential): {yfinance_sections}")
         logger.info(f"  - parallel sections: {parallel_sections}")
 
-        async def process_yfinance_sections():
-            """Process yfinance-dependent sections sequentially"""
-            results = {}
-            for section in yfinance_sections:
-                if section in agents:
-                    logger.info(f"Processing {section} for {company_name}...")
-                    try:
-                        agent = agents[section]
-                        if section == "market_index_analysis":
-                            if "report" in _market_analysis_cache:
-                                logger.info(f"Using cached US market analysis")
-                                report = _market_analysis_cache["report"]
-                            else:
-                                logger.info(f"Generating new US market analysis")
-                                report = await generate_market_report(
-                                    agent, section, reference_date, logger, language
-                                )
-                                _market_analysis_cache["report"] = report
-                        else:
-                            report = await generate_report(
-                                agent, section, company_name, ticker, reference_date, logger, language
-                            )
-                        results[section] = report
-                        # Add delay between yfinance calls to avoid rate limits
-                        # 3 seconds gives yfinance time to reset rate limits
-                        await asyncio.sleep(3)
-                    except Exception as e:
-                        logger.error(f"Error processing {section}: {e}")
-                        results[section] = f"Analysis failed: {section}"
-            return results
-
-        async def process_parallel_section(section):
-            """Process a non-yfinance section with its own MCPApp context"""
-            if section not in agents:
-                return section, None
-
-            section_app = MCPApp(name=f"us_stock_analysis_{section}", settings=str(MCP_CONFIG_PATH))
-            async with section_app.run() as section_context:
-                section_logger = section_context.logger
-                section_logger.info(f"Processing {section} for {company_name}...")
-                try:
-                    agent = agents[section]
-                    report = await generate_report(
-                        agent, section, company_name, ticker, reference_date, section_logger, language
-                    )
-                    return section, report
-                except Exception as e:
-                    section_logger.error(f"Error processing {section}: {e}")
-                    return section, f"Analysis failed: {section}"
-
-        # Execute hybrid: yfinance sequential + parallel sections concurrently
-        parallel_tasks = [process_parallel_section(s) for s in parallel_sections]
-        yfinance_task = process_yfinance_sections()
-
-        # Run both concurrently
-        all_results = await asyncio.gather(yfinance_task, *parallel_tasks)
-
-        # Collect results
-        # First result is yfinance sections dict
-        yfinance_results = all_results[0]
-        section_reports.update(yfinance_results)
-
-        # Remaining results are (section, report) tuples from parallel sections
-        for result in all_results[1:]:
-            if result and result[1] is not None:
-                section_reports[result[0]] = result[1]
-
-        # 6. Integrate content from other reports
-        combined_reports = ""
-        for section in base_sections:
-            if section in section_reports:
-                combined_reports += f"\n\n--- {section.upper()} ---\n\n"
-                combined_reports += section_reports[section]
-
-        # 7. Generate investment strategy
-        try:
-            logger.info(f"Processing investment_strategy for {company_name}...")
-
-            investment_strategy = await generate_investment_strategy(
-                section_reports, combined_reports, company_name, ticker, reference_date, logger, language
+        section_reports = await shared.collect_hybrid_sections(
+            logger,
+            agents=agents,
+            sequential=yfinance_sections,
+            parallel=parallel_sections,
+            company_name=company_name,
+            display_symbol=ticker,
+            reference_date=reference_date,
+            language=language,
+            market_cache=_market_analysis_cache,
+            app_prefix="us_stock_analysis",
+            base_sections=base_sections,
+        )
+        if not include_news:
+            section_reports["news_analysis"] = (
+                "_News analysis requires Perplexity API key. "
+                "Technical and fundamental analysis are provided normally._"
             )
-            section_reports["investment_strategy"] = investment_strategy.lstrip('\n')
-            logger.info(f"Completed investment_strategy - {len(investment_strategy)} characters")
-        except Exception as e:
-            logger.error(f"Error processing investment_strategy: {e}")
-            section_reports["investment_strategy"] = "Investment strategy analysis failed"
 
-        # 8. Generate executive summary
-        try:
-            logger.info(f"Processing summary for {company_name}...")
-            summary = await generate_summary(
-                section_reports, company_name, ticker, reference_date, logger, language
-            )
-            # Remove duplicate title/date if the agent added them
-            # Pattern: "# Company Name (TICKER) Analysis Report\n**Publication Date:** ..."
-            import re
-            summary = summary.lstrip('\n')
-            # Remove any leading H1 title that matches the report title pattern
-            summary = re.sub(
-                r'^#\s*' + re.escape(company_name) + r'\s*\(' + re.escape(ticker) + r'\)[^\n]*\n+',
-                '',
-                summary,
-                flags=re.IGNORECASE
-            )
-            # Remove any publication date line right after title removal
-            summary = re.sub(
-                r'^\*{0,2}Publication Date\*{0,2}\s*:\s*[^\n]+\n+',
-                '',
-                summary,
-                flags=re.IGNORECASE
-            )
-            # Remove leading separators (---)
-            summary = re.sub(r'^-{3,}\s*\n+', '', summary)
-            section_reports["summary"] = summary.lstrip('\n')
-            logger.info(f"Completed summary - {len(summary)} characters")
-        except Exception as e:
-            logger.error(f"Error processing summary: {e}")
-            section_reports["summary"] = "Summary generation failed"
+        section_reports = await shared.add_strategy_and_summary(
+            logger,
+            section_reports,
+            company_name=company_name,
+            display_symbol=ticker,
+            reference_date=reference_date,
+            language=language,
+            base_sections=base_sections,
+        )
 
         # 9. Generate charts (optional - may fail if yfinance data unavailable)
         # Charts are inserted into specific sections:
@@ -413,13 +306,9 @@ async def analyze_stock(
 {get_disclaimer(language)}
 """
 
-        # 11. Clean up markdown formatting
-        final_report = clean_markdown(final_report)
-        final_report = await annotate_financial_terms(final_report, language, logger)
-
-        if language and language.lower() != "en":
-            from prism.core.shared.translation import translate_report
-            final_report = await translate_report(final_report, language)
+        final_report = await shared.finalize_markdown(
+            logger, final_report, language=language, market="us"
+        )
 
         logger.info(f"Final report generated: {company_name}({ticker}) - {len(final_report)} characters")
 

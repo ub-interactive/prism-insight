@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from prism.core.translation import (
+from prism.core.shared.translation import (
     extract_and_replace_charts,
     restore_charts,
     translate_report,

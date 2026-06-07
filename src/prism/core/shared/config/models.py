@@ -126,6 +126,11 @@ def get_optional_reasoning_effort(
         return {}
 
     supports_reasoning_effort = normalized.startswith(("gpt-", "o1", "o3", "o4"))
-    if supports_reasoning_effort:
-        return {"reasoning_effort": preferred_effort}
-    return {}
+    if not supports_reasoning_effort:
+        return {}
+
+    effort = (preferred_effort or "").strip().lower()
+    if not effort or effort == "none":
+        return {}
+
+    return {"reasoning_effort": effort}

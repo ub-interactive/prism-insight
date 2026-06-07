@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytz
 
-import prism.ops.batches.pending_order_batch as pending_batch
+import prism.ops.us.batches.pending_order_batch as pending_batch
 
 KST = pytz.timezone("Asia/Seoul")
 

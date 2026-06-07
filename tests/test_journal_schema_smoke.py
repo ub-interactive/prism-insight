@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from prism.ops.pipelines.stock_tracking_agent import StockTrackingAgent
+from prism.ops.us.pipelines.stock_tracking_agent import StockTrackingAgent
 
 
 @pytest.mark.asyncio

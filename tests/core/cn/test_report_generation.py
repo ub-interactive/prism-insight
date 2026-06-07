@@ -1,4 +1,4 @@
-from prism.core.report_generation import LANGUAGE_NAMES, get_disclaimer
+from prism.core.shared.report_generation import LANGUAGE_NAMES, get_disclaimer
 
 
 def test_language_names_include_chinese_and_korean():

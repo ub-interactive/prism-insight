@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from prism.core.footnotes import (
+from prism.core.shared.footnotes import (
     TermFootnote,
     _coerce_terms,
     annotate_financial_terms,
@@ -137,7 +137,7 @@ def test_coerce_terms_accepts_valid_payload_and_filters_invalid_items():
 
 
 @pytest.mark.asyncio
-@patch("prism.core.footnotes._extract_financial_terms", new_callable=AsyncMock)
+@patch("prism.core.shared.footnotes._extract_financial_terms", new_callable=AsyncMock)
 async def test_annotate_financial_terms_returns_original_when_extraction_fails(mock_extract):
     mock_extract.side_effect = RuntimeError("model unavailable")
     report = "The P/E ratio contracted."
@@ -148,7 +148,7 @@ async def test_annotate_financial_terms_returns_original_when_extraction_fails(m
 
 
 @pytest.mark.asyncio
-@patch("prism.core.footnotes._extract_financial_terms", new_callable=AsyncMock)
+@patch("prism.core.shared.footnotes._extract_financial_terms", new_callable=AsyncMock)
 async def test_annotate_financial_terms_restores_charts(mock_extract):
     mock_extract.return_value = [
         TermFootnote(

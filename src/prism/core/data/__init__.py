@@ -1,1 +1,1 @@
-"""Data access layer — CN market client and prefetch (US modules live in core.us.data)."""
+"""Data access layer — US modules live in core.us.data; CN modules in core.cn.data."""

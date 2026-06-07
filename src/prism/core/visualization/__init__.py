@@ -1,1 +1,1 @@
-"""Visualization — CN chart generation (US charts live in core.us.visualization)."""
+"""Visualization — US charts live in core.us.visualization; CN charts in core.cn.visualization."""

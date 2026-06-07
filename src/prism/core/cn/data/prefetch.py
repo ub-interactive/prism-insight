@@ -3,9 +3,9 @@
 import logging
 from datetime import datetime, timedelta
 
-from prism.core.data.cn_client import CNDataClient
+from prism.core.cn.data.client import DataClient
+from prism.core.cn.market.ticker import normalize
 from prism.core.us.data.prefetch import _df_to_markdown
-from prism.core.market.cn_ticker import normalize
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +23,9 @@ def _ref_to_dates(reference_date: str) -> tuple[str, str]:
     return start.strftime("%Y%m%d"), end.strftime("%Y%m%d")
 
 
-def prefetch_cn_analysis_data(code: str, reference_date: str) -> dict:
+def prefetch_analysis_data(code: str, reference_date: str) -> dict:
     ticker = normalize(code)
-    client = CNDataClient()
+    client = DataClient()
     start_date, end_date = _ref_to_dates(reference_date)
     result = {}
 

@@ -1,8 +1,8 @@
-from prism.core.agents.cn_directory import get_cn_agent_directory
+from prism.core.cn.agents.directory import get_agent_directory
 
 
 def test_builds_all_six_agents():
-    agents = get_cn_agent_directory(
+    agents = get_agent_directory(
         company_name="贵州茅台",
         code="600519",
         exchange="SH",

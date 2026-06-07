@@ -54,9 +54,9 @@ def get_company_name(ticker: str) -> str:
 
 def get_cn_company_name(code: str) -> str:
     """Get company name from A-share code using akshare."""
-    from prism.core.data.cn_client import CNDataClient
+    from prism.core.cn.data import DataClient
 
-    return CNDataClient().get_company_name(code)
+    return DataClient().get_company_name(code)
 
 
 async def generate_report(
@@ -111,14 +111,14 @@ async def generate_report(
     start_time = time.time()
 
     if market == "cn":
-        from prism.core.analysis_cn import analyze_cn_stock
-        from prism.core.market.cn_ticker import normalize
-        from prism.core.market_calendar_cn import get_cn_reference_date
+        from prism.core.cn.analysis import analyze_stock
+        from prism.core.cn.market.ticker import normalize
+        from prism.core.cn.market_calendar import get_reference_date
         from prism.reporting.report_generator import save_cn_pdf_report, save_cn_report
 
         ticker_info = normalize(ticker)
-        reference_date = get_cn_reference_date()
-        report_content = await analyze_cn_stock(
+        reference_date = get_reference_date()
+        report_content = await analyze_stock(
             code=ticker_info.code,
             company_name=company_name,
             exchange=ticker_info.exchange,
@@ -195,7 +195,7 @@ Examples:
     args = parser.parse_args()
 
     if args.market == "cn":
-        from prism.core.market.cn_ticker import CNTickerError, normalize
+        from prism.core.cn.market.ticker import CNTickerError, normalize
 
         try:
             ticker_info = normalize(args.ticker)

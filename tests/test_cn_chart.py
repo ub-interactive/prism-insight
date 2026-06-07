@@ -1,6 +1,6 @@
 import pandas as pd
 
-from prism.core.visualization.cn_chart import _resolve_holder_columns
+from prism.core.cn.visualization.chart import _resolve_holder_columns
 
 
 def test_resolve_holder_columns_prefers_shareholding_ratio_over_rank():

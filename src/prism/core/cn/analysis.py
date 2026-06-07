@@ -15,11 +15,11 @@ load_dotenv()
 from mcp_agent.app import MCPApp
 
 from prism.paths import MCP_CONFIG_PATH
-from prism.core.agents.cn_directory import get_cn_agent_directory
-from prism.core.data.cn_client import CNDataClient
-from prism.core.data.cn_prefetch import prefetch_cn_analysis_data
-from prism.core.market.cn_ticker import normalize
-from prism.core.market_calendar_cn import get_cn_reference_date
+from prism.core.cn.agents.directory import get_agent_directory
+from prism.core.cn.data.client import DataClient
+from prism.core.cn.data.prefetch import prefetch_analysis_data
+from prism.core.cn.market.ticker import normalize
+from prism.core.cn.market_calendar import get_reference_date
 from prism.core.shared.report_generation import (
     generate_investment_strategy,
     generate_market_report,
@@ -29,17 +29,17 @@ from prism.core.shared.report_generation import (
 )
 from prism.core.shared.footnotes import annotate_financial_terms
 from prism.core.shared.utils import clean_markdown
-from prism.core.visualization.cn_chart import (
-    get_cn_holder_chart_html,
-    get_cn_price_chart_html,
-    get_cn_technical_chart_html,
+from prism.core.cn.visualization.chart import (
+    get_holder_chart_html,
+    get_price_chart_html,
+    get_technical_chart_html,
 )
 
 # Market analysis cache storage (global variable)
-_cn_market_analysis_cache = {}
+_market_analysis_cache = {}
 
 
-async def analyze_cn_stock(
+async def analyze_stock(
     code: str,
     company_name: str,
     exchange: str,
@@ -69,7 +69,7 @@ async def analyze_cn_stock(
     display_code = f"{ticker.code}.{ticker.exchange}"
 
     if reference_date is None:
-        reference_date = get_cn_reference_date()
+        reference_date = get_reference_date()
 
     async with app.run() as parallel_app:
         logger = parallel_app.logger
@@ -98,7 +98,7 @@ async def analyze_cn_stock(
         base_sections = akshare_sections + ["news_analysis"]
 
         try:
-            prefetched = prefetch_cn_analysis_data(code, reference_date)
+            prefetched = prefetch_analysis_data(code, reference_date)
             logger.info(
                 f"Prefetched CN data for {display_code}: "
                 f"{list(prefetched.keys()) if prefetched else 'none'}"
@@ -107,7 +107,7 @@ async def analyze_cn_stock(
             logger.error(f"CN data prefetch failed for {display_code}: {e}")
             raise
 
-        agents = get_cn_agent_directory(
+        agents = get_agent_directory(
             company_name,
             code,
             exchange,
@@ -130,15 +130,15 @@ async def analyze_cn_stock(
                     try:
                         agent = agents[section]
                         if section == "market_index_analysis":
-                            if "report" in _cn_market_analysis_cache:
+                            if "report" in _market_analysis_cache:
                                 logger.info("Using cached CN market analysis")
-                                report = _cn_market_analysis_cache["report"]
+                                report = _market_analysis_cache["report"]
                             else:
                                 logger.info("Generating new CN market analysis")
                                 report = await generate_market_report(
                                     agent, section, reference_date, logger, language
                                 )
-                                _cn_market_analysis_cache["report"] = report
+                                _market_analysis_cache["report"] = report
                         else:
                             report = await generate_report(
                                 agent,
@@ -264,11 +264,11 @@ async def analyze_cn_stock(
             end_date = reference_date
             start_date = (ref_dt - timedelta(days=365)).strftime("%Y%m%d")
 
-            client = CNDataClient()
+            client = DataClient()
             hist = client.get_ohlcv(code, start_date, end_date)
 
             if hist is not None and not hist.empty:
-                price_chart_html = get_cn_price_chart_html(
+                price_chart_html = get_price_chart_html(
                     code, company_name, hist, width=900, dpi=80
                 )
                 if price_chart_html:
@@ -276,7 +276,7 @@ async def analyze_cn_stock(
                 else:
                     logger.warning(f"Failed to generate price chart for {display_code}")
 
-                technical_chart_html = get_cn_technical_chart_html(
+                technical_chart_html = get_technical_chart_html(
                     code, company_name, hist, width=900, dpi=80
                 )
                 if technical_chart_html:
@@ -291,7 +291,7 @@ async def analyze_cn_stock(
                 logger.warning(f"No OHLCV data for charts: {display_code}")
 
             holders = client.get_top_holders(code)
-            holder_chart_html = get_cn_holder_chart_html(
+            holder_chart_html = get_holder_chart_html(
                 code, company_name, holders, width=900, dpi=80
             )
             if holder_chart_html:
@@ -381,7 +381,7 @@ async def analyze_cn_stock(
         return final_report
 
 
-def clear_cn_market_cache():
+def clear_market_cache():
     """Clear the CN market analysis cache."""
-    global _cn_market_analysis_cache
-    _cn_market_analysis_cache = {}
+    global _market_analysis_cache
+    _market_analysis_cache = {}

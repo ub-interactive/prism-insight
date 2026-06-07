@@ -11,7 +11,7 @@ from collections.abc import Callable
 import akshare as ak
 import pandas as pd
 
-from prism.core.market.cn_ticker import normalize
+from prism.core.cn.market.ticker import normalize
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ def _normalize_ohlcv(df: pd.DataFrame, rename_map: dict[str, str]) -> pd.DataFra
     return out.set_index("Date")
 
 
-class CNDataClient:
+class DataClient:
     """Unified CN A-share data client backed by akshare."""
 
     def __init__(self):

@@ -1,6 +1,6 @@
 import pytest
 
-from prism.core.market.cn_ticker import CNTicker, normalize, CNTickerError
+from prism.core.cn.market.ticker import CNTicker, normalize, CNTickerError
 
 
 def test_sh_main_board():

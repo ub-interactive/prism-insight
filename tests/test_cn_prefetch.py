@@ -3,10 +3,10 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
-from prism.core.data.cn_prefetch import prefetch_cn_analysis_data
+from prism.core.cn.data.prefetch import prefetch_analysis_data
 
 
-@patch("prism.core.data.cn_prefetch.CNDataClient")
+@patch("prism.core.cn.data.prefetch.DataClient")
 def test_prefetch_returns_required_keys(MockClient):
     instance = MockClient.return_value
     instance.get_ohlcv.return_value = pd.DataFrame({
@@ -19,7 +19,7 @@ def test_prefetch_returns_required_keys(MockClient):
     instance.get_financial_indicators.return_value = pd.DataFrame({"指标": [1]})
     instance.get_index_ohlcv.return_value = pd.DataFrame({"close": [3000]})
 
-    result = prefetch_cn_analysis_data("600519", reference_date="20260606")
+    result = prefetch_analysis_data("600519", reference_date="20260606")
 
     assert "stock_ohlcv" in result
     assert "stock_info" in result
@@ -28,9 +28,9 @@ def test_prefetch_returns_required_keys(MockClient):
     assert "600519" in result["stock_ohlcv"] or "OHLCV" in result["stock_ohlcv"]
 
 
-@patch("prism.core.data.cn_prefetch.CNDataClient")
+@patch("prism.core.cn.data.prefetch.DataClient")
 def test_prefetch_raises_when_ohlcv_empty(MockClient):
     instance = MockClient.return_value
     instance.get_ohlcv.return_value = pd.DataFrame()
     with pytest.raises(ValueError, match="No price data"):
-        prefetch_cn_analysis_data("600519", reference_date="20260606")
+        prefetch_analysis_data("600519", reference_date="20260606")

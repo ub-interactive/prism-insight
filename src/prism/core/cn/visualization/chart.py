@@ -83,7 +83,7 @@ def _html_or_empty(html: str | None) -> str:
     return html or ""
 
 
-def get_cn_price_chart_html(
+def get_price_chart_html(
     code: str,
     company_name: str,
     hist_df: pd.DataFrame,
@@ -178,7 +178,7 @@ def get_cn_price_chart_html(
         return ""
 
 
-def get_cn_technical_chart_html(
+def get_technical_chart_html(
     code: str,
     company_name: str,
     hist_df: pd.DataFrame,
@@ -252,7 +252,7 @@ def get_cn_technical_chart_html(
         return ""
 
 
-def get_cn_holder_chart_html(
+def get_holder_chart_html(
     code: str,
     company_name: str,
     holders_df: pd.DataFrame,

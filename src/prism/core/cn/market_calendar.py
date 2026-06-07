@@ -12,7 +12,7 @@ SSE_CALENDAR = mcal.get_calendar("SSE")
 CST = pytz.timezone("Asia/Shanghai")
 
 
-def is_cn_market_day(check_date: date | None = None) -> bool:
+def is_market_day(check_date: date | None = None) -> bool:
     """Return True if *check_date* (default: today CST) is an SSE trading day."""
     if check_date is None:
         check_date = datetime.now(CST).date()
@@ -35,11 +35,11 @@ def get_last_trading_day(from_date: date | None = None) -> date:
     return last.date() if hasattr(last, "date") else last.to_pydatetime().date()
 
 
-def get_cn_reference_date(from_date: date | None = None) -> str:
+def get_reference_date(from_date: date | None = None) -> str:
     """Return last CN trading day as YYYYMMDD."""
     if from_date is None:
         from_date = datetime.now(CST).date()
-    if is_cn_market_day(from_date):
+    if is_market_day(from_date):
         d = from_date
     else:
         d = get_last_trading_day(from_date)

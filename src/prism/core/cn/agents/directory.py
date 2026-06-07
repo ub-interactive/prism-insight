@@ -1,19 +1,19 @@
 from datetime import datetime, timedelta
 from typing import List
 
-from prism.core.agents.cn.company_info_agents import (
+from prism.core.cn.agents.company_info_agents import (
     create_company_overview_agent,
     create_company_status_agent,
 )
-from prism.core.agents.cn.market_index_agents import create_market_index_analysis_agent
-from prism.core.agents.cn.news_agents import create_news_analysis_agent
-from prism.core.agents.cn.stock_price_agents import (
+from prism.core.cn.agents.market_index_agents import create_market_index_analysis_agent
+from prism.core.cn.agents.news_agents import create_news_analysis_agent
+from prism.core.cn.agents.stock_price_agents import (
     create_institutional_holdings_analysis_agent,
     create_price_volume_analysis_agent,
 )
 
 
-def get_cn_agent_directory(
+def get_agent_directory(
     company_name: str,
     code: str,
     exchange: str,

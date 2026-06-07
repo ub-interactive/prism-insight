@@ -9,7 +9,7 @@ from mcp_agent.agents.agent import Agent
 from mcp_agent.workflows.llm.augmented_llm import RequestParams
 from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
 
-from prism.core.config.models import get_configured_model
+from prism.core.shared.config.models import get_configured_model
 
 logger = logging.getLogger(__name__)
 

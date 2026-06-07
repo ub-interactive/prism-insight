@@ -18,7 +18,7 @@ from mcp_agent.app import MCPApp
 from mcp_agent.workflows.llm.augmented_llm import RequestParams
 from mcp_agent.workflows.llm.augmented_llm_anthropic import AnthropicAugmentedLLM
 
-from prism.core.config.models import get_configured_anthropic_model
+from prism.core.shared.config.models import get_configured_anthropic_model
 from prism.paths import HTML_REPORTS_DIR, MCP_CONFIG_PATH, PDF_REPORTS_DIR, REPORTS_DIR, REPO_ROOT
 
 # Logger setup

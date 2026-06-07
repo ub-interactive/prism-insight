@@ -20,15 +20,15 @@ from prism.core.data.cn_client import CNDataClient
 from prism.core.data.cn_prefetch import prefetch_cn_analysis_data
 from prism.core.market.cn_ticker import normalize
 from prism.core.market_calendar_cn import get_cn_reference_date
-from prism.core.report_generation import (
+from prism.core.shared.report_generation import (
     generate_investment_strategy,
     generate_market_report,
     generate_report,
     generate_summary,
     get_disclaimer,
 )
-from prism.core.footnotes import annotate_financial_terms
-from prism.core.utils import clean_markdown
+from prism.core.shared.footnotes import annotate_financial_terms
+from prism.core.shared.utils import clean_markdown
 from prism.core.visualization.cn_chart import (
     get_cn_holder_chart_html,
     get_cn_price_chart_html,
@@ -369,7 +369,7 @@ async def analyze_cn_stock(
         final_report = await annotate_financial_terms(final_report, language, logger)
 
         if language and language.lower() != "en":
-            from prism.core.translation import translate_report
+            from prism.core.shared.translation import translate_report
 
             final_report = await translate_report(final_report, language)
 

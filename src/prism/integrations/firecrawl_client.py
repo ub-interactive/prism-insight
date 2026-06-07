@@ -10,7 +10,7 @@ import os
 
 from dotenv import load_dotenv
 
-from prism.core.config.models import get_configured_firecrawl_spark_model
+from prism.core.shared.config.models import get_configured_firecrawl_spark_model
 
 load_dotenv()
 logger = logging.getLogger(__name__)

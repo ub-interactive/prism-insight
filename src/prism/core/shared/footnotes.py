@@ -10,9 +10,9 @@ from mcp_agent.agents.agent import Agent
 from mcp_agent.workflows.llm.augmented_llm import RequestParams
 from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
 
-from prism.core.config.models import get_configured_model, get_optional_reasoning_effort
-from prism.core.translation import extract_and_replace_charts, restore_charts
-from prism.core.utils import parse_llm_json
+from prism.core.shared.config.models import get_configured_model, get_optional_reasoning_effort
+from prism.core.shared.translation import extract_and_replace_charts, restore_charts
+from prism.core.shared.utils import parse_llm_json
 
 FINANCIAL_FOOTNOTE_MODEL = get_configured_model("financial_footnotes", "gpt-5.4-mini")
 

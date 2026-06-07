@@ -4,7 +4,7 @@ Import this module early in orchestrator entry points to enable
 automatic request/response metadata logging when OpenAI returns 400/429 errors.
 
 Usage:
-    import prism.core.openai.debug  # noqa: F401 — side-effect import
+    import prism.core.shared.openai.debug  # noqa: F401 — side-effect import
 """
 
 import logging

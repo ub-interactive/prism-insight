@@ -20,8 +20,8 @@ from prism.paths import MCP_CONFIG_PATH
 import sys
 from prism.core.agents import get_agent_directory
 from prism.core.data.prefetch import prefetch_us_analysis_data
-from prism.core.config.models import get_configured_model
-from prism.core.report_generation import (
+from prism.core.shared.config.models import get_configured_model
+from prism.core.shared.report_generation import (
     generate_investment_strategy,
     generate_market_report,
     generate_report,
@@ -34,8 +34,8 @@ from prism.core.visualization.chart import (
     get_us_price_chart_html,
     get_us_technical_chart_html,
 )
-from prism.core.footnotes import annotate_financial_terms
-from prism.core.utils import clean_markdown
+from prism.core.shared.footnotes import annotate_financial_terms
+from prism.core.shared.utils import clean_markdown
 
 # Market analysis cache storage (global variable)
 _us_market_analysis_cache = {}
@@ -418,7 +418,7 @@ async def analyze_us_stock(
         final_report = await annotate_financial_terms(final_report, language, logger)
 
         if language and language.lower() != "en":
-            from prism.core.translation import translate_report
+            from prism.core.shared.translation import translate_report
             final_report = await translate_report(final_report, language)
 
         logger.info(f"Final report generated: {company_name}({ticker}) - {len(final_report)} characters")

@@ -30,8 +30,8 @@ _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
 from prism.paths import LOGS_DIR, MCP_CONFIG_PATH, PDF_REPORTS_DIR, REPORTS_DIR, REPO_ROOT, TRIGGER_RESULTS_DIR
 
-from prism.core.config.models import get_configured_model, get_optional_reasoning_effort
-from prism.core.openai.error_logging import log_openai_error
+from prism.core.shared.config.models import get_configured_model, get_optional_reasoning_effort
+from prism.core.shared.openai.error_logging import log_openai_error
 
 # Directory configuration (before logging — FileHandler needs LOGS_DIR)
 US_REPORTS_DIR = REPORTS_DIR
@@ -579,7 +579,7 @@ class USStockAnalysisOrchestrator:
             logger.error(f"Error during US pipeline execution: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
-            from prism.core.openai.quota_utils import is_openai_quota_error
+            from prism.core.shared.openai.quota_utils import is_openai_quota_error
 
             if is_openai_quota_error(e):
                 logger.error(

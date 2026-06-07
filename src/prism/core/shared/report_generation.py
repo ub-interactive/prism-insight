@@ -3,10 +3,10 @@ from mcp_agent.agents.agent import Agent
 from mcp_agent.workflows.llm.augmented_llm import RequestParams
 from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
 
-from prism.core.openai.error_logging import log_openai_error
+from prism.core.shared.openai.error_logging import log_openai_error
 
 try:
-    from prism.core.config.models import get_configured_model, get_optional_reasoning_effort
+    from prism.core.shared.config.models import get_configured_model, get_optional_reasoning_effort
 except Exception:
     # Fallback for dynamic import contexts.
     import importlib.util

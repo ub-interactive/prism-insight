@@ -36,7 +36,7 @@ from typing import List, Dict, Any, Tuple, Optional
 _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
 
-from prism.core.openai.error_logging import log_openai_error
+from prism.core.shared.openai.error_logging import log_openai_error
 from prism.paths import LOGS_DIR, DB_PATH
 
 # Ensure logs directory exists
@@ -57,9 +57,9 @@ logger = logging.getLogger(__name__)
 from mcp_agent.app import MCPApp
 from mcp_agent.workflows.llm.augmented_llm import RequestParams
 from prism.core.agents.trading_agents import create_trading_scenario_agent, create_sell_decision_agent
-from prism.core.llm.openai_responses_llm import OpenAIResponsesLLM as OpenAIAugmentedLLM
-from prism.core.config.models import get_configured_model
-from prism.core.utils import parse_llm_json
+from prism.core.shared.llm.openai_responses_llm import OpenAIResponsesLLM as OpenAIAugmentedLLM
+from prism.core.shared.config.models import get_configured_model
+from prism.core.shared.utils import parse_llm_json
 from prism.tracking.compression import USCompressionManager
 from prism.tracking.db_schema import (
     add_market_column_to_shared_tables,

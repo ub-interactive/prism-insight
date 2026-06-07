@@ -275,14 +275,14 @@ project_root = r'{project_root}'
 sys.path.insert(0, project_root)
 os.chdir(project_root)
 
-from prism.core.analysis import analyze_us_stock
-from prism.core.market_calendar import get_reference_date
+from prism.core.us.analysis import analyze_stock
+from prism.core.us.market_calendar import get_reference_date
 
 async def run():
     try:
         # Auto-detect last trading day
         ref_date = get_reference_date()
-        result = await analyze_us_stock(
+        result = await analyze_stock(
             ticker="{ticker}",
             company_name="{company_name}",
             reference_date=ref_date,

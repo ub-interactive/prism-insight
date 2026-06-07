@@ -4,9 +4,9 @@ US Stock Data Client
 Unified interface for fetching US stock market data using yfinance.
 
 Usage:
-    from prism_us.cores.us_data_client import USDataClient
+    from prism_us.cores.us_data_client import DataClient
 
-    client = USDataClient()
+    client = DataClient()
 
     # Get OHLCV data
     df = client.get_ohlcv("AAPL", period="1mo")
@@ -30,7 +30,7 @@ import yfinance as yf
 logger = logging.getLogger(__name__)
 
 
-class USDataClient:
+class DataClient:
     """
     Unified US stock data client.
 
@@ -414,14 +414,14 @@ class USDataClient:
 
 
 # Convenience function for quick access
-def get_us_data_client() -> USDataClient:
+def get_data_client() -> DataClient:
     """
-    Create and return a USDataClient instance.
+    Create and return a DataClient instance.
 
     Returns:
-        USDataClient instance
+        DataClient instance
     """
-    return USDataClient()
+    return DataClient()
 
 
 if __name__ == "__main__":
@@ -429,9 +429,9 @@ if __name__ == "__main__":
     import logging
     logging.basicConfig(level=logging.INFO)
 
-    client = USDataClient()
+    client = DataClient()
 
-    print("\n=== Testing USDataClient ===\n")
+    print("\n=== Testing DataClient ===\n")
 
     # Test OHLCV
     print("1. OHLCV Data (AAPL, 10 days):")

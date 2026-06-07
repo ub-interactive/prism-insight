@@ -642,7 +642,7 @@ def create_us_technical_indicators_chart(
 # Wrapper Functions for Easy Integration
 # =============================================================================
 
-def get_us_price_chart_html(
+def get_price_chart_html(
     ticker: str,
     company_name: str,
     hist_df: pd.DataFrame,
@@ -668,7 +668,7 @@ def get_us_price_chart_html(
     return figure_to_base64_html(fig, f"{ticker} Price Chart", width, dpi, 'jpg')
 
 
-def get_us_institutional_chart_html(
+def get_institutional_chart_html(
     ticker: str,
     company_name: str,
     major_holders: Optional[pd.DataFrame] = None,
@@ -696,7 +696,7 @@ def get_us_institutional_chart_html(
     return figure_to_base64_html(fig, f"{ticker} Institutional Holdings", width, dpi, 'jpg')
 
 
-def get_us_technical_chart_html(
+def get_technical_chart_html(
     ticker: str,
     company_name: str,
     hist_df: pd.DataFrame,

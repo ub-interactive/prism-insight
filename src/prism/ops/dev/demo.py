@@ -29,7 +29,7 @@ from prism.paths import REPO_ROOT
 project_root = REPO_ROOT
 load_dotenv(project_root / ".env")
 
-from prism.core.analysis import analyze_us_stock
+from prism.core.us.analysis import analyze_stock
 
 
 def check_perplexity_configured() -> bool:
@@ -132,7 +132,7 @@ async def generate_report(
         from prism.reporting.report_generator import save_us_pdf_report, save_us_report
 
         reference_date = datetime.now().strftime("%Y%m%d")
-        report_content = await analyze_us_stock(
+        report_content = await analyze_stock(
             ticker=ticker,
             company_name=company_name,
             reference_date=reference_date,

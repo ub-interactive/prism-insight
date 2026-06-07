@@ -16,7 +16,7 @@ _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
 
 # Re-export every public helper so existing ``from scripts.check_market_day import …`` keeps working.
-from prism.core.market_calendar import (  # noqa: F401, E402
+from prism.core.us.market_calendar import (  # noqa: F401, E402
     EST,
     KST,
     NYSE_CALENDAR,

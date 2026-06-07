@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta
 
 from prism.core.data.cn_client import CNDataClient
-from prism.core.data.prefetch import _df_to_markdown
+from prism.core.us.data.prefetch import _df_to_markdown
 from prism.core.market.cn_ticker import normalize
 
 logger = logging.getLogger(__name__)

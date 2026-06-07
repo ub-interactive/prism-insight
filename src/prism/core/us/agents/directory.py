@@ -3,13 +3,13 @@
 from datetime import datetime, timedelta
 from typing import Dict, List
 
-from prism.core.agents.company_info_agents import (
+from prism.core.us.agents.company_info_agents import (
     create_company_overview_agent,
     create_company_status_agent,
 )
-from prism.core.agents.market_index_agents import create_market_index_analysis_agent
-from prism.core.agents.news_strategy_agents import create_news_analysis_agent
-from prism.core.agents.stock_price_agents import (
+from prism.core.us.agents.market_index_agents import create_market_index_analysis_agent
+from prism.core.us.agents.news_strategy_agents import create_news_analysis_agent
+from prism.core.us.agents.stock_price_agents import (
     create_institutional_holdings_analysis_agent,
     create_price_volume_analysis_agent,
 )

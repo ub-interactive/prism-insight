@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 # MCP related imports
 from mcp_agent.app import MCPApp
 from mcp_agent.workflows.llm.augmented_llm import RequestParams
-from prism.core.agents.trading_agents import create_trading_scenario_agent, create_sell_decision_agent
+from prism.core.us.agents.trading_agents import create_trading_scenario_agent, create_sell_decision_agent
 from prism.core.shared.llm.openai_responses_llm import OpenAIResponsesLLM as OpenAIAugmentedLLM
 from prism.core.shared.config.models import get_configured_model
 from prism.core.shared.utils import parse_llm_json

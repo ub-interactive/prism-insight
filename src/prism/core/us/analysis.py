@@ -18,8 +18,8 @@ from prism.paths import MCP_CONFIG_PATH
 
 # Set up import paths
 import sys
-from prism.core.agents import get_agent_directory
-from prism.core.data.prefetch import prefetch_us_analysis_data
+from prism.core.us.agents.directory import get_agent_directory
+from prism.core.us.data.prefetch import prefetch_analysis_data
 from prism.core.shared.config.models import get_configured_model
 from prism.core.shared.report_generation import (
     generate_investment_strategy,
@@ -28,17 +28,17 @@ from prism.core.shared.report_generation import (
     generate_summary,
     get_disclaimer,
 )
-from prism.core.data.social_sentiment import USSocialSentimentClient
-from prism.core.visualization.chart import (
-    get_us_institutional_chart_html,
-    get_us_price_chart_html,
-    get_us_technical_chart_html,
+from prism.core.us.data.social_sentiment import USSocialSentimentClient
+from prism.core.us.visualization.chart import (
+    get_institutional_chart_html,
+    get_price_chart_html,
+    get_technical_chart_html,
 )
 from prism.core.shared.footnotes import annotate_financial_terms
 from prism.core.shared.utils import clean_markdown
 
 # Market analysis cache storage (global variable)
-_us_market_analysis_cache = {}
+_market_analysis_cache = {}
 
 US_REPORT_FILENAME_MODEL = get_configured_model("us_report_filename", "gpt-5.4-mini")
 
@@ -51,7 +51,7 @@ def _model_slug(model_name: str) -> str:
     return slug.strip("-") or "model"
 
 
-async def analyze_us_stock(
+async def analyze_stock(
     ticker: str = "AAPL",
     company_name: str = "Apple Inc.",
     reference_date: str = None,
@@ -108,7 +108,7 @@ async def analyze_us_stock(
 
         # 4. Prefetch data to reduce MCP tool call overhead
         try:
-            prefetched = prefetch_us_analysis_data(ticker)
+            prefetched = prefetch_analysis_data(ticker)
             logger.info(f"Prefetched US data for {ticker}: {list(prefetched.keys()) if prefetched else 'none'}")
         except Exception as e:
             logger.warning(f"US data prefetch failed, falling back to MCP: {e}")
@@ -147,15 +147,15 @@ async def analyze_us_stock(
                     try:
                         agent = agents[section]
                         if section == "market_index_analysis":
-                            if "report" in _us_market_analysis_cache:
+                            if "report" in _market_analysis_cache:
                                 logger.info(f"Using cached US market analysis")
-                                report = _us_market_analysis_cache["report"]
+                                report = _market_analysis_cache["report"]
                             else:
                                 logger.info(f"Generating new US market analysis")
                                 report = await generate_market_report(
                                     agent, section, reference_date, logger, language
                                 )
-                                _us_market_analysis_cache["report"] = report
+                                _market_analysis_cache["report"] = report
                         else:
                             report = await generate_report(
                                 agent, section, company_name, ticker, reference_date, logger, language
@@ -275,7 +275,7 @@ async def analyze_us_stock(
 
             if not hist.empty:
                 # 1. Price Chart (Candlestick with MA and Volume)
-                price_chart_html = get_us_price_chart_html(
+                price_chart_html = get_price_chart_html(
                     ticker, company_name, hist, width=900, dpi=80
                 )
                 if price_chart_html:
@@ -286,7 +286,7 @@ async def analyze_us_stock(
                 # 2. Institutional Holdings Chart
                 major_holders = stock.major_holders
                 institutional_holders = stock.institutional_holders
-                institutional_chart_html = get_us_institutional_chart_html(
+                institutional_chart_html = get_institutional_chart_html(
                     ticker, company_name, major_holders, institutional_holders, width=900, dpi=80
                 )
                 if institutional_chart_html:
@@ -295,7 +295,7 @@ async def analyze_us_stock(
                     logger.warning(f"Failed to generate institutional chart for {ticker}")
 
                 # 3. Technical Indicators Chart (RSI + MACD)
-                technical_chart_html = get_us_technical_chart_html(
+                technical_chart_html = get_technical_chart_html(
                     ticker, company_name, hist, width=900, dpi=80
                 )
                 if technical_chart_html:
@@ -426,10 +426,10 @@ async def analyze_us_stock(
         return final_report
 
 
-def clear_us_market_cache():
+def clear_market_cache():
     """Clear the US market analysis cache"""
-    global _us_market_analysis_cache
-    _us_market_analysis_cache = {}
+    global _market_analysis_cache
+    _market_analysis_cache = {}
 
 
 if __name__ == "__main__":
@@ -450,7 +450,7 @@ if __name__ == "__main__":
     start = time.time()
 
     # Run analysis for Apple Inc.
-    result = asyncio.run(analyze_us_stock(
+    result = asyncio.run(analyze_stock(
         ticker="AAPL",
         company_name="Apple Inc.",
         reference_date=datetime.now().strftime("%Y%m%d"),

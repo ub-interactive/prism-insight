@@ -14,7 +14,7 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from prism.core.visualization.chart import (
+from prism.core.us.visualization.chart import (
     HIST_DOWN_COLOR,
     HIST_UP_COLOR,
     MACD_COLOR,

@@ -43,11 +43,11 @@ def _df_to_markdown(df: pd.DataFrame, title: str = "") -> str:
     return result
 
 
-def _get_us_data_client():
-    """Get USDataClient instance from local module."""
-    from prism.core.data.client import USDataClient
+def _get_data_client():
+    """Get DataClient instance from local module."""
+    from prism.core.us.data.client import DataClient
 
-    return USDataClient()
+    return DataClient()
 
 
 def prefetch_us_stock_ohlcv(ticker: str, period: str = "1y") -> str:
@@ -61,7 +61,7 @@ def prefetch_us_stock_ohlcv(ticker: str, period: str = "1y") -> str:
         Markdown formatted OHLCV data string, or empty string on error
     """
     try:
-        client = _get_us_data_client()
+        client = _get_data_client()
         df = client.get_ohlcv(ticker, period=period, interval="1d")
 
         if df is None or df.empty:
@@ -88,7 +88,7 @@ def prefetch_us_holder_info(ticker: str) -> str:
         Markdown formatted holder data string (major + institutional + mutualfund), or empty string on error
     """
     try:
-        client = _get_us_data_client()
+        client = _get_data_client()
         holders = client.get_institutional_holders(ticker)
 
         if not holders:
@@ -168,7 +168,7 @@ def prefetch_stock_info(ticker: str) -> str:
         Markdown formatted company info string, or empty string on error
     """
     try:
-        client = _get_us_data_client()
+        client = _get_data_client()
         info = client.get_company_info(ticker)
 
         if not info or not info.get("name"):
@@ -801,7 +801,7 @@ def prefetch_segment_revenue(ticker: str) -> str:
         return ""
 
 
-def prefetch_us_analysis_data(ticker: str) -> dict:
+def prefetch_analysis_data(ticker: str) -> dict:
     """Prefetch all data needed for US stock analysis agents.
 
     Args:
@@ -887,7 +887,7 @@ def prefetch_us_macro_intelligence_data(reference_date: str = None) -> dict:
     result = {}
 
     try:
-        client = _get_us_data_client()
+        client = _get_data_client()
     except Exception as e:
         logger.error(f"Failed to get US data client: {e}")
         return result

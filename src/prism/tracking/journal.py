@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Helper function to import modules from main project (avoid namespace collision)
 # =============================================================================
-from prism.core.agents.trading_journal_agent import create_trading_journal_agent
+from prism.core.us.agents.trading_journal_agent import create_trading_journal_agent
 from prism.core.shared.config.models import get_configured_model, get_optional_reasoning_effort
 from prism.core.shared.utils import parse_llm_json
 

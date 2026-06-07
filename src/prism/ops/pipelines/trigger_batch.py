@@ -34,7 +34,7 @@ from pathlib import Path
 _repo = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_repo / "src"))
 
-from prism.core.data.surge_detector import (
+from prism.core.us.data.surge_detector import (
     get_snapshot,
     get_previous_snapshot,
     get_multi_day_ohlcv,

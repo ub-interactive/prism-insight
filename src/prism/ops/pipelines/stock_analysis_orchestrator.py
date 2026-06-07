@@ -91,7 +91,7 @@ class USStockAnalysisOrchestrator:
 
         try:
             # Step 1: Prefetch index data and compute regime programmatically
-            from prism.core.data.prefetch import prefetch_us_macro_intelligence_data
+            from prism.core.us.data.prefetch import prefetch_us_macro_intelligence_data
             prefetched = prefetch_us_macro_intelligence_data(reference_date)
             logger.info(f"US macro prefetch complete: {list(prefetched.keys())}")
 
@@ -103,7 +103,7 @@ class USStockAnalysisOrchestrator:
             # Step 2: Run LLM agent with perplexity for qualitative analysis
             from mcp_agent.app import MCPApp
             from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
-            from prism.core.agents.macro_intelligence_agent import create_macro_intelligence_agent
+            from prism.core.us.agents.macro_intelligence_agent import create_macro_intelligence_agent
 
             macro_app = MCPApp(name="us_macro_intelligence", settings=str(MCP_CONFIG_PATH))
 
@@ -295,10 +295,10 @@ class USStockAnalysisOrchestrator:
             )
 
             try:
-                from prism.core.analysis import analyze_us_stock
+                from prism.core.us.analysis import analyze_stock
 
-                logger.info(f"[{idx}/{len(tickers)}] Starting analyze_us_stock function call")
-                report = await analyze_us_stock(
+                logger.info(f"[{idx}/{len(tickers)}] Starting analyze_stock function call")
+                report = await analyze_stock(
                     ticker=ticker,
                     company_name=company_name,
                     reference_date=reference_date,
